@@ -11,6 +11,9 @@ type CartItem = {
   quantity: number;
   options: Record<string, string>;
   extras: string[];
+  
+  // ✨ ADDED THIS LINE (Fixes the red underline)
+  customText?: string; 
 };
 
 type CartContextType = {
@@ -18,7 +21,7 @@ type CartContextType = {
   addToCart: (item: CartItem) => void;
   removeFromCart: (uniqueId: string) => void;
   updateQuantity: (uniqueId: string, delta: number) => void;
-  clearCart: () => void; // <--- NEW
+  clearCart: () => void;
   cartTotal: number;
   cartCount: number;
   isCartOpen: boolean;
@@ -75,7 +78,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  // --- NEW FUNCTION ---
   const clearCart = () => {
     setCart([]); // Wipes the state
     localStorage.removeItem("rosetas_cart"); // Wipes the memory

@@ -7,11 +7,11 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import Navbar from "../../../components/Navbar";
 import { supabase } from "../../../lib/supabase";
-import { useCart } from "../../../context/CartContext"; // <--- IMPORT THIS
+import { useCart } from "../../../context/CartContext"; 
 
 export default function ProductPage() {
   const params = useParams();
-  const { addToCart } = useCart(); // <--- GET THE CART FUNCTION
+  const { addToCart, setIsCartOpen } = useCart();
 
   const [product, setProduct] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,7 +21,10 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   
-  // State for selected Extras (Add-ons)
+  // Ribbon Text State
+  const [customText, setCustomText] = useState(""); 
+  
+  // State for selected Extras
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
 
   // 1. FETCH PRODUCT DATA
@@ -41,15 +44,8 @@ export default function ProductPage() {
         setProduct(data);
         if (data.images && data.images.length > 0) setActiveImage(data.images[0]);
         
-        // Set default options
-        if (data.variants && Array.isArray(data.variants)) {
-          const defaults: Record<string, string> = {};
-          data.variants.forEach((v: any) => {
-            const values = v.values ? v.values.toString().split(',').map((s: string) => s.trim()) : [];
-            if (values.length > 0) defaults[v.name] = values[0];
-          });
-          setSelectedOptions(defaults);
-        }
+        // ✨ UPDATED: Removed the "Auto-Select" logic. 
+        // Now the user must explicitly click an option.
       }
       setIsLoading(false);
     };
@@ -65,13 +61,13 @@ export default function ProductPage() {
   // Handle Extras (Toggle on/off)
   const toggleExtra = (extraName: string) => {
     if (selectedExtras.includes(extraName)) {
-      setSelectedExtras(prev => prev.filter(e => e !== extraName)); // Remove
+      setSelectedExtras(prev => prev.filter(e => e !== extraName)); 
     } else {
-      setSelectedExtras(prev => [...prev, extraName]); // Add
+      setSelectedExtras(prev => [...prev, extraName]); 
     }
   };
 
-  // Calculate Unit Price (Base + Extras)
+  // Calculate Unit Price
   const calculateUnitTotal = () => {
     if (!product) return 0;
     let extrasCost = 0;
@@ -85,30 +81,32 @@ export default function ProductPage() {
     return product.price + extrasCost;
   };
 
-  // --- NEW: HANDLE ADD TO CART ---
   const handleAddToCart = () => {
     if (!product) return;
 
-    // Create a unique ID for this specific configuration
+    // Create unique ID
     const optionsKey = JSON.stringify(selectedOptions);
     const extrasKey = JSON.stringify(selectedExtras.sort());
-    const uniqueId = `${product.id}-${optionsKey}-${extrasKey}`;
+    const uniqueId = `${product.id}-${optionsKey}-${extrasKey}-${customText}`;
 
     addToCart({
       productId: product.id,
       uniqueId,
       name: product.name,
-      price: calculateUnitTotal(), // Save the price WITH extras
+      price: calculateUnitTotal(),
       image: activeImage || "/placeholder.jpg",
       quantity: quantity,
       options: selectedOptions,
-      extras: selectedExtras
+      extras: selectedExtras,
+      customText: customText
     });
+    
+    setIsCartOpen(true);
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-midnight flex items-center justify-center text-neon-purple">
+      <div className="min-h-screen bg-midnight flex items-center justify-center text-neon-rose">
         <Loader2 className="animate-spin" size={48} />
       </div>
     );
@@ -119,8 +117,13 @@ export default function ProductPage() {
   const unitPrice = calculateUnitTotal();
   const totalPrice = unitPrice * quantity;
 
+  // ✨ CHECK: Have all required options been selected?
+  const allOptionsSelected = product.variants 
+    ? product.variants.every((v: any) => selectedOptions[v.name]) 
+    : true;
+
   return (
-    <main className="min-h-screen bg-midnight text-white selection:bg-neon-rose selection:text-white pb-20">
+    <main className="min-h-screen bg-midnight text-white selection:bg-neon-rose selection:text-black pb-20">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 pt-8">
@@ -182,8 +185,7 @@ export default function ProductPage() {
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">{product.name}</h1>
             <div className="flex items-end gap-4">
-              {/* DYNAMIC PRICE DISPLAY */}
-              <span className="text-3xl font-light">€{totalPrice.toFixed(2)}</span>
+              <span className="text-3xl font-light text-neon-rose">€{totalPrice.toFixed(2)}</span>
               {product.stock > 0 ? (
                 <span className="text-green-400 text-sm mb-1.5 flex items-center gap-1"><Check size={14} /> In Stock</span>
               ) : (
@@ -211,7 +213,7 @@ export default function ProductPage() {
                           onClick={() => handleOptionSelect(variant.name, val)}
                           className={`px-6 py-3 rounded-lg text-sm font-medium transition-all border ${
                             selectedOptions[variant.name] === val
-                              ? "bg-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+                              ? "bg-neon-rose text-black border-neon-rose shadow-glow-rose font-bold"
                               : "bg-transparent text-gray-400 border-white/20 hover:border-white hover:text-white"
                           }`}
                         >
@@ -224,6 +226,22 @@ export default function ProductPage() {
               })}
             </div>
           )}
+          
+          {/* PERSONALIZED RIBBON INPUT */}
+          <div className="space-y-3 pt-6 border-t border-white/10">
+            <label className="flex items-center justify-between text-sm font-bold uppercase tracking-wider text-neon-rose">
+              <span>Personalized Ribbon</span>
+              <span className="text-gray-500 text-[10px] bg-white/5 px-2 py-1 rounded">OPTIONAL</span>
+            </label>
+            <input 
+              type="text" 
+              placeholder="Enter name or short message..." 
+              value={customText} 
+              onChange={(e) => setCustomText(e.target.value)}
+              className="w-full bg-black/50 border border-white/20 rounded-xl px-4 py-4 text-white focus:outline-none focus:border-neon-rose focus:ring-1 focus:ring-neon-rose transition-all placeholder:text-gray-600" 
+            />
+            <p className="text-xs text-gray-500">This text will be printed in gold on the satin ribbon.</p>
+          </div>
 
           {/* --- EXTRAS (Add-ons) --- */}
           {product.extras && product.extras.length > 0 && (
@@ -240,21 +258,21 @@ export default function ProductPage() {
                       onClick={() => toggleExtra(extra.name)}
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                         isSelected 
-                          ? "bg-neon-purple/10 border-neon-purple shadow-[0_0_10px_rgba(168,85,247,0.2)]" 
+                          ? "bg-neon-rose/10 border-neon-rose shadow-[0_0_10px_rgba(243,229,171,0.2)]" 
                           : "bg-white/5 border-white/10 hover:border-white/30"
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
-                          isSelected ? "bg-neon-purple border-neon-purple" : "border-gray-500"
+                          isSelected ? "bg-neon-rose border-neon-rose" : "border-gray-500"
                         }`}>
-                          {isSelected && <Check size={14} className="text-white" />}
+                          {isSelected && <Check size={14} className="text-black" />}
                         </div>
                         <span className={`text-sm font-medium ${isSelected ? "text-white" : "text-gray-400"}`}>
                           {extra.name}
                         </span>
                       </div>
-                      <span className="text-sm text-neon-purple font-mono">+€{extra.price}</span>
+                      <span className="text-sm text-neon-rose font-mono">+€{extra.price}</span>
                     </button>
                   );
                 })}
@@ -270,13 +288,18 @@ export default function ProductPage() {
               <button onClick={() => setQuantity(quantity + 1)} className="p-1 hover:text-white text-gray-500 transition-colors"><Plus size={18} /></button>
             </div>
             
-            {/* THIS BUTTON NOW ADDS TO CART */}
+            {/* ✨ UPDATED: Button is DISABLED until options are selected */}
             <button 
               onClick={handleAddToCart} 
-              className="flex-1 bg-neon-rose text-white font-bold rounded-full py-4 shadow-glow-rose hover:bg-rose-600 transition-all flex items-center justify-center gap-2"
+              disabled={!allOptionsSelected} 
+              className={`flex-1 font-bold rounded-full py-4 transition-all flex items-center justify-center gap-2 ${
+                allOptionsSelected 
+                  ? "bg-neon-rose text-black shadow-glow-rose hover:scale-[1.02] active:scale-95 cursor-pointer" 
+                  : "bg-white/10 text-gray-500 cursor-not-allowed opacity-50"
+              }`}
             >
               <ShoppingBag size={20} />
-              Add to Cart - €{totalPrice.toFixed(2)}
+              {allOptionsSelected ? `Add to Cart - €${totalPrice.toFixed(2)}` : "Select Options"}
             </button>
           </div>
         </motion.div>
