@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-// ✨ FIXED: Added ArrowRight to imports
 import { ChevronRight, Star, Loader2, ArrowRight } from "lucide-react";
 import ProductCard from "../components/ProductCard"; 
 import Features from "../components/Features"; 
@@ -70,8 +69,8 @@ export default function Home() {
 
           <div className="flex flex-wrap gap-4 pt-4">
             
-            {/* ✨ FIXED BUTTON: Gold Background + Black Text */}
-            <Link href="#shop">
+            {/* ✨ UPDATED LINK: Points to /shop now */}
+            <Link href="/shop">
               <button className="group px-8 py-5 bg-neon-rose text-black font-bold text-lg rounded-full shadow-glow-rose hover:scale-105 transition-all flex items-center gap-3">
                 Shop Collection
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
@@ -114,7 +113,8 @@ export default function Home() {
             <p className="text-gray-400">Chosen by our most exclusive clients.</p>
           </div>
           
-          <Link href="#shop">
+          {/* ✨ UPDATED LINK: Points to /shop now */}
+          <Link href="/shop">
             <button className="text-neon-rose hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
               View All <ChevronRight size={16} />
             </button>

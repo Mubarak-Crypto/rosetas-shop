@@ -1,7 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+// ✨ RENAME: This function must now be called 'proxy' instead of 'middleware'
+export async function proxy(request: NextRequest) {
   // 1. Create an unmodified response
   let response = NextResponse.next({
     request: {
@@ -67,6 +68,7 @@ export async function middleware(request: NextRequest) {
     if (request.nextUrl.pathname === '/admin/login') {
       // If they are already logged in, send them to dashboard
       if (user) {
+        // ✨ NOTE: Next.js 16 requires absolute URLs for redirects (which we are already doing here)
         return NextResponse.redirect(new URL('/admin/dashboard', request.url))
       }
       return response
