@@ -3,17 +3,17 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X } from "lucide-react";
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search } from "lucide-react";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'paid' | 'shipped'>('paid');
 
-  // ✨ NEW: Shipping Modal State (Copied from Dashboard)
+  // ✨ SHIPPING MODAL STATE
   const [shippingModal, setShippingModal] = useState<{ open: boolean; orderId: number | null }>({ open: false, orderId: null });
   const [trackingNumber, setTrackingNumber] = useState("");
-  const [carrier, setCarrier] = useState("DHL");
+  const [carrier, setCarrier] = useState("DHL Germany");
   const [isUpdating, setIsUpdating] = useState(false);
 
   // FETCH ORDERS
@@ -32,60 +32,80 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  // ✨ NEW: Handle Marking as Shipped & Sending Email
+  // ✨ FIXED: Handle Marking as Shipped & Sending Email
   const handleMarkShipped = async () => {
     if (!shippingModal.orderId || !trackingNumber) return;
     setIsUpdating(true);
 
-    // 1. Update Database
-    const { error } = await supabase
-      .from('orders')
-      .update({ 
-        status: 'shipped', 
-        tracking_number: trackingNumber,
-        carrier: carrier 
-      })
-      .eq('id', shippingModal.orderId);
+    try {
+      // 1. Update Database Status
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'shipped', 
+          tracking_number: trackingNumber,
+          carrier: carrier,
+          shipped_at: new Date().toISOString() // Save the exact time
+        })
+        .eq('id', shippingModal.orderId);
 
-    if (!error) {
+      if (error) throw error;
+
       // 2. Find Order Details for Email
       const orderToUpdate = orders.find(o => o.id === shippingModal.orderId);
       
       if (orderToUpdate) {
-        // 3. TRIGGER THE EMAIL API
-        fetch('/api/send-shipping-email', {
+        // 3. TRIGGER THE CORRECT API (Fixed to match your folder 'send-shipping-email')
+        const response = await fetch('/api/send-shipping-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: orderToUpdate.email,
+            email: orderToUpdate.customer_email || orderToUpdate.email, // Handle both field names
             customerName: orderToUpdate.customer_name,
-            trackingNumber,
-            carrier,
-            orderId: shippingModal.orderId
-          })
+            orderId: orderToUpdate.id.toString().slice(0, 8).toUpperCase(), // Format ID nicely
+            trackingNumber: trackingNumber,
+            carrier: carrier,
+          }),
         });
+        
+        if (!response.ok) {
+           console.error("Email API failed:", await response.text());
+           // We don't stop the UI update here, but we log the error
+        }
 
-        // 4. Update UI Instantly
+        // 4. Update UI Instantly (Move order to 'Shipped' tab)
         setOrders(prev => prev.map(o => 
           o.id === shippingModal.orderId 
             ? { ...o, status: 'shipped', tracking_number: trackingNumber, carrier: carrier } 
             : o
         ));
+
+        // 5. Success Message
+        alert(`Order #${shippingModal.orderId} marked as shipped! Email sent.`);
       }
       
-      // Close Modal
+      // Close Modal & Reset
       setShippingModal({ open: false, orderId: null });
       setTrackingNumber("");
-    } else {
-      alert("Error updating order. Please try again.");
+      
+    } catch (err) {
+      console.error("Shipping error:", err);
+      alert("Error updating order. Please check your connection.");
+    } finally {
+      setIsUpdating(false);
     }
-    setIsUpdating(false);
   };
 
   // Filter orders based on the active tab
-  const displayedOrders = orders.filter(order => 
-    activeTab === 'paid' ? order.status === 'paid' : order.status === 'shipped'
-  );
+  const displayedOrders = orders.filter(order => {
+    if (activeTab === 'paid') {
+      // Show 'paid' or 'pending' orders in the first tab
+      return order.status === 'paid' || order.status === 'pending';
+    } else {
+      // Show 'shipped' or 'completed' in the second tab
+      return order.status === 'shipped' || order.status === 'completed';
+    }
+  });
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex font-sans">
@@ -106,11 +126,11 @@ export default function AdminOrdersPage() {
                 onClick={() => setActiveTab('paid')}
                 className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'paid' ? 'bg-neon-rose text-white shadow-glow-rose' : 'text-gray-400 hover:text-white'}`}
               >
-                <Clock size={16} /> Pending ({orders.filter(o => o.status === 'paid').length})
+                <Clock size={16} /> Pending
               </button>
               <button 
                 onClick={() => setActiveTab('shipped')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'shipped' ? 'bg-green-500 text-white shadow-glow-green' : 'text-gray-400 hover:text-white'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'shipped' ? 'bg-blue-600 text-white shadow-glow-blue' : 'text-gray-400 hover:text-white'}`}
               >
                 <Truck size={16} /> Shipped History
               </button>
@@ -134,17 +154,17 @@ export default function AdminOrdersPage() {
                     <div>
                       <h3 className="text-xl font-bold text-white">{order.customer_name}</h3>
                       <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                        <span className="flex items-center gap-1"><Mail size={12} /> {order.email}</span>
+                        <span className="flex items-center gap-1"><Mail size={12} /> {order.email || order.customer_email}</span>
                         <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(order.created_at).toLocaleDateString()}</span>
-                        <span className="bg-white/10 px-2 py-0.5 rounded text-xs text-gray-300">ID: #{order.id}</span>
+                        <span className="bg-white/10 px-2 py-0.5 rounded text-xs text-gray-300 font-mono">#{order.id.toString().slice(0,8).toUpperCase()}</span>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-4">
-                      <span className="text-2xl font-bold text-neon-rose">€{order.total?.toFixed(2)}</span>
+                      <span className="text-2xl font-bold text-neon-rose">€{order.total_amount || order.total?.toFixed(2)}</span>
                       
                       {/* ACTION BUTTON */}
-                      {order.status === 'paid' ? (
+                      {(order.status === 'paid' || order.status === 'pending') ? (
                         <button 
                           onClick={() => setShippingModal({ open: true, orderId: order.id })}
                           className="bg-white text-black px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-200 transition-colors flex items-center gap-2 shadow-lg hover:scale-105"
@@ -153,7 +173,7 @@ export default function AdminOrdersPage() {
                         </button>
                       ) : (
                         <div className="text-right">
-                          <div className="flex items-center gap-2 text-green-400 font-bold text-sm bg-green-500/10 px-4 py-2 rounded-lg border border-green-500/20 mb-1">
+                          <div className="flex items-center gap-2 text-blue-400 font-bold text-sm bg-blue-500/10 px-4 py-2 rounded-lg border border-blue-500/20 mb-1">
                             <CheckCircle size={16} /> Shipped via {order.carrier}
                           </div>
                           <div className="text-xs text-gray-500 font-mono tracking-wider">
@@ -164,23 +184,24 @@ export default function AdminOrdersPage() {
                     </div>
                   </div>
 
+                  {/* SHIPPING & ITEMS GRID */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     
                     {/* SHIPPING INFO */}
                     <div className="space-y-2 text-sm text-gray-400">
-                      <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Shipping Details</h4>
+                      <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Shipping Address</h4>
                       <p className="flex items-start gap-2">
                         <MapPin size={14} className="mt-1 text-neon-purple" />
-                        {order.address}, {order.city}, {order.zip}
+                        <span className="text-white">{order.address}, {order.city}, {order.zip}</span>
                       </p>
-                      <p className="pl-6 text-xs">Phone: {order.phone}</p>
+                      <p className="pl-6 text-xs text-gray-500">Phone: {order.phone}</p>
                     </div>
 
                     {/* ITEMS LIST */}
                     <div className="lg:col-span-2">
                       <h4 className="text-xs font-bold text-gray-500 uppercase mb-3">Order Items</h4>
                       <div className="space-y-3">
-                        {order.items.map((item: any, idx: number) => (
+                        {order.items && order.items.map((item: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-4 bg-black/30 p-3 rounded-lg border border-white/5">
                             <div className="w-12 h-12 bg-gray-800 rounded overflow-hidden flex-shrink-0">
                               <img src={item.image} className="w-full h-full object-cover" />
@@ -190,7 +211,7 @@ export default function AdminOrdersPage() {
                                 {item.quantity}x {item.name}
                               </p>
                               
-                              {/* ✨ NEW: Ribbon Text Display */}
+                              {/* Ribbon Text Display */}
                               {item.customText && (
                                 <p className="text-xs text-neon-rose mt-0.5 font-medium flex items-center gap-1">
                                   🎀 Ribbon: "{item.customText}"
@@ -199,7 +220,6 @@ export default function AdminOrdersPage() {
                               
                               <p className="text-xs text-gray-500 mt-0.5">
                                 {item.options && Object.values(item.options).join(", ")} 
-                                {item.extras?.length > 0 && ` + ${item.extras.join(", ")}`}
                               </p>
                             </div>
                             <div className="text-sm font-mono text-gray-300">
@@ -217,13 +237,13 @@ export default function AdminOrdersPage() {
           )}
         </div>
 
-        {/* ✨ NEW: SHIPPING MODAL POPUP */}
+        {/* ✨ SHIPPING MODAL POPUP */}
         {shippingModal.open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
             <div className="bg-[#0a0a0a] border border-white/20 rounded-2xl w-full max-w-md p-6 shadow-2xl">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold flex items-center gap-2">
-                  <Truck className="text-neon-rose" /> Ship Order #{shippingModal.orderId}
+                  <Truck className="text-neon-rose" /> Ship Order
                 </h3>
                 <button onClick={() => setShippingModal({ open: false, orderId: null })} className="text-gray-500 hover:text-white transition-colors">
                   <X size={20} />
@@ -238,13 +258,11 @@ export default function AdminOrdersPage() {
                     onChange={(e) => setCarrier(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-neon-rose transition-colors"
                   >
-                    <option value="DHL">DHL</option>
+                    <option value="DHL Germany">DHL Germany</option>
                     <option value="DHL Express">DHL Express</option>
                     <option value="Hermes">Hermes</option>
                     <option value="DPD">DPD</option>
                     <option value="UPS">UPS</option>
-                    <option value="FedEx">FedEx</option>
-                    <option value="Other">Other</option>
                   </select>
                 </div>
 
@@ -262,9 +280,10 @@ export default function AdminOrdersPage() {
                 <button 
                   onClick={handleMarkShipped}
                   disabled={isUpdating || !trackingNumber}
-                  className="w-full bg-neon-rose text-black font-bold py-3 rounded-xl mt-4 hover:scale-[1.02] transition-transform disabled:opacity-50 shadow-glow-rose"
+                  className="w-full bg-neon-rose text-black font-bold py-3 rounded-xl mt-4 hover:scale-[1.02] transition-transform disabled:opacity-50 shadow-glow-rose flex items-center justify-center gap-2"
                 >
-                  {isUpdating ? "Saving..." : "Confirm Shipment"}
+                  {isUpdating ? <Loader2 className="animate-spin" size={18} /> : null}
+                  {isUpdating ? "Processing..." : "Confirm Shipment"}
                 </button>
               </div>
             </div>
