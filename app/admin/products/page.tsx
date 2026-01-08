@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Edit, Trash2, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Search, Filter, Edit, Trash2, Loader2, AlertCircle, ArrowRight, ArrowLeft as ArrowLeftIcon } from "lucide-react";
 import Link from "next/link";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
