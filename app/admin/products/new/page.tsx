@@ -365,7 +365,7 @@ export default function AddProductPage() {
 
                       {/* Mapping Label Added */}
                       <div className="bg-white/5 rounded px-2 py-1 border border-white/5 text-center">
-                        <span className="text-[9px] font-bold text-gray-400 uppercase block">Pos {idx + 1}</span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase block leading-tight">Pos {idx + 1}</span>
                         <span className="text-[10px] font-bold text-neon-rose uppercase truncate block">
                           {colorLabels[idx] || "Extra"}
                         </span>
