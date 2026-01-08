@@ -9,24 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        midnight: "#050505",
+        /* ✅ FIXED: Updated to #F6EFE6 */
+        cream: "#F6EFE6",
+        ink: "#1F1F1F",
+        nude: "#D8BFAF",
+        "champagne-gold": "#C9A24D",
         
-        // ✨ NEW: Soft Red Theme
-        "neon-rose": "#C0574F",   // Primary Brand Color (Velvet Red)
-        "theme-red": "#C0574F",   // Explicit Red name
-        
-        // 🛑 SAFETY NET: Force "Purple" code to use Red
-        "neon-purple": "#C0574F", 
-        
-        glass: "rgba(255, 255, 255, 0.05)",
+        "neon-rose": "#C9A24D",   
+        glass: "rgba(31, 31, 31, 0.08)",
       },
       boxShadow: {
-        // Red Glow
-        "glow-rose": "0 0 20px rgba(192, 87, 79, 0.4)", 
-        "glow-red": "0 0 20px rgba(192, 87, 79, 0.4)",
-        
-        // Safety Net: Force Purple Glow to be Red Glow
-        "glow-purple": "0 0 20px rgba(192, 87, 79, 0.4)", 
+        "glow-gold": "0 10px 30px rgba(201, 162, 77, 0.25)",
       },
     },
   },

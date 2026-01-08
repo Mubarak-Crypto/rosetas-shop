@@ -8,11 +8,13 @@ import Features from "../components/Features";
 import Navbar from "../components/Navbar";
 import { supabase } from "../lib/supabase"; 
 import Link from "next/link";
+import { useLanguage } from "../context/LanguageContext"; // ✨ Added Language Import
 
 export default function Home() {
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const shopSectionRef = useRef<HTMLDivElement>(null); // ✨ Ref for the scroll logic
+  const { language, t } = useLanguage(); // ✨ Access translation functions
 
   // Smooth scroll function
   const scrollToShop = () => {
@@ -59,18 +61,15 @@ export default function Home() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neon-rose/30 bg-neon-rose/10 text-neon-rose text-xs font-bold tracking-widest uppercase shadow-glow-rose">
             <Star size={12} className="fill-neon-rose" />
-            The Premium Collection
+            {language === 'EN' ? "The Premium Collection" : "Die Premium-Kollektion"}
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold leading-tight">
-            Not just a rose. <br />
-            <span className="sparkle-text">
-              A Statement.
-            </span>
+            {language === 'EN' ? <>Not just a rose. <br /> <span className="sparkle-text">A Statement.</span></> : <>Nicht nur eine Rose. <br /> <span className="sparkle-text">Ein Statement.</span></>}
           </h1>
           
           <p className="text-lg text-gray-400 max-w-md leading-relaxed">
-            Hand-crafted luxury satin bouquets with our signature diamond-dust glitter finish.
+            {t('hero_subtitle')}
           </p>
 
           <div className="flex flex-wrap gap-4 pt-4">
@@ -78,7 +77,7 @@ export default function Home() {
               onClick={scrollToShop}
               className="group px-8 py-5 bg-neon-rose text-white font-bold text-lg rounded-full shadow-glow-rose hover:scale-105 transition-all flex items-center gap-3"
             >
-              Shop Collection
+              {t('shop_now')}
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
@@ -111,15 +110,16 @@ export default function Home() {
       <section className="relative z-10 max-w-5xl mx-auto px-6 py-24 text-center space-y-12">
         <div className="space-y-6">
           <h2 className="text-neon-rose font-bold tracking-[0.2em] uppercase text-sm">
-            Hand-Crafted in Essen • Our Story
+            {language === 'EN' ? "Hand-Crafted in Essen • Our Story" : "Handgefertigt in Essen • Unsere Geschichte"}
           </h2>
           <h3 className="text-4xl md:text-6xl font-bold tracking-tighter">
-            Where Artistry Meets <br /> <span className="italic font-serif text-neon-rose">Elegance.</span>
+            {language === 'EN' ? <>Where Artistry Meets <br /> <span className="italic font-serif text-neon-rose">Elegance.</span></> : <>Wo Kunstfertigkeit auf <br /> <span className="italic font-serif text-neon-rose">Eleganz trifft.</span></>}
           </h3>
           <p className="text-gray-400 text-lg md:text-xl leading-relaxed max-w-3xl mx-auto">
-            At Rosetas, we don't just sell flowers; we create permanent moments of luxury. 
-            Based in Essen, Germany, our studio specializes in hand-crafted satin bouquets 
-            designed to capture emotions that never fade.
+            {language === 'EN' 
+              ? "At Rosetas, we don't just sell flowers; we create permanent moments of luxury. Based in Essen, Germany, our studio specializes in hand-crafted satin bouquets designed to capture emotions that never fade."
+              : "Bei Rosetas verkaufen wir nicht nur Blumen; wir schaffen dauerhafte Momente des Luxus. Mit Sitz in Essen, Deutschland, ist unser Studio auf handgefertigte Satin-Bouquets spezialisiert, die Emotionen einfangen, die niemals verblassen."
+            }
           </p>
         </div>
 
@@ -128,22 +128,34 @@ export default function Home() {
              <div className="w-12 h-12 bg-neon-rose/10 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="text-neon-rose" size={24} />
              </div>
-             <h4 className="font-bold text-lg">The Rosetas Shine</h4>
-             <p className="text-gray-500 text-sm">Our proprietary diamond-dust glitter ensures your bouquet sparkles with maximum brilliance.</p>
+             <h4 className="font-bold text-lg">{language === 'EN' ? "The Rosetas Shine" : "Der Rosetas-Glanz"}</h4>
+             <p className="text-gray-500 text-sm">
+               {language === 'EN' 
+                ? "Our proprietary diamond-dust glitter ensures your bouquet sparkles with maximum brilliance."
+                : "Unser spezieller Diamantstaub-Glitzer sorgt dafür, dass Ihr Bouquet mit maximaler Brillanz funkelt."}
+             </p>
           </div>
           <div className="space-y-4">
              <div className="w-12 h-12 bg-neon-rose/10 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Heart className="text-neon-rose" size={24} />
              </div>
-             <h4 className="font-bold text-lg">Who We Are</h4>
-             <p className="text-gray-500 text-sm">A small team of dedicated artisans at Albert-Schweitzer-Str. 5, creating individual masterpieces.</p>
+             <h4 className="font-bold text-lg">{language === 'EN' ? "Who We Are" : "Wer Wir Sind"}</h4>
+             <p className="text-gray-500 text-sm">
+               {language === 'EN'
+                ? "A small team of dedicated artisans at Albert-Schweitzer-Str. 5, creating individual masterpieces."
+                : "Ein kleines Team engagierter Kunsthandwerker in der Albert-Schweitzer-Str. 5, das individuelle Meisterwerke schafft."}
+             </p>
           </div>
           <div className="space-y-4">
              <div className="w-12 h-12 bg-neon-rose/10 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Crown className="text-neon-rose" size={24} />
              </div>
-             <h4 className="font-bold text-lg">Luxury Details</h4>
-             <p className="text-gray-500 text-sm">From personalized ribbons to crystal crowns, we offer the ultimate gifting experience.</p>
+             <h4 className="font-bold text-lg">{language === 'EN' ? "Luxury Details" : "Luxuriöse Details"}</h4>
+             <p className="text-gray-500 text-sm">
+               {language === 'EN'
+                ? "From personalized ribbons to crystal crowns, we offer the ultimate gifting experience."
+                : "Von personalisierten Bändern bis hin zu Kristallkronen bieten wir das ultimative Geschenkerlebnis."}
+             </p>
           </div>
         </div>
 
@@ -152,7 +164,7 @@ export default function Home() {
             onClick={scrollToShop}
             className="px-10 py-4 bg-white text-black font-bold rounded-full hover:bg-neon-rose hover:text-white transition-all shadow-glow-white flex items-center gap-2 mx-auto"
           >
-            Go to Shop <ArrowDown size={18} />
+            {language === 'EN' ? "Go to Shop" : "Zum Shop gehen"} <ArrowDown size={18} />
           </button>
         </div>
       </section>
@@ -161,13 +173,13 @@ export default function Home() {
       <section ref={shopSectionRef} id="shop" className="relative z-10 max-w-7xl mx-auto px-6 py-20 border-t border-white/5 scroll-mt-20">
         <div className="flex items-end justify-between mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Curated Selections</h2>
-            <p className="text-gray-400">Chosen by our most exclusive clients.</p>
+            <h2 className="text-3xl font-bold mb-2">{t('our_collection')}</h2>
+            <p className="text-gray-400">{language === 'EN' ? "Chosen by our most exclusive clients." : "Ausgewählt von unseren exklusivsten Kunden."}</p>
           </div>
           
           <Link href="/shop">
             <button className="text-neon-rose hover:text-white transition-colors flex items-center gap-2 text-sm font-medium">
-              View All <ChevronRight size={16} />
+              {language === 'EN' ? "View All" : "Alle anzeigen"} <ChevronRight size={16} />
             </button>
           </Link>
         </div>
@@ -182,7 +194,7 @@ export default function Home() {
               <ProductCard 
                 key={product.id}
                 id={product.id}
-                title={product.name} 
+                title={language === 'EN' && product.name_en ? product.name_en : product.name} 
                 price={`€${product.price}`} 
                 category={product.category}
                 image={product.images?.[0] || "/products/red-glitter.jpg"} 
@@ -190,8 +202,7 @@ export default function Home() {
               />
             )) : (
               <div className="col-span-3 text-center py-10 text-gray-500 bg-white/5 rounded-2xl border border-dashed border-white/10">
-                <p>No active products found in the database.</p>
-                <p className="text-xs mt-2">Go to Admin Panel to add products.</p>
+                <p>{language === 'EN' ? "No active products found." : "Keine aktiven Produkte gefunden."}</p>
               </div>
             )}
           </div>
@@ -207,17 +218,19 @@ export default function Home() {
               <div className="space-y-4 max-w-xl">
                 <div className="inline-flex items-center gap-2 text-neon-rose text-sm font-bold uppercase tracking-widest">
                   <Scissors size={14} />
-                  For Professionals
+                  {language === 'EN' ? "For Professionals" : "Für Profis"}
                 </div>
-                <h2 className="text-4xl md:text-5xl font-bold">Florist Supplies</h2>
+                <h2 className="text-4xl md:text-5xl font-bold">{t('nav_supplies')}</h2>
                 <p className="text-gray-400 text-lg leading-relaxed">
-                  Source the same premium ribbons, wires, and wrapping materials we use in our luxury studio.
+                  {language === 'EN' 
+                    ? "Source the same premium ribbons, wires, and wrapping materials we use in our luxury studio."
+                    : "Beziehen Sie die gleichen hochwertigen Bänder, Drähte und Verpackungsmaterialien, die wir in unserem Luxusstudio verwenden."}
                 </p>
               </div>
 
               <Link href="/supplies">
                 <button className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:bg-neon-rose hover:text-white transition-all shadow-lg hover:shadow-glow-rose">
-                  Browse Supplies
+                  {language === 'EN' ? "Browse Supplies" : "Zubehör durchsuchen"}
                 </button>
               </Link>
             </div>

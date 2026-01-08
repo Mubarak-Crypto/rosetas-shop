@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X } from "lucide-react";
+import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star } from "lucide-react"; // ✨ Added Star icon
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
@@ -25,7 +25,7 @@ export default function AdminSidebar() {
       {/* 🔴 MOBILE MENU BUTTON (Only visible on small screens) */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 right-4 z-50 bg-neon-rose text-white p-2 rounded-lg shadow-lg hover:bg-neon-rose/80 transition-colors"
+        className="md:hidden fixed top-4 right-4 z-50 bg-[#C9A24D] text-white p-2 rounded-lg shadow-lg hover:bg-[#C9A24D]/80 transition-colors"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -42,16 +42,16 @@ export default function AdminSidebar() {
       <aside className={`
         fixed md:relative z-40 top-0 left-0
         h-screen w-64 
-        bg-[#0a0a0a] border-r border-white/10
+        bg-[#1F1F1F] border-r border-white/5
         flex flex-col 
         transition-transform duration-300 ease-in-out
         ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
       `}>
         
         {/* HEADER */}
-        <div className="p-8 border-b border-white/10 pt-12 md:pt-8">
+        <div className="p-8 border-b border-white/5 pt-12 md:pt-8">
           <h2 className="text-2xl font-bold tracking-tighter text-white">
-            ZAHRAK <span className="text-neon-rose text-xs tracking-widest block font-light">ADMIN PANEL</span>
+            ROSETAS <span className="text-[#C9A24D] text-[10px] tracking-[0.2em] block font-black uppercase mt-1">Admin Panel</span>
           </h2>
         </div>
 
@@ -62,10 +62,10 @@ export default function AdminSidebar() {
           <Link 
             href="/admin/dashboard" 
             onClick={() => setIsOpen(false)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/dashboard") 
-                ? "bg-neon-rose text-white shadow-glow-rose" 
-                : "text-gray-400 hover:text-white hover:bg-white/5"
+                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
             <LayoutDashboard size={20} />
@@ -76,10 +76,10 @@ export default function AdminSidebar() {
           <Link 
             href="/admin/orders" 
             onClick={() => setIsOpen(false)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/orders") 
-                ? "bg-neon-rose text-white shadow-glow-rose" 
-                : "text-gray-400 hover:text-white hover:bg-white/5"
+                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
             <Package size={20} />
@@ -90,30 +90,44 @@ export default function AdminSidebar() {
           <Link 
             href="/admin/products" 
             onClick={() => setIsOpen(false)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/products") 
-                ? "bg-neon-rose text-white shadow-glow-rose" 
-                : "text-gray-400 hover:text-white hover:bg-white/5"
+                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
             <ShoppingBag size={20} />
             Products
           </Link>
+
+          {/* ✨ Manage Reviews Link */}
+          <Link 
+            href="/admin/reviews" 
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              isActive("/admin/reviews") 
+                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Star size={20} />
+            Manage Reviews
+          </Link>
         </nav>
 
         {/* FOOTER */}
-        <div className="p-4 border-t border-white/10 space-y-2">
+        <div className="p-4 border-t border-white/5 space-y-2">
           <Link 
             href="/" 
             target="_blank" 
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-500 hover:text-white hover:bg-white/5 transition-all text-sm"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all text-sm font-bold"
           >
             <ExternalLink size={18} /> View Live Shop
           </Link>
           
           <button 
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all text-sm font-medium"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all text-sm font-bold"
           >
             <LogOut size={18} /> Logout
           </button>

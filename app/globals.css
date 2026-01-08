@@ -1,54 +1,100 @@
 @import "tailwindcss";
 
 @theme {
-  --color-midnight: #050505;
+  /* ✨ UPDATED: Matching the color from your app/page.tsx */
+  --color-cream-bg: #F6EFE6;       /* Vanilla Cream background */
+  --color-ink: #1F1F1F;           /* Sharp Near-black text */
+  --color-champagne-gold: #C9A24D; 
+  --color-nude: #D8BFAF;
   
-  /* ✨ NEW: Velvet Red */
-  --color-neon-rose: #C0574F;
-  --color-theme-red: #C0574F;
+  /* Primary Mapping */
+  --color-neon-rose: #C9A24D;
+  --color-theme-red: #C9A24D;
 
-  /* SAFETY: Map Purple to Red */
-  --color-neon-purple: #C0574F;
-
-  --color-glass: rgba(255, 255, 255, 0.05);
+  --color-glass: rgba(31, 31, 31, 0.08); 
   
-  /* Red Glows */
-  --shadow-glow-rose: 0 0 20px rgba(192, 87, 79, 0.4);
-  --shadow-glow-red: 0 0 20px rgba(192, 87, 79, 0.4);
-  --shadow-glow-purple: 0 0 20px rgba(192, 87, 79, 0.4);
+  /* Luxury Shadows */
+  --shadow-glow-gold: 0 10px 30px rgba(201, 162, 77, 0.25); 
 }
 
 body {
-  background-color: var(--color-midnight);
-  color: white;
+  /* ✅ FIXED: Now using #F6EFE6 globally */
+  background-color: #F6EFE6;
+  color: #1F1F1F;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Force White Text on Red Buttons (Better Contrast than Black) */
-.bg-neon-rose, .bg-theme-red {
+/* 🚨 TEXT VISIBILITY: Forces descriptions to sharp black ONLY on light backgrounds */
+/* Removed !important from color to allow Footer/Buttons to override it */
+p, span, .text-gray-400, .text-gray-500, .text-muted-foreground {
+  color: #1F1F1F; 
+  font-weight: 500; 
+  line-height: 1.6;
+  opacity: 1 !important;
+}
+
+/* Headlines default to Black */
+h1, h2, h3, h4, h5, h6 {
+  color: #1F1F1F;
+}
+
+/* ✅ FIX: Allow .text-white classes to actually be white */
+.text-white {
   color: #FFFFFF !important;
-  font-weight: 600;
 }
 
-/* Sparkle Animation - Velvet Edition */
+/* ✅ FIX: Force all text inside footer to ignore the global black text rule */
+footer p, footer span, footer a, footer h2, footer h3 {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
+}
+
+/* Feature Blocks: Frosted effect to sit clearly on solid background */
+.feature-card {
+  background: rgba(255, 255, 255, 0.4) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(31, 31, 31, 0.1);
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+}
+
+/* High-End Buttons: Nude color with visible black text */
+.bg-neon-rose {
+  background-color: #D8BFAF !important;
+  color: #1F1F1F !important;
+  border: 1px solid rgba(31, 31, 31, 0.1);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.bg-neon-rose:hover {
+  background-color: #C9A24D !important;
+  color: #FFFFFF !important; 
+  box-shadow: var(--shadow-glow-gold);
+  transform: translateY(-2px);
+}
+
+/* Gold Text Polish with Black definition for contrast */
 .sparkle-text {
   background: linear-gradient(
     to right,
-    #C0574F, /* Red Start */
-    #FFD1D1, /* Light Pink/White Center */
-    #C0574F, /* Red End */
-    #8A3A34, /* Darker Deep Red */
-    #C0574F
+    #C9A24D, 
+    #1F1F1F, 
+    #C9A24D, 
+    #F6EFE6, 
+    #C9A24D
   );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: shine 3s infinite linear;
+  animation: shine 5s infinite linear;
   background-size: 200% auto;
-  text-shadow: 0px 0px 10px rgba(192, 87, 79, 0.4);
+  font-weight: 800;
 }
 
 @keyframes shine {
-  to {
-    background-position: 200% center;
-  }
+  to { background-position: 200% center; }
 }

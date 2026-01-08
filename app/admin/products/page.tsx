@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Filter, Edit, Trash2, Loader2, AlertCircle, ArrowRight, ArrowLeft as ArrowLeftIcon } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Loader2, Video, Globe } from "lucide-react"; // ✨ Added Globe icon
 import Link from "next/link";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
@@ -51,19 +51,21 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white flex font-sans">
+    /* ✅ FIXED: Theme Colors Updated to Cream & Ink */
+    <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
       <AdminSidebar />
 
       <main className="flex-1 p-8 overflow-y-auto">
         {/* Header */}
         <header className="flex justify-between items-center mb-10">
           <div>
-            <h1 className="text-3xl font-bold">Products</h1>
-            <p className="text-gray-400 text-sm mt-1">Manage your bouquets and prices.</p>
+            <h1 className="text-3xl font-bold text-[#1F1F1F]">Products</h1>
+            <p className="text-[#1F1F1F]/60 text-sm mt-1 font-medium">Manage your bouquets and prices.</p>
           </div>
           
           <Link href="/admin/products/new">
-            <button className="bg-neon-rose hover:bg-[#D8C3A5] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-glow-rose">
+            {/* ✅ FIXED: Button forced to Ink Black with Gold hover */}
+            <button className="bg-[#1F1F1F] hover:bg-[#C9A24D] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg">
               <Plus size={20} />
               Add New Product
             </button>
@@ -73,31 +75,32 @@ export default function AdminProducts() {
         {/* Filters */}
         <div className="flex gap-4 mb-6">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1F1F1F]/30" size={18} />
             <input 
               type="text" 
               placeholder="Search products..." 
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm focus:border-neon-rose outline-none transition-colors"
+              className="w-full bg-white border border-black/5 rounded-xl pl-12 pr-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#1F1F1F]"
             />
           </div>
         </div>
 
         {/* Products Table */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden min-h-[300px]">
+        <div className="bg-white border border-black/5 rounded-2xl overflow-hidden min-h-[300px] shadow-sm">
           
           {isLoading ? (
-            <div className="flex items-center justify-center h-64 text-neon-rose">
+            <div className="flex items-center justify-center h-64 text-[#C9A24D]">
               <Loader2 className="animate-spin" size={48} />
             </div>
           ) : products.length === 0 ? (
-            <div className="text-center p-10 text-gray-500">
+            <div className="text-center p-10 text-[#1F1F1F]/40 font-medium">
               <p>No products found in database.</p>
             </div>
           ) : (
             <table className="w-full text-left">
-              <thead className="bg-black/20 text-xs uppercase text-gray-500 font-bold tracking-wider">
+              <thead className="bg-gray-50 text-[10px] uppercase text-[#1F1F1F]/50 font-bold tracking-widest border-b border-black/5">
                 <tr>
                   <th className="px-6 py-4">Product</th>
+                  <th className="px-6 py-4">Bilingual</th> {/* ✨ NEW: Language Status Column */}
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
                   <th className="px-6 py-4">Stock</th>
@@ -105,27 +108,44 @@ export default function AdminProducts() {
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-black/5">
                 {products.map((product) => (
-                  <tr key={product.id} className="hover:bg-white/5 transition-colors group">
+                  <tr key={product.id} className="hover:bg-gray-50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/10 bg-black">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden border border-black/5 bg-gray-100 relative">
                           {product.images && product.images[0] ? (
                             <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full bg-white/10" />
+                            <div className="w-full h-full bg-black/5" />
+                          )}
+                          {/* ✨ NEW: Video Badge Indicator */}
+                          {product.video_url && (
+                            <div className="absolute top-0 right-0 bg-[#C9A24D] p-0.5 rounded-bl">
+                              <Video size={10} className="text-white" />
+                            </div>
                           )}
                         </div>
-                        <span className="font-bold text-sm">{product.name}</span>
+                        <span className="font-bold text-sm text-[#1F1F1F]">{product.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-400">{product.category}</td>
-                    <td className="px-6 py-4 text-sm font-mono text-neon-rose">€{product.price}</td>
-                    <td className="px-6 py-4 text-sm text-gray-400">{product.stock} units</td>
+                    
+                    {/* ✨ NEW: Bilingual Status indicator */}
                     <td className="px-6 py-4">
-                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide border ${
-                         product.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${product.name ? 'bg-black text-white' : 'bg-gray-100 text-gray-300'}`}>DE</span>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${product.name_en ? 'bg-[#C9A24D] text-white' : 'bg-gray-100 text-gray-300'}`}>EN</span>
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">{product.category}</td>
+                    <td className="px-6 py-4 text-sm font-mono font-bold text-[#C9A24D]">€{product.price}</td>
+                    <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">{product.stock} units</td>
+                    <td className="px-6 py-4">
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tight border ${
+                         product.status === 'active' 
+                          ? 'bg-green-50 text-green-700 border-green-200' 
+                          : 'bg-red-50 text-red-700 border-red-200'
                       }`}>
                         {product.status}
                       </span>
@@ -135,7 +155,7 @@ export default function AdminProducts() {
                         
                         {/* EDIT BUTTON (Now Linked) */}
                         <Link href={`/admin/products/edit/${product.id}`}>
-                          <button className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
+                          <button className="p-2 hover:bg-black/5 rounded-lg text-[#1F1F1F]/40 hover:text-[#C9A24D] transition-colors">
                             <Edit size={16} />
                           </button>
                         </Link>
@@ -143,7 +163,7 @@ export default function AdminProducts() {
                         {/* DELETE BUTTON (Now Functional) */}
                         <button 
                           onClick={() => handleDelete(product.id)}
-                          className="p-2 hover:bg-red-500/20 rounded-lg text-gray-400 hover:text-red-400 transition-colors"
+                          className="p-2 hover:bg-red-50 rounded-lg text-[#1F1F1F]/40 hover:text-red-600 transition-colors"
                         >
                           <Trash2 size={16} />
                         </button>

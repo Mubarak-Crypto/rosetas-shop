@@ -4,15 +4,18 @@ import { Instagram, Mail, Phone, Loader2, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { useLanguage } from "../context/LanguageContext"; // ✨ Added Language Import
 
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+  const { language, t } = useLanguage(); // ✨ Access translation functions
   
-  // ✨ NEW: Dynamic Categories State
   const [categories, setCategories] = useState<string[]>([]);
 
-  // ✨ NEW: Fetch Categories logic to ensure footer matches Admin selection
+  // ✅ HELPER: Using direct Hex and Opacity to bypass global dimming
+  const forceWhite = { color: '#FFFFFF', opacity: 1 };
+
   useEffect(() => {
     const fetchCategories = async () => {
       const { data } = await supabase
@@ -21,7 +24,6 @@ export default function Footer() {
         .eq('status', 'active');
 
       if (data) {
-        // Filter out "supplies", remove duplicates, and sort
         const uniqueCategories = Array.from(new Set(data.map(item => item.category)))
           .filter((cat): cat is string => Boolean(cat) && cat !== 'supplies');
         setCategories(uniqueCategories.sort());
@@ -33,11 +35,9 @@ export default function Footer() {
   const handleSubscribe = async () => {
     if (!email) return;
     setStatus("loading");
-
     const { error } = await supabase.from("newsletter").insert([{ email }]);
-
     if (error) {
-      alert("Something went wrong. Please try again.");
+      alert(language === 'EN' ? "Something went wrong. Please try again." : "Etwas ist schiefgelaufen. Bitte erneut versuchen.");
       setStatus("idle");
     } else {
       setStatus("success");
@@ -46,68 +46,87 @@ export default function Footer() {
   };
 
   return (
-    <footer className="relative z-10 border-t border-white/10 bg-black/90 backdrop-blur-xl pt-20 pb-10">
+    <footer className="relative z-10 border-t border-white/10 bg-[#0a0a0a] pt-20 pb-10">
       <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
         
         {/* 1. Brand Section */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold tracking-tighter text-white">
-            ROSETAS<span className="text-neon-rose">.</span>
+          <h2 className="text-2xl font-bold tracking-tighter" style={forceWhite}>
+            ROSETAS<span className="text-[#C9A24D]">.</span>
           </h2>
-          <div className="text-gray-400 text-sm leading-relaxed space-y-2">
-            <p>Hand-crafted luxury bouquets.</p>
-            <p className="flex items-start gap-2 opacity-80">
-              <MapPin size={14} className="text-neon-rose mt-1 flex-shrink-0" />
-              <span>Albert-Schweitzer-Str. 5<br />4579 Essen, Germany</span>
+          <div className="text-sm leading-relaxed space-y-2">
+            {/* ✅ FIXED: Description Visibility */}
+            <p className="font-bold" style={forceWhite}>
+              {language === 'EN' ? "Hand-crafted luxury bouquets." : "Handgefertigte Luxus-Bouquets."}
+            </p>
+            {/* ✅ FIXED: Address Visibility */}
+            <p className="flex items-start gap-2 mt-4" style={forceWhite}>
+              <MapPin size={14} className="text-[#C9A24D] mt-1 flex-shrink-0" />
+              <span className="font-bold" style={forceWhite}>
+                Albert-Schweitzer-Str. 5<br />4579 Essen, Germany
+              </span>
             </p>
           </div>
           <div className="flex gap-4 pt-2">
-            <a href="https://instagram.com/Rosetas.bouquets" target="_blank" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-neon-rose hover:text-white transition-all text-gray-400">
-              <Instagram size={18} />
+            <a href="https://instagram.com/Rosetas.bouquets" target="_blank" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#C9A24D] hover:text-white transition-all">
+              <Instagram size={18} style={forceWhite} />
             </a>
-            <a href="mailto:kontakt@rosetasbouquets.info" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-neon-rose hover:text-white transition-all text-gray-400">
-              <Mail size={18} />
+            <a href="mailto:kontakt@rosetasbouquets.info" className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-[#C9A24D] hover:text-white transition-all">
+              <Mail size={18} style={forceWhite} />
             </a>
           </div>
         </div>
 
-        {/* 2. Shop Links (NOW DYNAMIC) */}
+        {/* 2. Shop Links */}
         <div>
-          <h3 className="font-bold mb-6 text-white">Shop</h3>
-          <ul className="space-y-4 text-sm text-gray-400">
+          <h3 className="font-bold mb-6 uppercase tracking-widest text-sm" style={forceWhite}>{t('nav_shop')}</h3>
+          <ul className="space-y-4 text-sm font-bold">
             {categories.length > 0 ? (
               categories.map((cat) => (
                 <li key={cat}>
-                  <Link href={`/shop?category=${encodeURIComponent(cat)}`} className="hover:text-neon-rose transition-colors">
-                    {cat}
+                  <Link href={`/shop?category=${encodeURIComponent(cat)}`} className="hover:text-[#C9A24D] transition-colors" style={forceWhite}>
+                    {language === 'EN' && cat === "Floristenbedarf" ? "Florist Supplies" : cat}
                   </Link>
                 </li>
               ))
             ) : (
-              <li><Link href="/shop" className="hover:text-neon-rose transition-colors">All Collections</Link></li>
+              <>
+                <li><Link href="/shop" className="hover:text-[#C9A24D] transition-colors" style={forceWhite}>{language === 'EN' ? "Glitter Roses" : "Glitzer Rosen"}</Link></li>
+                <li><Link href="/shop" className="hover:text-[#C9A24D] transition-colors" style={forceWhite}>{language === 'EN' ? "Plush Bouquets" : "Plüsch Bouquets"}</Link></li>
+              </>
             )}
+            {/* Added Supplies link for visibility */}
+            <li>
+              <Link href="/supplies" className="hover:text-[#C9A24D] transition-colors" style={forceWhite}>
+                {t('nav_supplies')}
+              </Link>
+            </li>
           </ul>
         </div>
 
         {/* 3. Customer Care */}
         <div>
-          <h3 className="font-bold mb-6 text-white">Contact</h3>
-          <div className="space-y-4 text-sm text-gray-400">
-            <p className="text-gray-500 text-xs uppercase tracking-wider mb-2">Need Help?</p>
+          <h3 className="font-bold mb-6 uppercase tracking-widest text-sm" style={forceWhite}>{t('footer_contact')}</h3>
+          <div className="space-y-4 text-sm">
+            <p className="text-[#C9A24D] text-xs uppercase tracking-widest mb-2 font-black">
+              {language === 'EN' ? "Need Help?" : "Brauchst du Hilfe?"}
+            </p>
             
-            <a href="tel:+4915565956604" className="flex items-center gap-3 hover:text-white transition-colors">
-              <Phone size={16} className="text-neon-rose" /> 
-              <span>0155 65956604</span>
+            {/* ✅ FIXED: Phone Visibility */}
+            <a href="tel:+4915565956604" className="flex items-center gap-3 hover:text-[#C9A24D] transition-colors">
+              <Phone size={16} className="text-[#C9A24D]" /> 
+              <span className="font-bold" style={forceWhite}>0155 65956604</span>
             </a>
             
-            <a href="mailto:kontakt@rosetasbouquets.info" className="flex items-center gap-3 hover:text-white transition-colors">
-              <Mail size={16} className="text-neon-rose" /> 
-              <span>kontakt@rosetasbouquets.info</span>
+            {/* ✅ FIXED: Email Visibility */}
+            <a href="mailto:kontakt@rosetasbouquets.info" className="flex items-center gap-3 hover:text-[#C9A24D] transition-colors">
+              <Mail size={16} className="text-[#C9A24D]" /> 
+              <span className="font-bold" style={forceWhite}>kontakt@rosetasbouquets.info</span>
             </a>
             
             <div className="pt-4">
-              <Link href="/impressum" className="text-xs text-gray-500 hover:text-white underline decoration-gray-700 underline-offset-4">
-                View Legal Notice (Impressum)
+              <Link href="/impressum" className="text-xs hover:text-[#C9A24D] underline decoration-[#C9A24D] underline-offset-4 font-bold" style={forceWhite}>
+                {language === 'EN' ? "View Legal Notice (Impressum)" : "Impressum ansehen"}
               </Link>
             </div>
           </div>
@@ -115,28 +134,30 @@ export default function Footer() {
 
         {/* 4. Newsletter */}
         <div>
-          <h3 className="font-bold mb-6 text-white">Stay Exclusive</h3>
-          <p className="text-gray-400 text-sm mb-4">Join the VIP list for new drops.</p>
+          <h3 className="font-bold mb-6 uppercase tracking-widest text-sm" style={forceWhite}>{language === 'EN' ? "Stay Exclusive" : "Exklusiv bleiben"}</h3>
+          <p className="text-sm mb-4 font-bold" style={forceWhite}>
+            {language === 'EN' ? "Join the VIP list for new drops." : "Trage dich in die VIP-Liste für neue Drops ein."}
+          </p>
           
           {status === "success" ? (
-            <div className="text-neon-rose font-bold text-sm animate-in fade-in bg-neon-rose/10 p-3 rounded-lg border border-neon-rose/20">
-              ✨ You are on the list!
+            <div className="text-[#C9A24D] font-bold text-sm animate-in fade-in bg-[#C9A24D]/10 p-3 rounded-lg border border-[#C9A24D]/20">
+              {language === 'EN' ? "✨ You are on the list!" : "✨ Du bist auf der Liste!"}
             </div>
           ) : (
             <div className="flex gap-2">
               <input 
                 type="email" 
-                placeholder="Enter your email" 
+                placeholder={language === 'EN' ? "Enter your email" : "E-Mail eingeben"} 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-neon-rose transition-colors text-white"
+                className="bg-white/10 border border-white/40 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[#C9A24D] transition-colors text-white placeholder:text-white/60 font-bold"
               />
               <button 
                 onClick={handleSubscribe}
                 disabled={status === "loading"}
-                className="bg-white text-black px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 min-w-[60px] flex justify-center items-center"
+                className="bg-white text-black px-4 py-2 rounded-lg text-sm font-black hover:bg-[#C9A24D] hover:text-white transition-colors disabled:opacity-50 min-w-[60px] flex justify-center items-center shadow-lg"
               >
-                {status === "loading" ? <Loader2 size={16} className="animate-spin" /> : "Join"}
+                {status === "loading" ? <Loader2 size={16} className="animate-spin" /> : (language === 'EN' ? "Join" : "Beitreten")}
               </button>
             </div>
           )}
@@ -144,25 +165,23 @@ export default function Footer() {
       </div>
 
       {/* Bottom Bar */}
-      <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 gap-4">
+      <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center text-[10px] gap-4">
         
         <div className="flex flex-col md:flex-row items-center gap-6">
-          <p>&copy; 2026 Rosetas Bouquets.</p>
+          {/* ✅ FIXED: Copyright Visibility */}
+          <p className="font-bold" style={forceWhite}>&copy; 2026 Rosetas Bouquets. {t('footer_rights')}</p>
           
-          <div className="flex gap-6">
-            <Link href="/impressum" className="hover:text-neon-rose transition-colors">
-              Impressum
-            </Link>
-            <Link href="/terms" className="hover:text-neon-rose transition-colors">
-              Terms of Service
-            </Link>
-            <Link href="/privacy" className="hover:text-neon-rose transition-colors">
-              Privacy Policy
-            </Link>
+          <div className="flex gap-6 font-bold">
+            <Link href="/impressum" className="hover:text-[#C9A24D] transition-colors" style={forceWhite}>{t('footer_impressum')}</Link>
+            <Link href="/terms" className="hover:text-[#C9A24D] transition-colors" style={forceWhite}>{t('footer_terms')}</Link>
+            <Link href="/privacy" className="hover:text-[#C9A24D] transition-colors" style={forceWhite}>{t('footer_policy')}</Link>
           </div>
         </div>
 
-        <p className="opacity-50">Verantwortlich: Ashkab Albukaev</p>
+        {/* ✅ FIXED: Responsible Name Visibility */}
+        <p className="font-bold" style={forceWhite}>
+          {language === 'EN' ? "Responsible: Ashkab Albukaev" : "Verantwortlich: Ashkab Albukaev"}
+        </p>
       </div>
     </footer>
   );

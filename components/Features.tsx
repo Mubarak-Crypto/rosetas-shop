@@ -2,50 +2,54 @@
 
 import { motion } from "framer-motion";
 import { Sparkles, Award, Clock, Gift } from "lucide-react";
-
-const features = [
-  {
-    icon: Award,
-    title: "Artisan Precision",
-    description: "Every petal is placed by hand. No mass production. Just perfection.",
-    color: "rose"
-  },
-  {
-    icon: Sparkles,
-    title: "Crystal Glitter Finish",
-    description: "Our proprietary glitter application ensures maximum brilliance under any light.",
-    color: "#D8C3A5"
-  },
-  {
-    icon: Clock,
-    title: "Eternal Beauty",
-    description: "Preserved to last. A memory that doesn't fade after a week.",
-    color: "rose"
-  },
-  {
-    icon: Gift,
-    title: "The Ultimate Gift",
-    description: "Arrives in premium packaging designed to leave a lasting impression.",
-    color: "#D8C3A5"
-  }
-];
+import { useLanguage } from "../context/LanguageContext"; // ✨ Added Language Import
 
 export default function Features() {
+  const { t } = useLanguage(); // ✨ Access translation function
+
+  // Updated features array to use translation keys
+  const features = [
+    {
+      icon: Award,
+      title: t('feat_1_title'),
+      description: t('feat_1_desc'),
+      color: "rose"
+    },
+    {
+      icon: Sparkles,
+      title: t('feat_2_title'),
+      description: t('feat_2_desc'),
+      color: "#D8C3A5"
+    },
+    {
+      icon: Clock,
+      title: t('feat_3_title'),
+      description: t('feat_3_desc'),
+      color: "rose"
+    },
+    {
+      icon: Gift,
+      title: t('feat_4_title'),
+      description: t('feat_4_desc'),
+      color: "#D8C3A5"
+    }
+  ];
+
   return (
     <section className="relative z-10 max-w-7xl mx-auto px-6 py-24 border-t border-white/5 bg-black/20">
       <div className="text-center mb-16">
         
         {/* ✨ UPDATED HEADLINE */}
         <h2 className="text-3xl md:text-4xl font-bold mb-4 flex flex-wrap justify-center items-baseline gap-2">
-          That’s why 
+          {t('features_headline_start')} 
           <span className="font-serif italic text-4xl md:text-5xl sparkle-text tracking-wide">
             Rosetas
           </span> 
-          is the choice
+          {t('features_headline_end')}
         </h2>
 
         <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-          We don't just sell flowers. We create permanent moments of luxury.
+          {t('features_subtitle')}
         </p>
       </div>
 

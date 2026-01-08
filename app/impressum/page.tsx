@@ -1,30 +1,39 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Language Import
 
 export default function Impressum() {
+  const { language, t } = useLanguage(); // ✨ Access current language and translation function
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-neon-rose selection:text-black">
+    /* ✅ FIXED: Theme Colors Updated to Cream & Ink to match the rest of the shop */
+    <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#C9A24D] selection:text-white">
       <div className="max-w-3xl mx-auto px-6 py-20">
         
         {/* Back Button */}
         <Link 
           href="/" 
-          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-neon-rose transition-colors mb-12 group"
+          className="inline-flex items-center gap-2 text-sm text-[#1F1F1F]/40 hover:text-[#C9A24D] transition-colors mb-12 group font-bold uppercase tracking-wider"
         >
           <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          Back to Shop
+          {t('back_to_shop')}
         </Link>
 
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-12 text-white">
-          Impressum<span className="text-neon-rose">.</span>
+        {/* ✅ FIXED: Title color updated for visibility on light background */}
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-12 text-[#1F1F1F]">
+          Impressum<span className="text-[#C9A24D]">.</span>
         </h1>
         
         <div className="space-y-12 text-base md:text-lg">
           {/* Section 1: Legal Owner */}
-          <section className="border-l border-white/10 pl-6 hover:border-neon-rose transition-colors">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-neon-rose mb-4">Angaben gemäß § 5 TMG</h2>
-            <p className="leading-relaxed text-gray-300">
-              <span className="text-white font-bold block mb-1">Rosetas Bouquets</span>
+          <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+              {language === 'EN' ? "Information according to § 5 TMG" : "Angaben gemäß § 5 TMG"}
+            </h2>
+            <p className="leading-relaxed text-[#1F1F1F]/70">
+              <span className="text-[#1F1F1F] font-bold block mb-1">Rosetas Bouquets</span>
               Ashkab Albukaev<br />
               Albert-Schweitzer-Str. 5<br />
               4579 Essen<br />
@@ -33,44 +42,59 @@ export default function Impressum() {
           </section>
 
           {/* Section 2: Contact */}
-          <section className="border-l border-white/10 pl-6 hover:border-neon-rose transition-colors">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-neon-rose mb-4">Kontakt</h2>
-            <div className="space-y-2 text-gray-300">
-              <p>Telefon: <span className="text-white">0155 65956604</span></p>
-              <p>E-Mail: <span className="text-white">kontakt@rosetasbouquets.info</span></p>
+          <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+              {language === 'EN' ? "Contact" : "Kontakt"}
+            </h2>
+            <div className="space-y-2 text-[#1F1F1F]/70">
+              <p>{language === 'EN' ? "Phone" : "Telefon"}: <span className="text-[#1F1F1F] font-bold">0155 65956604</span></p>
+              <p>E-Mail: <span className="text-[#1F1F1F] font-bold">kontakt@rosetasbouquets.info</span></p>
             </div>
           </section>
 
           {/* Section 3: VAT ID */}
-          <section className="border-l border-white/10 pl-6 hover:border-neon-rose transition-colors">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-neon-rose mb-4">Umsatzsteuer-ID</h2>
-            <p className="leading-relaxed text-gray-300">
-              Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:<br />
-              <strong className="text-white">UST-IdNr: DE451442586</strong>
+          <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+              {language === 'EN' ? "VAT ID" : "Umsatzsteuer-ID"}
+            </h2>
+            <p className="leading-relaxed text-[#1F1F1F]/70">
+              {language === 'EN' 
+                ? "VAT identification number according to § 27 a Value Added Tax Act:" 
+                : "Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:"}
+              <br />
+              <strong className="text-[#1F1F1F]">UST-IdNr: DE451442586</strong>
             </p>
           </section>
 
           {/* Section 4: Dispute Resolution */}
-          <section className="border-l border-white/10 pl-6 hover:border-neon-rose transition-colors">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-neon-rose mb-4">Streitschlichtung</h2>
-            <p className="leading-relaxed text-gray-300">
-              Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit: 
+          <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+              {language === 'EN' ? "Dispute Resolution" : "Streitschlichtung"}
+            </h2>
+            <p className="leading-relaxed text-[#1F1F1F]/70">
+              {language === 'EN' 
+                ? "The European Commission provides a platform for online dispute resolution (OS):" 
+                : "Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:"}
               <a 
                 href="https://ec.europa.eu/consumers/odr/" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="text-white underline decoration-neon-rose underline-offset-4 hover:text-neon-rose transition-colors ml-1"
+                className="text-[#1F1F1F] font-bold underline decoration-[#C9A24D] underline-offset-4 hover:text-[#C9A24D] transition-colors ml-1"
               >
                 https://ec.europa.eu/consumers/odr/
               </a>.<br />
-              Unsere E-Mail-Adresse finden Sie oben im Impressum.
+              {language === 'EN' 
+                ? "Our e-mail address can be found above in the impressum." 
+                : "Unsere E-Mail-Adresse finden Sie oben im Impressum."}
             </p>
           </section>
         </div>
         
         {/* Simple Footer Note */}
-        <div className="mt-20 pt-8 border-t border-white/5 text-gray-600 text-xs italic">
-          Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV: Ashkab Albukaev
+        <div className="mt-20 pt-8 border-t border-black/5 text-[#1F1F1F]/40 text-xs italic font-medium">
+          {language === 'EN' 
+            ? "Responsible for content according to § 55 Abs. 2 RStV: Ashkab Albukaev" 
+            : "Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV: Ashkab Albukaev"}
         </div>
       </div>
     </div>

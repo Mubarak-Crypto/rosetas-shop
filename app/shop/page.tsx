@@ -8,12 +8,14 @@ import { useEffect, useState, Suspense } from "react"; // Added Suspense
 import { supabase } from "../../lib/supabase";
 import { Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Language Import
 
 // ✨ Split into a sub-component to handle SearchParams safely for Vercel
 function ShopContent() {
   // 2. Get the current search params (the stuff after the ? in the URL)
   const searchParams = useSearchParams();
   const categoryFilter = searchParams.get("category");
+  const { language, t } = useLanguage(); // ✨ Access language state
 
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,33 +48,41 @@ function ShopContent() {
   }, [categoryFilter]); // 4. This ensures the page updates when you click a footer link!
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-neon-rose selection:text-black">
+    /* ✅ FIXED: Background changed to Vanilla Cream and Text to Ink Black */
+    <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#C9A24D] selection:text-white">
       <Navbar />
       
       <main className="max-w-7xl mx-auto px-6 py-24">
         <header className="mb-12 text-center">
           {/* 5. Dynamic Title */}
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 capitalize">
-            {categoryFilter ? categoryFilter : "All Collections"}
-          </h1>
-          <p className="text-gray-400 max-w-2xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 capitalize text-[#1F1F1F]">
             {categoryFilter 
-              ? `Viewing our exclusive ${categoryFilter} selection.`
-              : "Explore our complete range of hand-crafted luxury bouquets."}
+              ? (language === 'EN' && categoryFilter === "Floristenbedarf" ? "Florist Supplies" : categoryFilter) 
+              : (language === 'EN' ? "All Collections" : "Alle Kollektionen")}
+          </h1>
+          <p className="text-[#1F1F1F]/60 max-w-2xl mx-auto font-medium">
+            {categoryFilter 
+              ? (language === 'EN' 
+                  ? `Viewing our exclusive ${categoryFilter === "Floristenbedarf" ? "Florist Supplies" : categoryFilter} selection.`
+                  : `Entdecken Sie unsere exklusive ${categoryFilter}-Auswahl.`)
+              : (language === 'EN'
+                  ? "Explore our complete range of hand-crafted luxury bouquets."
+                  : "Entdecken Sie unser komplettes Sortiment an handgefertigten Luxus-Bouquets.")}
           </p>
         </header>
 
         {isLoading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="animate-spin text-neon-rose" size={40} />
+            {/* ✅ FIXED: Loader color updated to Champagne Gold */}
+            <Loader2 className="animate-spin text-[#C9A24D]" size={40} />
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center text-gray-500 py-20 flex flex-col items-center">
-            <p className="mb-4">No products found in this category.</p>
+          <div className="text-center text-[#1F1F1F]/40 py-20 flex flex-col items-center font-medium">
+            <p className="mb-4">{language === 'EN' ? "No products found in this category." : "Keine Produkte in dieser Kategorie gefunden."}</p>
             {/* Show a button to go back to all products if empty */}
             {categoryFilter && (
-                <a href="/shop" className="text-neon-rose hover:underline text-sm">
-                    View all products
+                <a href="/shop" className="text-[#C9A24D] hover:underline text-sm font-bold">
+                    {language === 'EN' ? "View all products" : "Alle Produkte anzeigen"}
                 </a>
             )}
           </div>
@@ -82,10 +92,11 @@ function ShopContent() {
               <ProductCard 
                 key={product.id}
                 id={product.id}
-                title={product.name} 
+                title={language === 'EN' && product.name_en ? product.name_en : product.name} 
                 price={`€${product.price}`} 
                 category={product.category}
                 image={product.images?.[0] || "/products/red-glitter.jpg"} 
+                videoUrl={product.video_url} // ✨ NEW: Passing video data to show the sparkle badge
                 delay={index * 0.1} 
               />
             ))}
@@ -102,8 +113,9 @@ function ShopContent() {
 export default function ShopPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-        <Loader2 className="animate-spin text-neon-rose" size={40} />
+      /* ✅ FIXED: Fallback background and loader updated */
+      <div className="min-h-screen bg-[#F6EFE6] flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#C9A24D]" size={40} />
       </div>
     }>
       <ShopContent />
