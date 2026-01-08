@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search } from "lucide-react";
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle } from "lucide-react";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'paid' | 'shipped'>('paid');
+  const [searchTerm, setSearchTerm] = useState(""); // ✨ New Search State
 
   // ✨ SHIPPING MODAL STATE
   const [shippingModal, setShippingModal] = useState<{ open: boolean; orderId: number | null }>({ open: false, orderId: null });
@@ -69,8 +70,8 @@ export default function AdminOrdersPage() {
         });
         
         if (!response.ok) {
-           console.error("Email API failed:", await response.text());
-           // We don't stop the UI update here, but we log the error
+            console.error("Email API failed:", await response.text());
+            // We don't stop the UI update here, but we log the error
         }
 
         // 4. Update UI Instantly (Move order to 'Shipped' tab)
@@ -96,15 +97,21 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Filter orders based on the active tab
+  // Filter orders based on the active tab AND search term
   const displayedOrders = orders.filter(order => {
-    if (activeTab === 'paid') {
-      // Show 'paid' or 'pending' orders in the first tab
-      return order.status === 'paid' || order.status === 'pending';
-    } else {
-      // Show 'shipped' or 'completed' in the second tab
-      return order.status === 'shipped' || order.status === 'completed';
-    }
+    // Tab Filter
+    const matchesTab = activeTab === 'paid' 
+      ? (order.status === 'paid' || order.status === 'pending')
+      : (order.status === 'shipped' || order.status === 'completed');
+
+    // Search Filter
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      order.customer_name?.toLowerCase().includes(searchLower) ||
+      order.email?.toLowerCase().includes(searchLower) ||
+      order.id.toString().includes(searchLower);
+
+    return matchesTab && matchesSearch;
   });
 
   return (
@@ -114,35 +121,49 @@ export default function AdminOrdersPage() {
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-8 pb-20">
           
-          {/* HEADER & TABS */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h1 className="text-3xl font-bold flex items-center gap-3">
-              <Package className="text-neon-rose" /> Order Management
-            </h1>
-            
-            {/* TABS SWITCHER */}
-            <div className="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/10">
-              <button 
-                onClick={() => setActiveTab('paid')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'paid' ? 'bg-neon-rose text-white shadow-glow-rose' : 'text-gray-400 hover:text-white'}`}
-              >
-                <Clock size={16} /> Pending
-              </button>
-              <button 
-                onClick={() => setActiveTab('shipped')}
-                className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'shipped' ? 'bg-blue-600 text-white shadow-glow-blue' : 'text-gray-400 hover:text-white'}`}
-              >
-                <Truck size={16} /> Shipped History
-              </button>
+          {/* HEADER & CONTROLS */}
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <h1 className="text-3xl font-bold flex items-center gap-3">
+                <Package className="text-neon-rose" /> Order Management
+              </h1>
+              
+              {/* TABS SWITCHER */}
+              <div className="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/10 self-start md:self-auto">
+                <button 
+                  onClick={() => setActiveTab('paid')}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'paid' ? 'bg-neon-rose text-white shadow-glow-rose' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <Clock size={16} /> Pending
+                </button>
+                <button 
+                  onClick={() => setActiveTab('shipped')}
+                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'shipped' ? 'bg-blue-600 text-white shadow-glow-blue' : 'text-gray-400 hover:text-white'}`}
+                >
+                  <Truck size={16} /> Shipped History
+                </button>
+              </div>
+            </div>
+
+            {/* SEARCH BAR */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+              <input 
+                type="text" 
+                placeholder="Search by customer name, email, or Order ID..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:border-neon-rose focus:ring-1 focus:ring-neon-rose transition-all"
+              />
             </div>
           </div>
 
           {isLoading ? (
-            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-neon-purple" size={40} /></div>
+            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-neon-rose" size={40} /></div>
           ) : displayedOrders.length === 0 ? (
             <div className="bg-white/5 p-12 rounded-2xl text-center border border-white/10 text-gray-500 flex flex-col items-center gap-4">
               <Package size={48} className="opacity-20" />
-              <p>No {activeTab} orders found.</p>
+              <p>No {activeTab} orders found {searchTerm && "matching your search"}.</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -152,7 +173,17 @@ export default function AdminOrdersPage() {
                   {/* ORDER HEADER */}
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-white/5 pb-4">
                     <div>
-                      <h3 className="text-xl font-bold text-white">{order.customer_name}</h3>
+                      <div className="flex items-center gap-3">
+                         <h3 className="text-xl font-bold text-white">{order.customer_name}</h3>
+                         {/* Status Badge */}
+                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${
+                           order.status === 'paid' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                           order.status === 'shipped' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+                           'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                         }`}>
+                           {order.status}
+                         </span>
+                      </div>
                       <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                         <span className="flex items-center gap-1"><Mail size={12} /> {order.email || order.customer_email}</span>
                         <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(order.created_at).toLocaleDateString()}</span>
@@ -188,13 +219,21 @@ export default function AdminOrdersPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     
                     {/* SHIPPING INFO */}
-                    <div className="space-y-2 text-sm text-gray-400">
-                      <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Shipping Address</h4>
-                      <p className="flex items-start gap-2">
-                        <MapPin size={14} className="mt-1 text-neon-purple" />
-                        <span className="text-white">{order.address}, {order.city}, {order.zip}</span>
-                      </p>
-                      <p className="pl-6 text-xs text-gray-500">Phone: {order.phone}</p>
+                    <div className="space-y-4 text-sm text-gray-400">
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Shipping Address</h4>
+                        <p className="flex items-start gap-2">
+                          <MapPin size={14} className="mt-1 text-neon-rose" />
+                          <span className="text-white">
+                            {order.address}<br/>
+                            {order.city}, {order.zip}
+                          </span>
+                        </p>
+                      </div>
+                      <div>
+                         <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Contact</h4>
+                         <p className="pl-6 text-white">{order.phone}</p>
+                      </div>
                     </div>
 
                     {/* ITEMS LIST */}
@@ -203,7 +242,7 @@ export default function AdminOrdersPage() {
                       <div className="space-y-3">
                         {order.items && order.items.map((item: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-4 bg-black/30 p-3 rounded-lg border border-white/5">
-                            <div className="w-12 h-12 bg-gray-800 rounded overflow-hidden flex-shrink-0">
+                            <div className="w-12 h-12 bg-gray-800 rounded overflow-hidden flex-shrink-0 border border-white/10">
                               <img src={item.image} className="w-full h-full object-cover" />
                             </div>
                             <div className="flex-1">

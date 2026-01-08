@@ -14,7 +14,7 @@ const features = [
     icon: Sparkles,
     title: "Crystal Glitter Finish",
     description: "Our proprietary glitter application ensures maximum brilliance under any light.",
-    color: "purple"
+    color: "#D8C3A5"
   },
   {
     icon: Clock,
@@ -26,7 +26,7 @@ const features = [
     icon: Gift,
     title: "The Ultimate Gift",
     description: "Arrives in premium packaging designed to leave a lasting impression.",
-    color: "purple"
+    color: "#D8C3A5"
   }
 ];
 
@@ -63,7 +63,7 @@ export default function Features() {
             <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${
               feature.color === 'rose' 
                 ? 'bg-neon-rose/10 text-neon-rose shadow-[0_0_15px_rgba(243,229,171,0.2)]' 
-                : 'bg-neon-purple/10 text-neon-purple shadow-[0_0_15px_rgba(176,38,255,0.2)]'
+                : 'bg-neon-rose/10 text-neon-rose shadow-[0_0_15px_rgba(176,38,255,0.2)]'
             }`}>
               <feature.icon size={24} />
             </div>

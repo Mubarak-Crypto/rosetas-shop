@@ -25,7 +25,7 @@ export default function AdminSidebar() {
       {/* 🔴 MOBILE MENU BUTTON (Only visible on small screens) */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 right-4 z-50 bg-neon-purple text-white p-2 rounded-lg shadow-lg hover:bg-neon-purple/80 transition-colors"
+        className="md:hidden fixed top-4 right-4 z-50 bg-neon-rose text-white p-2 rounded-lg shadow-lg hover:bg-neon-rose/80 transition-colors"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -51,7 +51,7 @@ export default function AdminSidebar() {
         {/* HEADER */}
         <div className="p-8 border-b border-white/10 pt-12 md:pt-8">
           <h2 className="text-2xl font-bold tracking-tighter text-white">
-            ZAHRAK <span className="text-neon-purple text-xs tracking-widest block font-light">ADMIN PANEL</span>
+            ZAHRAK <span className="text-neon-rose text-xs tracking-widest block font-light">ADMIN PANEL</span>
           </h2>
         </div>
 
@@ -64,7 +64,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
               isActive("/admin/dashboard") 
-                ? "bg-neon-purple text-white shadow-glow-purple" 
+                ? "bg-neon-rose text-white shadow-glow-rose" 
                 : "text-gray-400 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -78,7 +78,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
               isActive("/admin/orders") 
-                ? "bg-neon-purple text-white shadow-glow-purple" 
+                ? "bg-neon-rose text-white shadow-glow-rose" 
                 : "text-gray-400 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -92,7 +92,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium ${
               isActive("/admin/products") 
-                ? "bg-neon-purple text-white shadow-glow-purple" 
+                ? "bg-neon-rose text-white shadow-glow-rose" 
                 : "text-gray-400 hover:text-white hover:bg-white/5"
             }`}
           >

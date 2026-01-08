@@ -89,9 +89,9 @@ export default function CartSidebar() {
 
                         {/* Extras (+Crown) */}
                         {item.extras && item.extras.length > 0 && (
-                          <div className="text-[10px] text-neon-purple mt-1 flex flex-wrap gap-1">
+                          <div className="text-[10px] text-neon-rose mt-1 flex flex-wrap gap-1">
                             {item.extras.map(e => (
-                              <span key={e} className="bg-neon-purple/10 px-1.5 py-0.5 rounded border border-neon-purple/20">+ {e}</span>
+                              <span key={e} className="bg-neon-rose/10 px-1.5 py-0.5 rounded border border-neon-rose/20">+ {e}</span>
                             ))}
                           </div>
                         )}

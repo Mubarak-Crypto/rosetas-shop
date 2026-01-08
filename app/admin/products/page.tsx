@@ -63,7 +63,7 @@ export default function AdminProducts() {
           </div>
           
           <Link href="/admin/products/new">
-            <button className="bg-neon-purple hover:bg-purple-600 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-glow-purple">
+            <button className="bg-neon-rose hover:bg-[#D8C3A5] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-glow-rose">
               <Plus size={20} />
               Add New Product
             </button>
@@ -77,7 +77,7 @@ export default function AdminProducts() {
             <input 
               type="text" 
               placeholder="Search products..." 
-              className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm focus:border-neon-purple outline-none transition-colors"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-sm focus:border-neon-rose outline-none transition-colors"
             />
           </div>
         </div>
@@ -86,7 +86,7 @@ export default function AdminProducts() {
         <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden min-h-[300px]">
           
           {isLoading ? (
-            <div className="flex items-center justify-center h-64 text-neon-purple">
+            <div className="flex items-center justify-center h-64 text-neon-rose">
               <Loader2 className="animate-spin" size={48} />
             </div>
           ) : products.length === 0 ? (
@@ -121,7 +121,7 @@ export default function AdminProducts() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-400">{product.category}</td>
-                    <td className="px-6 py-4 text-sm font-mono text-neon-purple">€{product.price}</td>
+                    <td className="px-6 py-4 text-sm font-mono text-neon-rose">€{product.price}</td>
                     <td className="px-6 py-4 text-sm text-gray-400">{product.stock} units</td>
                     <td className="px-6 py-4">
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide border ${

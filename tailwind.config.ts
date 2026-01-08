@@ -10,13 +10,23 @@ const config: Config = {
     extend: {
       colors: {
         midnight: "#050505",
-        "neon-rose": "#F3E5AB", // Champagne Cream
-        "neon-purple": "#b026ff",
+        
+        // ✨ NEW: Soft Red Theme
+        "neon-rose": "#C0574F",   // Primary Brand Color (Velvet Red)
+        "theme-red": "#C0574F",   // Explicit Red name
+        
+        // 🛑 SAFETY NET: Force "Purple" code to use Red
+        "neon-purple": "#C0574F", 
+        
         glass: "rgba(255, 255, 255, 0.05)",
       },
       boxShadow: {
-        "glow-rose": "0 0 20px rgba(243, 229, 171, 0.2)", // Soft, weak glow
-        "glow-purple": "0 0 20px rgba(176, 38, 255, 0.5)",
+        // Red Glow
+        "glow-rose": "0 0 20px rgba(192, 87, 79, 0.4)", 
+        "glow-red": "0 0 20px rgba(192, 87, 79, 0.4)",
+        
+        // Safety Net: Force Purple Glow to be Red Glow
+        "glow-purple": "0 0 20px rgba(192, 87, 79, 0.4)", 
       },
     },
   },

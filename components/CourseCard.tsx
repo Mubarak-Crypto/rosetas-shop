@@ -16,7 +16,7 @@ export default function CourseCard({ title, price, duration, image, level }: Cou
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      className="group relative bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-neon-purple/50 transition-all cursor-pointer"
+      className="group relative bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:border-neon-rose/50 transition-all cursor-pointer"
     >
       {/* Thumbnail */}
       <div className="relative h-48 w-full overflow-hidden">
@@ -29,7 +29,7 @@ export default function CourseCard({ title, price, duration, image, level }: Cou
         </div>
         
         {/* Badges */}
-        <div className="absolute top-3 left-3 bg-neon-purple text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider shadow-glow-purple">
+        <div className="absolute top-3 left-3 bg-neon-rose text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider shadow-glow-rose">
           Digital Course
         </div>
       </div>
@@ -37,13 +37,13 @@ export default function CourseCard({ title, price, duration, image, level }: Cou
       {/* Content */}
       <div className="p-5">
         <div className="flex justify-between items-start mb-2">
-          <p className="text-xs text-neon-purple font-bold uppercase tracking-widest">{level}</p>
+          <p className="text-xs text-neon-rose font-bold uppercase tracking-widest">{level}</p>
           <div className="flex items-center gap-1 text-gray-400 text-xs">
             <Clock size={12} /> {duration}
           </div>
         </div>
         
-        <h3 className="text-lg font-bold text-white mb-2 leading-tight group-hover:text-neon-purple transition-colors">
+        <h3 className="text-lg font-bold text-white mb-2 leading-tight group-hover:text-neon-rose transition-colors">
           {title}
         </h3>
         

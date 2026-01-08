@@ -3,15 +3,19 @@
 @theme {
   --color-midnight: #050505;
   
-  /* Champagne Cream */
-  --color-neon-rose: #F3E5AB;
-  
-  --color-neon-purple: #b026ff;
+  /* ✨ NEW: Velvet Red */
+  --color-neon-rose: #C0574F;
+  --color-theme-red: #C0574F;
+
+  /* SAFETY: Map Purple to Red */
+  --color-neon-purple: #C0574F;
+
   --color-glass: rgba(255, 255, 255, 0.05);
   
-  /* Soft Glow */
-  --shadow-glow-rose: 0 0 20px rgba(243, 229, 171, 0.2);
-  --shadow-glow-purple: 0 0 20px rgba(176, 38, 255, 0.5);
+  /* Red Glows */
+  --shadow-glow-rose: 0 0 20px rgba(192, 87, 79, 0.4);
+  --shadow-glow-red: 0 0 20px rgba(192, 87, 79, 0.4);
+  --shadow-glow-purple: 0 0 20px rgba(192, 87, 79, 0.4);
 }
 
 body {
@@ -19,28 +23,28 @@ body {
   color: white;
 }
 
-/* ✨ THE FIX: Force Black Text on Gold Buttons */
-/* This makes the "Shop Collection" text visible again */
-.bg-neon-rose {
-  color: #050505 !important;
+/* Force White Text on Red Buttons (Better Contrast than Black) */
+.bg-neon-rose, .bg-theme-red {
+  color: #FFFFFF !important;
+  font-weight: 600;
 }
 
-/* Sparkle Animation */
+/* Sparkle Animation - Velvet Edition */
 .sparkle-text {
   background: linear-gradient(
     to right,
-    #bf953f,
-    #fcf6ba,
-    #b38728,
-    #fbf5b7,
-    #aa771c
+    #C0574F, /* Red Start */
+    #FFD1D1, /* Light Pink/White Center */
+    #C0574F, /* Red End */
+    #8A3A34, /* Darker Deep Red */
+    #C0574F
   );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   animation: shine 3s infinite linear;
   background-size: 200% auto;
-  text-shadow: 0px 0px 10px rgba(255, 215, 0, 0.3);
+  text-shadow: 0px 0px 10px rgba(192, 87, 79, 0.4);
 }
 
 @keyframes shine {

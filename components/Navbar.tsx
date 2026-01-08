@@ -14,12 +14,12 @@ export default function Navbar() {
       <Link href="/" className="flex items-center gap-3 group">
         
         {/* 1. The Custom "R" Image (Exact Brand Match) */}
-        {/* Make sure you add 'r-logo.png' to your public folder! */}
         <div className="relative w-12 h-12 md:w-14 md:h-14">
           <img 
             src="/r-logo.png" 
             alt="R Logo" 
-            className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" 
+            // ✨ FIX ADDED HERE: 'mix-blend-screen' removes the black box background
+            className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] mix-blend-screen" 
           />
         </div>
         
