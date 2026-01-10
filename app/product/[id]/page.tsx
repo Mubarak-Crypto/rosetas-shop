@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react"; // Added useRef
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play } from "lucide-react"; // ✨ Added Play icon
+import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck } from "lucide-react"; // ✨ Added Play & ShieldCheck icons
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation"; // ✨ Added useSearchParams for verification logic
 import Navbar from "../../../components/Navbar";
 import { supabase } from "../../../lib/supabase";
 import { useCart } from "../../../context/CartContext"; 
@@ -12,9 +12,13 @@ import { useLanguage } from "../../../context/LanguageContext"; // ✨ Added Lan
 
 export default function ProductPage() {
   const params = useParams();
+  const searchParams = useSearchParams(); // ✨ NEW: Access URL params for verification
   const { addToCart, setIsCartOpen } = useCart();
   const { language, t } = useLanguage(); // ✨ NEW: Access language and translation function
   const videoRef = useRef<HTMLVideoElement>(null); // ✨ NEW: Ref for lightbox video controls
+
+  // ✨ NEW: Check if this user arrived via a private verified review link
+  const isVerifiedBuyer = searchParams.get('verify') === 'true';
 
   const [product, setProduct] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,7 +65,8 @@ export default function ProductPage() {
         
         // ✨ UPDATED: Multiple Video Logic
         const videos = Array.isArray(data.video_url) ? data.video_url : (data.video_url ? [data.video_url] : []);
-        if (videos.length > 0) {
+        // ✅ FIXED: Ensure valid video source exists before showing video view
+        if (videos.length > 0 && videos[0] && videos[0].trim() !== "") {
           setActiveVideo(videos[0]);
           setShowVideo(true);
         }
@@ -71,6 +76,7 @@ export default function ProductPage() {
           .from('reviews')
           .select('*')
           .eq('product_id', params.id)
+          .eq('status', 'approved') // ✅ RESTRICTION: Only show approved reviews publicly
           .order('created_at', { ascending: false });
         
         if (reviewData) setReviews(reviewData);
@@ -84,20 +90,18 @@ export default function ProductPage() {
   // ✨ UPDATED: INDEX BRIDGE IMAGE SWAP LOGIC
   const handleOptionSelect = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
-    setShowVideo(false); // ✨ Switch to image view when a color is picked
+    
+    // Logic Gate: Only switch images if the variant is color-related
+    const isColorVariant = optionName.toLowerCase() === 'color' || optionName.toLowerCase() === 'farbe';
 
-    if (product?.images && product.images.length > 0) {
-      // Find the specific variant configuration
+    if (isColorVariant && product?.images && product.images.length > 0) {
+      setShowVideo(false); 
       const variant = product.variants.find((v: any) => v.name === optionName);
       
       if (variant && variant.values) {
-        // Turn the comma-separated values into an array
+        // Values array logic preserved to maintain index bridge
         const valuesArray = variant.values.toString().split(',').map((s: string) => s.trim());
-        
-        // Find the index of the clicked color (e.g., 0, 1, or 2)
         const clickedIndex = valuesArray.indexOf(value);
-        
-        // Match that index to the image array position
         if (product.images[clickedIndex]) {
           setActiveImage(product.images[clickedIndex]);
         }
@@ -113,8 +117,44 @@ export default function ProductPage() {
     }
   };
 
-  const calculateUnitTotal = () => {
+  // ✨ NEW: Logic to find stock for current selection
+  const getSelectedVariantStock = () => {
+    if (!product || !product.variants) return 999;
+    
+    let lowestStock = 999;
+    let hasStockInfo = false;
+
+    product.variants.forEach((v: any) => {
+      const selectedValue = selectedOptions[v.name];
+      if (selectedValue && selectedValue.includes('| Stock:')) {
+        const stockMatch = selectedValue.match(/\| Stock:\s*(\d+)/);
+        if (stockMatch) {
+          hasStockInfo = true;
+          lowestStock = Math.min(lowestStock, parseInt(stockMatch[1]));
+        }
+      }
+    });
+
+    return hasStockInfo ? lowestStock : (product.stock || 0);
+  };
+
+  // ✨ NEW: Helper to extract price from variants like "50 Roses (€100)"
+  const getBasePrice = () => {
     if (!product) return 0;
+    let currentBase = product.price;
+
+    Object.values(selectedOptions).forEach(val => {
+      const priceMatch = val.match(/\(€(\d+)\)/);
+      if (priceMatch && priceMatch[1]) {
+        currentBase = parseFloat(priceMatch[1]);
+      }
+    });
+
+    return currentBase;
+  };
+
+  const calculateUnitTotal = () => {
+    const base = getBasePrice(); // ✨ Use dynamic base price from variant
     let extrasCost = 0;
     if (product.extras && Array.isArray(product.extras)) {
       product.extras.forEach((extra: any) => {
@@ -123,12 +163,13 @@ export default function ProductPage() {
         }
       });
     }
-    return product.price + extrasCost;
+    return base + extrasCost;
   };
 
   const handleAddToCart = () => {
     if (!product) return;
 
+    const unitPrice = calculateUnitTotal();
     const optionsKey = JSON.stringify(selectedOptions);
     const extrasKey = JSON.stringify(selectedExtras.sort());
     const uniqueId = `${product.id}-${optionsKey}-${extrasKey}-${customText}`;
@@ -138,11 +179,13 @@ export default function ProductPage() {
       uniqueId,
       // ✨ Use logic for translated name
       name: language === 'EN' && product.name_en ? product.name_en : product.name, 
-      price: calculateUnitTotal(),
+      price: unitPrice,
       image: activeImage || "/placeholder.jpg",
       quantity: quantity,
       options: selectedOptions,
       extras: selectedExtras,
+      // ✅ FIXED: Passing category ensures the €80 limit triggers correctly
+      category: product.category,
       customText: customText
     });
     
@@ -161,18 +204,14 @@ export default function ProductPage() {
         rating: newReview.rating,
         comment: newReview.comment,
         source: 'website',
-        is_verified: false
+        is_verified: true, // ✅ Set to true as they used a private link
+        status: 'pending' // ✅ Admin must still approve manually
       }
     ]);
 
     if (!error) {
-      const { data } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('product_id', product.id)
-        .order('created_at', { ascending: false });
-      if (data) setReviews(data);
       setNewReview({ customer_name: "", rating: 5, comment: "" });
+      // Show a success alert or message here if desired
     }
     setIsSubmittingReview(false);
   };
@@ -189,13 +228,17 @@ export default function ProductPage() {
 
   const unitPrice = calculateUnitTotal();
   const totalPrice = unitPrice * quantity;
+  const currentVariantStock = getSelectedVariantStock(); // ✨ Get variant stock
 
   const allOptionsSelected = product.variants 
     ? product.variants.every((v: any) => selectedOptions[v.name]) 
     : true;
 
-  const isRibbonValid = customText.trim().length > 0;
-  const canAddToCart = allOptionsSelected && isRibbonValid;
+  // ✨ UPDATED: Logic now uses the database 'needs_ribbon' toggle instead of checking category
+  const isRibbonRequired = product.needs_ribbon === true;
+  const isRibbonValid = isRibbonRequired ? customText.trim().length > 0 : true;
+  const isCurrentlyInStock = currentVariantStock > 0; // ✨ Check specific selection stock
+  const canAddToCart = allOptionsSelected && isRibbonValid && isCurrentlyInStock;
 
   const avgRating = reviews.length > 0 
     ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length 
@@ -214,10 +257,12 @@ export default function ProductPage() {
           <motion.div 
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
-            className="relative aspect-[4/5] w-full bg-black rounded-[3rem] border border-black/5 flex items-center justify-center overflow-hidden group shadow-2xl"
+            /* ✨ LUXURY UPDATE: Added luminous glow and white border instead of black */
+            className="relative aspect-[4/5] w-full bg-white rounded-[3rem] shadow-[0_20px_50px_rgba(255,255,255,0.8),0_0_20px_rgba(201,162,77,0.1)] border border-white flex items-center justify-center overflow-hidden group"
           >
             {showVideo && activeVideo ? (
                 <div className="relative w-full h-full cursor-zoom-in" onClick={() => setZoomVideo(activeVideo)}>
+                  {/* ✅ FIXED: Plays inline and loops automatically on page load */}
                   <video 
                       key={activeVideo}
                       src={activeVideo} 
@@ -228,7 +273,7 @@ export default function ProductPage() {
                       playsInline 
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                     <Maximize2 className="text-white drop-shadow-lg" size={48} />
+                      <Maximize2 className="text-white drop-shadow-lg" size={48} />
                   </div>
                 </div>
             ) : (
@@ -250,13 +295,13 @@ export default function ProductPage() {
                   </AnimatePresence>
                   
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                     <Maximize2 className="text-white drop-shadow-lg" size={48} />
+                      <Maximize2 className="text-white drop-shadow-lg" size={48} />
                   </div>
                 </div>
 
                 <button 
                   onClick={() => setZoomImage(activeImage)}
-                  className="absolute top-4 right-4 z-20 w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-[#C9A24D] hover:text-black transition-all"
+                  className="absolute top-4 right-4 z-20 w-10 h-10 bg-white/50 backdrop-blur-md rounded-full flex items-center justify-center text-[#1F1F1F] border border-white/20 hover:bg-[#D4C29A] transition-all"
                 >
                   <Maximize2 size={18} />
                 </button>
@@ -265,21 +310,26 @@ export default function ProductPage() {
           </motion.div>
 
           <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide items-center">
-            {productVideos.map((vidUrl: string, idx: number) => (
-                <button
-                    key={`vid-${idx}`}
-                    onClick={() => {
-                        setActiveVideo(vidUrl);
-                        setShowVideo(true);
-                    }}
-                    className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 flex items-center justify-center bg-black ${
-                        (showVideo && activeVideo === vidUrl) ? "border-[#C9A24D] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
-                    }`}
-                >
-                    <Play size={24} className="text-white fill-current" />
-                    <span className="absolute bottom-1 text-[8px] font-bold text-white uppercase">Video {productVideos.length > 1 ? idx + 1 : ""}</span>
-                </button>
-            ))}
+            {productVideos.map((vidUrl: string, idx: number) => {
+                const isValidVideo = vidUrl && vidUrl.trim() !== "";
+                if (!isValidVideo) return null;
+
+                return (
+                  <button
+                      key={`vid-${idx}`}
+                      onClick={() => {
+                          setActiveVideo(vidUrl);
+                          setShowVideo(true);
+                      }}
+                      className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 flex items-center justify-center bg-black ${
+                          (showVideo && activeVideo === vidUrl) ? "border-[#D4C29A] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
+                      }`}
+                  >
+                      <Play size={24} className="text-white fill-current" />
+                      <span className="absolute bottom-1 text-[8px] font-bold text-white uppercase">Video {productVideos.length > 1 ? idx + 1 : ""}</span>
+                  </button>
+                );
+            })}
 
             {product.images && product.images.map((img: string, idx: number) => (
               <button
@@ -289,7 +339,7 @@ export default function ProductPage() {
                     setShowVideo(false);
                 }}
                 className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${
-                  (!showVideo && activeImage === img) ? "border-[#C9A24D] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
+                  (!showVideo && activeImage === img) ? "border-[#D4C29A] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
                 }`}
               >
                 <img src={img} className="w-full h-full object-cover" />
@@ -309,23 +359,23 @@ export default function ProductPage() {
           </Link>
 
           <div>
-            <div className="flex items-center gap-2 mb-4 text-[#C9A24D] text-sm font-bold tracking-wider uppercase">
+            <div className="flex items-center gap-2 mb-4 text-[#D4C29A] text-sm font-bold tracking-wider uppercase">
               <Star size={14} fill="currentColor" />
-              {language === 'EN' && product.category === "Floristenbedarf" ? "Florist Supplies" : product.category || "Luxury Collection"}
+              {language === 'EN' && (product.category === "Floristenbedarf" || product.category === "supplies") ? "Florist Supplies" : product.category || "Luxury Collection"}
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-[#1F1F1F]">
               {language === 'EN' && product.name_en ? product.name_en : product.name}
             </h1>
             <div className="flex items-end gap-4">
               <span className="text-3xl font-bold text-[#1F1F1F]">€{totalPrice.toFixed(2)}</span>
-              {product.stock > 0 ? (
-                <span className="text-green-600 text-sm mb-1.5 flex items-center gap-1 font-bold"><Check size={14} /> {t('in_stock')}</span>
+              {isCurrentlyInStock ? (
+                <span className="text-green-600 text-sm mb-1.5 flex items-center gap-1 font-bold"><Check size={14} /> {t('in_stock')} ({currentVariantStock})</span>
               ) : (
                 <span className="text-red-600 text-sm mb-1.5 flex items-center gap-1 font-bold">{t('out_of_stock')}</span>
               )}
             </div>
             
-            <div className="flex items-center gap-2 mt-4 text-[#C9A24D]">
+            <div className="flex items-center gap-2 mt-4 text-[#D4C29A]">
               <div className="flex">
                 {[1, 2, 3, 4, 5].map((s) => (
                   <Star key={s} size={14} fill={s <= avgRating ? "currentColor" : "none"} />
@@ -341,35 +391,56 @@ export default function ProductPage() {
             {language === 'EN' && product.description_en ? product.description_en : product.description}
           </p>
 
+          {/* ✨ GRID LAYOUT FOR VARIANTS - FIXED */}
           {product.variants && product.variants.length > 0 && (
             <div className="space-y-6">
               {product.variants.map((variant: any, idx: number) => {
                 const values = variant.values ? variant.values.toString().split(',').map((s: string) => s.trim()) : [];
                 return (
                   <div key={`${variant.name}-${idx}`}>
-                    <label className="text-xs font-bold text-[#1F1F1F]/40 block mb-3 uppercase tracking-widest">{variant.name}</label>
-                    <div className="flex flex-wrap gap-3">
+                    <label className="text-xs font-bold text-[#1F1F1F]/40 block mb-4 uppercase tracking-widest">{variant.name}</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {values.map((val: string) => {
                         const isSelected = selectedOptions[variant.name] === val;
+                        
+                        // Parse "50 Roses (€100) | Stock: 5"
+                        const cleanLabel = val.split('(')[0].split('|')[0].trim();
+                        const subLabel = val.includes('(') ? val.split('(')[1].split(')')[0] : "";
+                        const itemStockMatch = val.match(/\| Stock:\s*(\d+)/);
+                        const itemStock = itemStockMatch ? parseInt(itemStockMatch[1]) : 999;
+
                         return (
                           <button
                             key={`${variant.name}-${val}`}
                             onClick={() => handleOptionSelect(variant.name, val)}
-                            className={`px-6 py-3 rounded-xl text-sm font-bold transition-all border flex items-center justify-center ${
-                              isSelected
-                                ? "bg-[#1F1F1F] border-[#1F1F1F] shadow-lg"
-                                : "bg-white text-[#1F1F1F]/40 border-black/5 hover:border-[#1F1F1F] hover:text-[#1F1F1F]"
-                            }`}
+                            disabled={itemStock <= 0}
+                            /* ✨ FORCED INLINE STYLING: Fixes text visibility and prevents black blob */
+                            style={{
+                              backgroundColor: isSelected ? "#1F1F1F" : (itemStock <= 0 ? "#F9F9F9" : "white"),
+                              color: isSelected ? "white" : (itemStock <= 0 ? "#CCC" : "#1F1F1F"),
+                              borderColor: isSelected ? "#1F1F1F" : "rgba(0,0,0,0.05)",
+                              borderRadius: "1rem",
+                              padding: "1rem",
+                              borderWidth: "2px",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              transition: "all 0.2s ease",
+                              opacity: itemStock <= 0 ? 0.5 : 1,
+                              cursor: itemStock <= 0 ? 'not-allowed' : 'pointer'
+                            }}
+                            className="font-bold text-sm shadow-sm hover:border-[#D4C29A]"
                           >
-                            <span 
-                                style={{ 
-                                    color: isSelected ? 'white !important' : 'inherit',
-                                    fontWeight: isSelected ? '800' : '500' 
-                                }}
-                                className={isSelected ? "!text-white" : ""}
-                            >
-                                {val}
-                            </span>
+                            <span className="uppercase tracking-tight font-bold text-xs" style={{ color: "inherit" }}>{cleanLabel}</span>
+                            {subLabel && (
+                              <span style={{ fontSize: "9px", opacity: isSelected ? 0.6 : 1, color: isSelected ? "white" : "#D4C29A" }}>
+                                {subLabel}
+                              </span>
+                            )}
+                            {itemStock <= 5 && itemStock > 0 && (
+                              <span className="text-[8px] mt-1 text-red-400 font-bold">Only {itemStock} left</span>
+                            )}
                           </button>
                         );
                       })}
@@ -380,31 +451,34 @@ export default function ProductPage() {
             </div>
           )}
           
-          <div className="space-y-3 pt-6 border-t border-black/5">
-            <div className="flex justify-between items-end">
-              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#C9A24D]">
-                <span>{t('ribbon_label')}</span>
-              </label>
-            </div>
+          {/* ✨ PERSONALIZATION SECTION */}
+          {product.needs_ribbon && (
+            <div className="space-y-3 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2">
+              <div className="flex justify-between items-end">
+                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#D4C29A]">
+                  <span>{t('ribbon_label')}</span>
+                </label>
+              </div>
 
-            <input 
-              type="text" 
-              placeholder={t('ribbon_placeholder')} 
-              value={customText} 
-              onChange={(e) => setCustomText(e.target.value)}
-              className={`w-full bg-white border rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none transition-all placeholder:text-gray-300 ${
-                 !customText.trim() 
-                  ? "border-red-200 focus:border-red-500" 
-                  : "border-black/5 focus:border-[#C9A24D]"
-              }`}
-            />
-            
-            {!customText.trim() && (
-              <p className="text-red-500 text-xs flex items-center gap-1 font-bold animate-pulse">
-                <AlertCircle size={12} /> {t('ribbon_error')}
-              </p>
-            )}
-          </div>
+              <input 
+                type="text" 
+                placeholder={t('ribbon_placeholder')} 
+                value={customText} 
+                onChange={(e) => setCustomText(e.target.value)}
+                className={`w-full bg-white border rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none transition-all placeholder:text-gray-300 ${
+                    !customText.trim() 
+                    ? "border-red-200 focus:border-red-500" 
+                    : "border-black/5 focus:border-[#D4C29A]"
+                }`}
+              />
+              
+              {!customText.trim() && (
+                <p className="text-red-500 text-xs flex items-center gap-1 font-bold animate-pulse">
+                  <AlertCircle size={12} /> {t('ribbon_error')}
+                </p>
+              )}
+            </div>
+          )}
 
           {product.extras && product.extras.length > 0 && (
             <div className="space-y-4 pt-4 border-t border-black/5">
@@ -421,7 +495,7 @@ export default function ProductPage() {
                       key={idx}
                       className={`flex items-center p-2 rounded-xl border transition-all ${
                         isSelected 
-                          ? "bg-[#C9A24D]/10 border-[#C9A24D] shadow-sm" 
+                          ? "bg-[#D4C29A]/10 border-[#D4C29A] shadow-sm" 
                           : "bg-white border-black/5 hover:border-black/20"
                       }`}
                     >
@@ -446,7 +520,7 @@ export default function ProductPage() {
                         >
                             <div className="flex items-center gap-3">
                                 <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors flex-shrink-0 ${
-                                isSelected ? "bg-[#C9A24D] border-[#C9A24D]" : "border-gray-300"
+                                isSelected ? "bg-[#D4C29A] border-[#D4C29A]" : "border-gray-300"
                                 }`}>
                                 {isSelected && <Check size={14} style={{ color: 'white' }} />}
                                 </div>
@@ -455,7 +529,7 @@ export default function ProductPage() {
                                 {extra.name}
                                 </span>
                             </div>
-                            <span className="text-sm text-[#C9A24D] font-bold ml-2">+€{extra.price}</span>
+                            <span className="text-sm text-[#D4C29A] font-bold ml-2">+€{extra.price}</span>
                         </button>
                     </div>
                   );
@@ -466,41 +540,39 @@ export default function ProductPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-black/5 mt-4">
             <div className="flex items-center bg-white rounded-full border border-black/5 px-4 py-3 w-fit shadow-sm">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:text-[#C9A24D] text-gray-300 transition-colors"><Minus size={18} /></button>
+              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:text-[#D4C29A] text-gray-300 transition-colors"><Minus size={18} /></button>
               <span className="w-12 text-center font-bold text-[#1F1F1F]">{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)} className="p-1 hover:text-[#C9A24D] text-gray-300 transition-colors"><Plus size={18} /></button>
+              <button onClick={() => setQuantity(quantity + 1)} className="p-1 hover:text-[#D4C29A] text-gray-300 transition-colors"><Plus size={18} /></button>
             </div>
             
+            {/* ✨ LUXURY UPDATE: Cart Button remains Champagne Gold (#D4C29A) */}
             <button 
               onClick={handleAddToCart} 
               disabled={!canAddToCart} 
-              className={`flex-1 font-bold rounded-full py-4 transition-all flex items-center justify-center gap-2 ${
-                canAddToCart 
-                  ? "bg-[#1F1F1F] text-white shadow-lg hover:scale-[1.02] active:scale-95 cursor-pointer" 
-                  : "bg-black/5 text-[#1F1F1F]/20 cursor-not-allowed"
-              }`}
+              className={`flex-1 font-bold rounded-full py-4 transition-all flex items-center justify-center gap-2 
+                ${canAddToCart 
+                  ? "bg-[#D4C29A] border-2 border-white shadow-[0_10px_20px_rgba(212,194,154,0.3)] hover:shadow-[0_15px_30px_rgba(212,194,154,0.5)] hover:bg-[#C4B28A] scale-100 active:scale-95 cursor-pointer text-white" 
+                  : "bg-black/5 text-[#1F1F1F]/20 cursor-not-allowed border-2 border-transparent"
+                }`}
             >
-              <ShoppingBag size={20} style={{ color: canAddToCart ? 'white !important' : 'inherit' }} />
-              <span 
-                className={canAddToCart ? "!text-white" : ""}
-                style={{ color: canAddToCart ? 'white !important' : 'inherit' }}
-              >
+              <ShoppingBag size={20} className={canAddToCart ? "text-white" : "text-inherit"} />
+              <span className={canAddToCart ? "text-white" : ""}>
                 {canAddToCart 
                   ? `${t('add_to_cart')} - €${totalPrice.toFixed(2)}` 
-                  : !allOptionsSelected ? t('select_options') : t('ribbon_placeholder')}
+                  : !isCurrentlyInStock ? t('out_of_stock') : !allOptionsSelected ? t('select_options') : t('ribbon_placeholder')}
               </span>
             </button>
           </div>
         </motion.div>
       </div>
 
-      {/* ✨ REVIEWS SECTION --- */}
+      {/* REVIEWS SECTION */}
       <section className="max-w-7xl mx-auto px-6 pt-24 border-t border-black/5 mt-24">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
           <div className="space-y-8">
             <div>
               <h2 className="text-3xl font-bold mb-2">{t('reviews_title')}</h2>
-              <div className="flex items-center gap-2 text-[#C9A24D]">
+              <div className="flex items-center gap-2 text-[#D4C29A]">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map((s) => (
                     <Star key={s} size={20} fill={s <= avgRating ? "currentColor" : "none"} />
@@ -512,34 +584,53 @@ export default function ProductPage() {
               </div>
             </div>
 
-            <form onSubmit={handleReviewSubmit} className="bg-white p-6 rounded-3xl shadow-sm border border-black/5 space-y-4">
-              <h3 className="font-bold uppercase tracking-widest text-xs opacity-40">{t('write_review')}</h3>
-              <input 
-                type="text" placeholder={language === 'EN' ? "Your Name" : "Dein Name"} required
-                className="w-full bg-[#F6EFE6] p-3 rounded-xl outline-none text-sm font-bold"
-                value={newReview.customer_name}
-                onChange={e => setNewReview({...newReview, customer_name: e.target.value})}
-              />
-              <div className="flex gap-2 text-[#C9A24D]">
-                {[1,2,3,4,5].map(star => (
-                  <button type="button" key={star} onClick={() => setNewReview({...newReview, rating: star})}>
-                    <Star size={18} fill={newReview.rating >= star ? "currentColor" : "none"} />
-                  </button>
-                ))}
+            {/* ✅ Verified Review Logic */}
+            {isVerifiedBuyer ? (
+              <form onSubmit={handleReviewSubmit} className="bg-white p-6 rounded-3xl shadow-sm border border-black/5 space-y-4">
+                <h3 className="font-bold uppercase tracking-widest text-xs opacity-40">{t('write_review')}</h3>
+                <input 
+                  type="text" placeholder={language === 'EN' ? "Your Name" : "Dein Name"} required
+                  className="w-full bg-[#F6EFE6] p-3 rounded-xl outline-none text-sm font-bold"
+                  value={newReview.customer_name}
+                  onChange={e => setNewReview({...newReview, customer_name: e.target.value})}
+                />
+                <div className="flex gap-2 text-[#D4C29A]">
+                  {[1,2,3,4,5].map(star => (
+                    <button type="button" key={star} onClick={() => setNewReview({...newReview, rating: star})}>
+                      <Star size={18} fill={newReview.rating >= star ? "currentColor" : "none"} />
+                    </button>
+                  ))}
+                </div>
+                <textarea 
+                  placeholder={language === 'EN' ? "Share your thoughts..." : "Teile deine Gedanken..."} required rows={3}
+                  className="w-full bg-[#F6EFE6] p-3 rounded-xl outline-none text-sm font-medium"
+                  value={newReview.comment}
+                  onChange={e => setNewReview({...newReview, comment: e.target.value})}
+                />
+                <button 
+                  disabled={isSubmittingReview}
+                  className="w-full bg-[#1F1F1F] text-white py-3 rounded-xl font-bold hover:scale-[1.02] transition-transform disabled:opacity-50"
+                >
+                  {isSubmittingReview ? t('posting') : t('post_review')}
+                </button>
+              </form>
+            ) : (
+              <div className="bg-white/40 p-10 rounded-3xl border border-dashed border-[#D4C29A]/20 text-center space-y-4 shadow-sm">
+                <div className="w-12 h-12 bg-[#D4C29A]/10 rounded-full flex items-center justify-center mx-auto">
+                   <ShieldCheck className="text-[#D4C29A]" size={24} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-[#1F1F1F] mb-1">
+                    {language === 'EN' ? "Verified Reviews Only" : "Nur verifizierte Bewertungen"}
+                  </h3>
+                  <p className="text-xs text-[#1F1F1F]/40 font-medium leading-relaxed">
+                    {language === 'EN' 
+                      ? "To ensure absolute authenticity, reviews are exclusively restricted to verified buyers." 
+                      : "Um absolute Authentizität zu gewährleisten, sind Bewertungen ausschließlich verifizierten Käufern vorbehalten."}
+                  </p>
+                </div>
               </div>
-              <textarea 
-                placeholder={language === 'EN' ? "Share your thoughts..." : "Teile deine Gedanken..."} required rows={3}
-                className="w-full bg-[#F6EFE6] p-3 rounded-xl outline-none text-sm font-medium"
-                value={newReview.comment}
-                onChange={e => setNewReview({...newReview, comment: e.target.value})}
-              />
-              <button 
-                disabled={isSubmittingReview}
-                className="w-full bg-[#1F1F1F] text-white py-3 rounded-xl font-bold hover:scale-[1.02] transition-transform disabled:opacity-50"
-              >
-                {isSubmittingReview ? t('posting') : t('post_review')}
-              </button>
-            </form>
+            )}
           </div>
 
           <div className="lg:col-span-2 space-y-8">
@@ -558,7 +649,7 @@ export default function ProductPage() {
                         <span className="text-[10px] font-bold uppercase opacity-40 italic">via {review.source}</span>
                       )}
                     </div>
-                    <div className="flex text-[#C9A24D]">
+                    <div className="flex text-[#D4C29A]">
                       {[...Array(review.rating)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                     </div>
                   </div>
@@ -611,16 +702,19 @@ export default function ProductPage() {
                     className="relative w-full max-w-4xl"
                     onClick={(e) => e.stopPropagation()}
                 >
+                    {/* ✅ FIXED: Removed 'muted' so full sound plays in Zoom View */}
                     <video 
                         ref={videoRef}
                         src={zoomVideo} 
                         className="w-full max-h-[80vh] rounded-2xl shadow-2xl"
                         controls 
                         autoPlay 
-                        loop 
+                        loop={false} 
                     />
                     <div className="mt-4 text-center">
-                        <p className="text-white/60 text-xs uppercase tracking-widest font-bold">Sparkle View Active</p>
+                        <p className="text-white/60 text-xs uppercase tracking-widest font-bold">
+                          {language === 'EN' ? "Sparkle View with Sound" : "Glanz-Ansicht mit Ton"}
+                        </p>
                     </div>
                 </motion.div>
             )}

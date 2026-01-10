@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Loader2, Video, Globe } from "lucide-react"; // ✨ Added Globe icon
+import { Plus, Search, Edit, Trash2, Loader2, Video, Globe, Bookmark } from "lucide-react"; // ✨ Added Bookmark icon for Ribbon status
 import Link from "next/link";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
@@ -87,6 +87,7 @@ export default function AdminProducts() {
         {/* Products Table */}
         <div className="bg-white border border-black/5 rounded-2xl overflow-hidden min-h-[300px] shadow-sm">
           
+          {/*  */}
           {isLoading ? (
             <div className="flex items-center justify-center h-64 text-[#C9A24D]">
               <Loader2 className="animate-spin" size={48} />
@@ -100,7 +101,8 @@ export default function AdminProducts() {
               <thead className="bg-gray-50 text-[10px] uppercase text-[#1F1F1F]/50 font-bold tracking-widest border-b border-black/5">
                 <tr>
                   <th className="px-6 py-4">Product</th>
-                  <th className="px-6 py-4">Bilingual</th> {/* ✨ NEW: Language Status Column */}
+                  <th className="px-6 py-4">Bilingual</th>
+                  <th className="px-6 py-4">Ribbon</th> {/* ✨ NEW: Ribbon Mandatory Column */}
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
                   <th className="px-6 py-4">Stock</th>
@@ -119,7 +121,6 @@ export default function AdminProducts() {
                           ) : (
                             <div className="w-full h-full bg-black/5" />
                           )}
-                          {/* ✨ NEW: Video Badge Indicator */}
                           {product.video_url && (
                             <div className="absolute top-0 right-0 bg-[#C9A24D] p-0.5 rounded-bl">
                               <Video size={10} className="text-white" />
@@ -130,11 +131,23 @@ export default function AdminProducts() {
                       </div>
                     </td>
                     
-                    {/* ✨ NEW: Bilingual Status indicator */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded ${product.name ? 'bg-black text-white' : 'bg-gray-100 text-gray-300'}`}>DE</span>
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded ${product.name_en ? 'bg-[#C9A24D] text-white' : 'bg-gray-100 text-gray-300'}`}>EN</span>
+                      </div>
+                    </td>
+
+                    {/* ✨ NEW: Ribbon Status Indicator */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        {product.needs_ribbon ? (
+                          <span className="flex items-center gap-1 text-[10px] font-black uppercase text-[#C9A24D] bg-[#C9A24D]/10 px-2 py-1 rounded">
+                             <Bookmark size={10} fill="currentColor" /> Active
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-gray-300 uppercase">Disabled</span>
+                        )}
                       </div>
                     </td>
 
@@ -153,14 +166,12 @@ export default function AdminProducts() {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         
-                        {/* EDIT BUTTON (Now Linked) */}
                         <Link href={`/admin/products/edit/${product.id}`}>
                           <button className="p-2 hover:bg-black/5 rounded-lg text-[#1F1F1F]/40 hover:text-[#C9A24D] transition-colors">
                             <Edit size={16} />
                           </button>
                         </Link>
 
-                        {/* DELETE BUTTON (Now Functional) */}
                         <button 
                           onClick={() => handleDelete(product.id)}
                           className="p-2 hover:bg-red-50 rounded-lg text-[#1F1F1F]/40 hover:text-red-600 transition-colors"

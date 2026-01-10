@@ -18,8 +18,9 @@ interface ProductProps {
 export default function ProductCard({ id, title, price, category, image, delay, videoUrl }: ProductProps) {
   const { language } = useLanguage(); // ✨ Access current language
   
-  // ✨ Logic to check if there is at least one video
-  const hasVideo = Array.isArray(videoUrl) ? videoUrl.length > 0 : !!videoUrl;
+  // ✨ Refined Logic: Check if a valid video source exists and isn't just an empty string
+  const videoSrc = Array.isArray(videoUrl) ? videoUrl[0] : videoUrl;
+  const hasVideo = videoSrc && videoSrc.trim().length > 0;
 
   // ✨ Logic to translate hardcoded categories if they come from the database
   const translatedCategory = language === 'EN' && category === 'Floristenbedarf' ? 'Florist Supplies' : category;
@@ -32,17 +33,32 @@ export default function ProductCard({ id, title, price, category, image, delay, 
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ delay: delay, duration: 0.5 }}
-        className="group relative h-full bg-white/40 border border-black/5 rounded-2xl overflow-hidden hover:border-black/10 transition-all duration-300 flex flex-col"
+        /* ✅ FIXED: Background changed to Vanilla Cream/White blend for the lively feel */
+        className="group relative h-full bg-white/60 border border-black/5 rounded-2xl overflow-hidden hover:border-black/10 transition-all duration-300 flex flex-col"
       >
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-b from-transparent to-[#C9A24D]/10 pointer-events-none" />
 
         {/* Media Container */}
         <div className="h-72 w-full bg-black/10 flex items-center justify-center relative overflow-hidden">
-          <img 
-            src={image} 
-            alt={title} 
-            className="w-full h-full object-cover opacity-90 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700 ease-out" 
-          />
+          {/* ✨ FIXED MEDIA LOGIC: If a valid video exists, play it. Otherwise, show image. */}
+          {hasVideo ? (
+            <video
+              src={videoSrc}
+              autoPlay
+              muted
+              loop
+              playsInline
+              /* ✅ POSTER ADDED: This shows the image while the video is loading so no grey boxes appear */
+              poster={image}
+              className="w-full h-full object-cover opacity-90 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700 ease-out"
+            />
+          ) : (
+            <img 
+              src={image} 
+              alt={title} 
+              className="w-full h-full object-cover opacity-90 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700 ease-out" 
+            />
+          )}
           
           {/* ✨ NEW: Video Indicator Badge (Shows if product has a video) */}
           {/* ✅ FIXED: High-contrast text and forced white color for visibility */}
@@ -62,11 +78,12 @@ export default function ProductCard({ id, title, price, category, image, delay, 
             style={{ color: 'white' }} 
           />
 
-          {/* ✅ FIXED: Plus Button with forced icon visibility */}
-          <button className="absolute bottom-4 right-4 w-10 h-10 bg-[#1F1F1F] text-white rounded-full flex items-center justify-center translate-y-12 group-hover:translate-y-0 transition-transform duration-300 hover:scale-110 shadow-lg z-20">
+          {/* ✅ FIXED: Plus Button with NEW Luminous Glowing Style */}
+          {/* Background is now vibrant gold with a white border and soft gold radiance */}
+          <button className="absolute bottom-4 right-4 w-10 h-10 bg-[#C9A24D] text-white border-2 border-white rounded-full flex items-center justify-center translate-y-12 group-hover:translate-y-0 transition-all duration-300 hover:scale-110 shadow-[0_0_15px_rgba(201,162,77,0.5)] z-20">
             <Plus 
               size={20} 
-              style={{ color: 'white !important' }} 
+              style={{ color: 'white' }} 
               className="!text-white" 
             />
           </button>

@@ -33,10 +33,11 @@ export default function Impressum() {
               {language === 'EN' ? "Information according to § 5 TMG" : "Angaben gemäß § 5 TMG"}
             </h2>
             <p className="leading-relaxed text-[#1F1F1F]/70">
-              <span className="text-[#1F1F1F] font-bold block mb-1">Rosetas Bouquets</span>
+              {/* ✅ FIXED: Uses t('legal_business_type') to correctly show Einzelunternehmen in German */}
+              <span className="text-[#1F1F1F] font-bold block mb-1">{t('legal_business_type')}</span>
               Ashkab Albukaev<br />
               Albert-Schweitzer-Str. 5<br />
-              4579 Essen<br />
+              45279 Essen<br />
               Deutschland
             </p>
           </section>

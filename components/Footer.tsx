@@ -63,7 +63,7 @@ export default function Footer() {
             <p className="flex items-start gap-2 mt-4" style={forceWhite}>
               <MapPin size={14} className="text-[#C9A24D] mt-1 flex-shrink-0" />
               <span className="font-bold" style={forceWhite}>
-                Albert-Schweitzer-Str. 5<br />4579 Essen, Germany
+               Essen, Germany
               </span>
             </p>
           </div>

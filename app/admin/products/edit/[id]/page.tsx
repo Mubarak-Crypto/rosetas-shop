@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, Loader2, Crop, DollarSign, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe } from "lucide-react"; // ✨ Added Globe icon
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info } from "lucide-react"; // ✨ Added Info icon
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -21,7 +21,7 @@ export default function EditProductPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false); // ✅ FIXED: Changed setter from setIsLoading to setIsUploading
   const [isUploadingVideo, setIsUploadingVideo] = useState(false); // ✨ NEW: Video upload state
 
   // Form State
@@ -36,12 +36,17 @@ export default function EditProductPage() {
   const [descriptionEn, setDescriptionEn] = useState(""); // ✨ NEW: English Description State
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [needsRibbon, setNeedsRibbon] = useState(false); // ✨ NEW: Toggle state for ribbon requirement
   
   // Variants
   const [variants, setVariants] = useState<Variant[]>([]);
   const [isAddingVariant, setIsAddingVariant] = useState(false);
   const [newVariantName, setNewVariantName] = useState("");
   const [newVariantValues, setNewVariantValues] = useState("");
+  // ✨ NEW: Helper states for building a variant list with stock
+  const [tempValueName, setTempValueName] = useState("");
+  const [tempValueStock, setTempValueStock] = useState("");
+  const [tempList, setTempList] = useState<string[]>([]);
 
   // Extras
   const [extras, setExtras] = useState<Extra[]>([]);
@@ -86,6 +91,7 @@ export default function EditProductPage() {
         setVideoUrls(loadedVideos);
         setVariants(data.variants || []);
         setExtras(data.extras || []);
+        setNeedsRibbon(data.needs_ribbon || false); // ✨ Load ribbon toggle status
         setIsLoading(false);
       }
     };
@@ -230,17 +236,28 @@ export default function EditProductPage() {
   const getColorLabels = () => {
     const colorVariant = variants.find(v => v.name.toLowerCase() === 'color' || v.name.toLowerCase() === 'farbe');
     if (!colorVariant) return [];
-    return colorVariant.values.split(',').map(v => v.trim());
+    // Only return the part before the stock separator
+    return colorVariant.values.split(',').map(v => v.split('|')[0].trim());
   };
 
   // --- VARIANTS & EXTRAS ---
+  const handleAddVariantItem = () => {
+    if (!tempValueName) return;
+    // Format: "Red | Stock: 5" or "Red (€50) | Stock: 5"
+    const entry = `${tempValueName}${tempValueStock ? ` | Stock: ${tempValueStock}` : ''}`;
+    setTempList([...tempList, entry]);
+    setTempValueName("");
+    setTempValueStock("");
+  };
+
   const handleAddVariant = () => {
-    if (!newVariantName || !newVariantValues) return;
-    setVariants([...variants, { name: newVariantName, values: newVariantValues }]);
+    if (!newVariantName || tempList.length === 0) return;
+    setVariants([...variants, { name: newVariantName, values: tempList.join(', ') }]);
     setNewVariantName("");
-    setNewVariantValues("");
+    setTempList([]);
     setIsAddingVariant(false);
   };
+
   const removeVariant = (index: number) => {
     setVariants(variants.filter((_, i) => i !== index));
   };
@@ -282,7 +299,8 @@ export default function EditProductPage() {
         images,
         video_url: videoUrls, // ✨ Save multiple video URLs array
         variants,
-        extras // Save Extras (includes images now)
+        extras, // Save Extras (includes images now)
+        needs_ribbon: needsRibbon // ✨ NEW: Save ribbon toggle status
       })
       .eq('id', productId);
 
@@ -442,6 +460,26 @@ export default function EditProductPage() {
                 </div>
               </div>
 
+              {/* ✨ NEW: PERSONALIZATION CONFIGURATION SECTION */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                  <Bookmark className="text-[#C9A24D]" size={20} /> Personalization Mode
+                </h3>
+                <div className="p-4 bg-[#F6EFE6] rounded-xl border border-[#C9A24D]/20 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#1F1F1F]">Require Mandatory Ribbon Text?</p>
+                    <p className="text-[11px] text-[#1F1F1F]/50 mt-1 font-medium italic">If active, customers MUST enter text to add this bouquet to their cart.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setNeedsRibbon(!needsRibbon)}
+                    className={`w-14 h-8 rounded-full transition-all flex items-center p-1 ${needsRibbon ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}
+                  >
+                    <div className="w-6 h-6 bg-white rounded-full shadow-md" />
+                  </button>
+                </div>
+              </div>
+
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
                 <h3 className="font-bold text-lg mb-4">Pricing</h3>
                 <div className="grid grid-cols-3 gap-4">
@@ -494,6 +532,9 @@ export default function EditProductPage() {
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'product')} disabled={isUploading} />
                   </label>
                 </div>
+                <p className="text-xs text-gray-400 italic">
+                  {isUploading ? "Uploading..." : "Tip: Images are automatically cropped to 4:5 Portrait mode."}
+                </p>
               </div>
 
               {/* ✨ UPDATED: MULTIPLE PRODUCT VIDEOS SECTION */}
@@ -533,23 +574,54 @@ export default function EditProductPage() {
               {/* OPTIONS */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-2 text-[#1F1F1F]">Options</h3>
+                
+                {/* ✨ NEW: PRICING GRID INSTRUCTIONS */}
+                <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
+                  <Info size={16} className="text-[#C9A24D] mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold">Pricing Grid Guide:</p>
+                    <p className="text-[9px] font-medium leading-relaxed">
+                      Use format: <span className="bg-white px-1 font-bold italic rounded">50 Roses (€100)</span> to update shop price.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="space-y-3 mb-4">
                   {variants.map((v, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-black/5">
-                      <div><span className="text-xs font-bold text-gray-400 block uppercase tracking-wider">{v.name}</span><span className="text-sm text-[#1F1F1F] font-bold">{v.values}</span></div>
+                      <div className="max-w-[80%]"><span className="text-xs font-bold text-gray-400 block uppercase tracking-wider">{v.name}</span><span className="text-xs text-[#1F1F1F] font-bold break-words leading-tight">{v.values}</span></div>
                       <button type="button" onClick={() => removeVariant(idx)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
                   ))}
                 </div>
                 {isAddingVariant ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3">
-                    <input type="text" placeholder="e.g. Color" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                    <input type="text" placeholder="Red, Blue" value={newVariantValues} onChange={(e) => setNewVariantValues(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                    <input type="text" placeholder="Option Name (e.g. Color)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                    
+                    {/* ✨ BUILD THE VALUE LIST ONE BY ONE */}
+                    <div className="space-y-2 bg-white/50 p-2 rounded-lg border border-black/5">
+                        <div className="flex gap-2">
+                           <input type="text" placeholder="Value (e.g. Red)" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="flex-[2] bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                           <input type="number" placeholder="Stock" value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="flex-1 bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                           <button type="button" onClick={handleAddVariantItem} className="bg-[#C9A24D] text-white px-2 rounded-lg"><Plus size={16}/></button>
+                        </div>
+                        {tempList.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-2">
+                                {tempList.map((t, i) => (
+                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex items-center gap-1.5">
+                                        <span className="text-[10px] font-bold">{t}</span>
+                                        <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex gap-2">
                       <button type="button" onClick={handleAddVariant} className="flex-1 bg-[#1F1F1F] text-white text-xs font-bold py-2 rounded-lg flex items-center justify-center">
-                        <span style={{ color: 'white !important' }} className="!text-white">Add</span>
+                        <span style={{ color: 'white !important' }} className="!text-white">Save Option</span>
                       </button>
-                      <button type="button" onClick={() => setIsAddingVariant(false)} className="flex-1 bg-black/5 text-[#1F1F1F] text-xs font-bold py-2 rounded-lg">Cancel</button>
+                      <button type="button" onClick={() => { setIsAddingVariant(false); setTempList([]); }} className="flex-1 bg-black/5 text-[#1F1F1F] text-xs font-bold py-2 rounded-lg">Cancel</button>
                     </div>
                   </div>
                 ) : (

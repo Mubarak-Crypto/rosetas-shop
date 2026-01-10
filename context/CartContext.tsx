@@ -12,6 +12,9 @@ type CartItem = {
   options: Record<string, string>;
   extras: string[];
   
+  // ✨ ADDED THIS LINE (Fixes the red underline in CartSidebar)
+  category: string; 
+  
   // ✨ ADDED THIS LINE (Fixes the red underline)
   customText?: string; 
 };

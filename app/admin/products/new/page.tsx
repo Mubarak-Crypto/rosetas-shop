@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe } from "lucide-react";
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info } from "lucide-react"; // ✨ Added Info icon
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -19,7 +19,7 @@ type UploadType = "product" | "extra";
 export default function AddProductPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false); // ✅ FIXED: Changed setter from setIsLoading to setIsUploading
   const [isUploadingVideo, setIsUploadingVideo] = useState(false); // ✨ NEW: Video upload state
   
   // --- STATE VARIABLES ---
@@ -34,11 +34,16 @@ export default function AddProductPage() {
   const [descriptionEn, setDescriptionEn] = useState(""); // ✨ NEW: English Description State
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [needsRibbon, setNeedsRibbon] = useState(false); // ✨ NEW: Ribbon Toggle State
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [isAddingVariant, setIsAddingVariant] = useState(false);
   const [newVariantName, setNewVariantName] = useState("");
   const [newVariantValues, setNewVariantValues] = useState("");
+  // ✨ NEW: Helper states for building a variant list with stock
+  const [tempValueName, setTempValueName] = useState("");
+  const [tempValueStock, setTempValueStock] = useState("");
+  const [tempList, setTempList] = useState<string[]>([]);
 
   const [extras, setExtras] = useState<Extra[]>([]);
   const [isAddingExtra, setIsAddingExtra] = useState(false);
@@ -200,17 +205,28 @@ export default function AddProductPage() {
   const getColorLabels = () => {
     const colorVariant = variants.find(v => v.name.toLowerCase() === 'color' || v.name.toLowerCase() === 'farbe');
     if (!colorVariant) return [];
-    return colorVariant.values.split(',').map(v => v.trim());
+    // Only return the part before the stock separator
+    return colorVariant.values.split(',').map(v => v.split('|')[0].trim());
   };
 
   // --- LOGIC: VARIANTS ---
+  const handleAddVariantItem = () => {
+    if (!tempValueName) return;
+    // Format: "Red | Stock: 5" or "Red (€50) | Stock: 5"
+    const entry = `${tempValueName}${tempValueStock ? ` | Stock: ${tempValueStock}` : ''}`;
+    setTempList([...tempList, entry]);
+    setTempValueName("");
+    setTempValueStock("");
+  };
+
   const handleAddVariant = () => {
-    if (!newVariantName || !newVariantValues) return;
-    setVariants([...variants, { name: newVariantName, values: newVariantValues }]);
+    if (!newVariantName || tempList.length === 0) return;
+    setVariants([...variants, { name: newVariantName, values: tempList.join(', ') }]);
     setNewVariantName("");
-    setNewVariantValues("");
+    setTempList([]);
     setIsAddingVariant(false);
   };
+  
   const removeVariant = (index: number) => {
     setVariants(variants.filter((_, i) => i !== index));
   };
@@ -264,7 +280,8 @@ export default function AddProductPage() {
           images,
           video_url: videoUrls, // ✨ UPDATED: Now saves the array of URLs
           variants,
-          extras // This now includes images!
+          extras, // This now includes images!
+          needs_ribbon: needsRibbon // ✨ NEW: Save the Ribbon requirement
         }
       ]);
 
@@ -369,7 +386,6 @@ export default function AddProductPage() {
                       </div>
                     )}
                   </div>
-                  {/* ✨ END CATEGORY STEP 1 UPDATE */}
                    <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Stock Status</label>
                     <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#1F1F1F] font-medium">
@@ -395,6 +411,26 @@ export default function AddProductPage() {
                     </label>
                     <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={4} placeholder="English description..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none"></textarea>
                   </div>
+                </div>
+              </div>
+
+              {/* ✨ NEW: PERSONALIZATION CONFIGURATION SECTION */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                  <Bookmark className="text-[#C9A24D]" size={20} /> Personalization Mode
+                </h3>
+                <div className="p-4 bg-[#F6EFE6] rounded-xl border border-[#C9A24D]/20 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#1F1F1F]">Require Mandatory Ribbon Text?</p>
+                    <p className="text-[11px] text-[#1F1F1F]/50 mt-1 font-medium italic">If active, customers MUST enter text to add this bouquet to their cart.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setNeedsRibbon(!needsRibbon)}
+                    className={`w-14 h-8 rounded-full transition-all flex items-center p-1 ${needsRibbon ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}
+                  >
+                    <div className="w-6 h-6 bg-white rounded-full shadow-md" />
+                  </button>
                 </div>
               </div>
 
@@ -444,7 +480,7 @@ export default function AddProductPage() {
                   
                   {/* UPLOAD BUTTON (Main) */}
                   <label className={`aspect-[4/5] rounded-lg border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isUploading && uploadType === 'product' ? (
+                    {isUploading ? (
                       <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
                     ) : (
                       <div className="flex flex-col items-center gap-2 text-gray-400">
@@ -452,7 +488,6 @@ export default function AddProductPage() {
                         <span className="text-[10px] font-bold uppercase">Add Photo</span>
                       </div>
                     )}
-                    {/* Note: Pass 'product' as type */}
                     <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'product')} disabled={isUploading} />
                   </label>
                 </div>
@@ -498,22 +533,54 @@ export default function AddProductPage() {
               {/* OPTIONS (VARIANTS) */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-2">Options</h3>
-                <p className="text-xs text-gray-400 mb-4">Colors, Sizes (No price change)</p>
+                <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
+                
+                {/* ✨ NEW: PRICING & STOCK GUIDE */}
+                <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
+                  <Info size={16} className="text-[#C9A24D] mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold">Pricing Grid Guide:</p>
+                    <p className="text-[9px] font-medium leading-relaxed">
+                      Use format: <span className="bg-white px-1 font-bold italic rounded">50 Roses (€100)</span> to update shop price.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="space-y-3 mb-4">
                   {variants.map((v, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-black/5">
-                      <div><span className="text-xs font-bold text-gray-400 block uppercase">{v.name}</span><span className="text-sm text-[#1F1F1F] font-medium">{v.values}</span></div>
+                      <div className="max-w-[80%]"><span className="text-xs font-bold text-gray-400 block uppercase">{v.name}</span><span className="text-xs text-[#1F1F1F] font-medium break-words leading-tight">{v.values}</span></div>
                       <button type="button" onClick={() => removeVariant(idx)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
                   ))}
                 </div>
+
                 {isAddingVariant ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3">
-                    <input type="text" placeholder="Name (e.g. Color)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                    <input type="text" placeholder="Values (Red, Blue)" value={newVariantValues} onChange={(e) => setNewVariantValues(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                    <input type="text" placeholder="Option Name (e.g. Color)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                    
+                    {/* ✨ BUILD THE VALUE LIST ONE BY ONE */}
+                    <div className="space-y-2 bg-white/50 p-2 rounded-lg border border-black/5">
+                        <div className="flex gap-2">
+                           <input type="text" placeholder="Value (e.g. Red)" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="flex-[2] bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                           <input type="number" placeholder="Stock" value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="flex-1 bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                           <button type="button" onClick={handleAddVariantItem} className="bg-[#C9A24D] text-white px-2 rounded-lg"><Plus size={16}/></button>
+                        </div>
+                        {tempList.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-2">
+                                {tempList.map((t, i) => (
+                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex items-center gap-1.5">
+                                        <span className="text-[10px] font-bold">{t}</span>
+                                        <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="flex gap-2">
-                      <button type="button" onClick={handleAddVariant} className="flex-1 bg-[#1F1F1F] text-xs font-bold py-2 rounded-lg text-white">Add</button>
-                      <button type="button" onClick={() => setIsAddingVariant(false)} className="flex-1 bg-black/5 text-xs font-bold py-2 rounded-lg">Cancel</button>
+                      <button type="button" onClick={handleAddVariant} className="flex-1 bg-[#1F1F1F] text-xs font-bold py-2 rounded-lg text-white">Save Option</button>
+                      <button type="button" onClick={() => { setIsAddingVariant(false); setTempList([]); }} className="flex-1 bg-black/5 text-xs font-bold py-2 rounded-lg">Cancel</button>
                     </div>
                   </div>
                 ) : (
@@ -565,7 +632,7 @@ export default function AddProductPage() {
                             </div>
                         ) : (
                             <label className={`w-12 h-12 rounded border border-dashed border-black/10 flex items-center justify-center hover:border-[#C9A24D] cursor-pointer ${isUploading ? "opacity-50 pointer-events-none" : ""}`}>
-                                {isUploading && uploadType === 'extra' ? <Loader2 size={14} className="animate-spin text-[#C9A24D]"/> : <Upload size={14} className="text-gray-400" />}
+                                {isUploading ? <Loader2 size={14} className="animate-spin text-[#C9A24D]"/> : <Upload size={14} className="text-gray-400" />}
                                 <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'extra')} disabled={isUploading} />
                             </label>
                         )}
@@ -593,7 +660,6 @@ export default function AddProductPage() {
                 image={cropImage}
                 crop={crop}
                 zoom={zoom}
-                // ✨ If it's an Extra, use 1:1 Square. If Product, use 4:5.
                 aspect={uploadType === "extra" ? 1 : 4 / 5} 
                 onCropChange={setCrop}
                 onCropComplete={onCropComplete}
@@ -601,7 +667,6 @@ export default function AddProductPage() {
               />
             </div>
 
-            {/* Controls */}
             <div className="w-full max-w-lg mt-6 space-y-4 bg-white p-6 rounded-2xl">
                 <div className="flex items-center gap-4">
                   <span className="text-xs font-bold text-[#1F1F1F] uppercase">Zoom</span>
@@ -617,17 +682,8 @@ export default function AddProductPage() {
                 </div>
 
                 <div className="flex gap-4">
-                  <button 
-                    onClick={() => setCropImage(null)} 
-                    className="flex-1 py-3 bg-black/5 text-[#1F1F1F] rounded-xl font-bold hover:bg-black/10 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={handleUploadCroppedImage} 
-                    disabled={isUploading}
-                    className="flex-1 py-3 bg-[#1F1F1F] text-white rounded-xl font-bold hover:bg-[#C9A24D] transition-colors flex items-center justify-center gap-2"
-                  >
+                  <button onClick={() => setCropImage(null)} className="flex-1 py-3 bg-black/5 text-[#1F1F1F] rounded-xl font-bold hover:bg-black/10 transition-colors">Cancel</button>
+                  <button onClick={handleUploadCroppedImage} disabled={isUploading} className="flex-1 py-3 bg-[#1F1F1F] text-white rounded-xl font-bold hover:bg-[#C9A24D] transition-all flex items-center justify-center gap-2">
                     {isUploading ? <Loader2 className="animate-spin" /> : <><Crop size={18} /> Crop & Upload</>}
                   </button>
                 </div>

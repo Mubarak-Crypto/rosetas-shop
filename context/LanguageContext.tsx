@@ -12,38 +12,45 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// 📖 Full Translation Dictionary - NOW INCLUDES SUPPLIES & ALL PAGES
+// 📖 Full Translation Dictionary - NOW INCLUDES MANUAL OVERRIDES FROM IMAGES
 const translations: Record<Language, Record<string, string>> = {
   DE: {
     // Navbar & Common
     "nav_shop": "Shop",
-    "nav_supplies": "Floristenbedarf", // ✨ Added
+    "nav_supplies": "Floristenbedarf", 
     "nav_about": "Über uns",
     "admin_login": "Admin Login",
     "cart": "Warenkorb",
     
     // Home Page
-    "hero_title": "Handgefertigte Glitzer-Rosen",
-    "hero_subtitle": "Luxus-Bouquets aus Essen, Deutschland",
-    "shop_now": "Jetzt Shoppen",
+    // ✨ FORCED ENGLISH HEADLINE (Updated content as per request)
+    "hero_title": "Not just flowers — a statement.",
+    // ✅ FIXED: German Subtitle set to her specific request
+    "hero_subtitle": "Für Wirkung gemacht.", 
+    "shop_now": "Zum Shop gehen",
     "our_collection": "Unsere Kollektion",
     
-    // Features Component
+    // ✨ STORY SECTION (From Manual Images)
+    "story_badge": "HANDGEFERTIGT IN ESSEN • UNSERE GESCHICHTE",
+    "story_title": "Wo Kunstfertigkeit auf Eleganz trifft.",
+    "story_text": "Bei Rosetas entstehen keine gewöhnlichen Blumen, sondern Statements aus Eleganz und Qualität. Seit unserer Gründung im Jahr 2025 stehen wir für hochwertige, handgefertigte Blumenkonzepte, die Emotionen bewahren und Luxus neu definieren.",
+
+    // Features Component (From Manual Images)
     "features_headline_start": "Deshalb ist",
     "features_headline_end": "die erste Wahl",
-    "features_subtitle": "Wir verkaufen nicht nur Blumen. Wir schaffen bleibende Momente voller Luxus.",
-    "feat_1_title": "Handwerkliche Präzision",
-    "feat_1_desc": "Jedes Blütenblatt wird von Hand gesetzt. Keine Massenproduktion. Nur Perfektion.",
-    "feat_2_title": "Kristall-Glitzer-Finish",
-    "feat_2_desc": "Unser spezielles Glitzer-Verfahren sorgt für maximale Brillanz unter jedem Licht.",
-    "feat_3_title": "Ewige Schönheit",
-    "feat_3_desc": "Konserviert für die Ewigkeit. Eine Erinnerung, die nicht nach einer Woche verblasst.",
+    "features_subtitle": "Qualität, Verständnis und Umsetzung – auf die Sie zählen können.",
+    "feat_1_title": "Rosetas Glanz",
+    "feat_1_desc": "Ein Blick genügt, um Rosetas zu erkennen",
+    "feat_2_title": "Mehr als ein Geschenk",
+    "feat_2_desc": "Ein bleibende Eindruck für besondere Momente",
+    "feat_3_title": "Perfektion im Detail",
+    "feat_3_desc": "Bewusst ausgewählte Akzente von der ersten Idee bis zum letzten Feinschliff",
     "feat_4_title": "Das ultimative Geschenk",
     "feat_4_desc": "Wird in einer Premium-Verpackung geliefert, die einen bleibenden Eindruck hinterlässt.",
 
-    // Supplies Page ✨ Added
-    "supplies_title": "Profi-Floristenbedarf",
-    "supplies_subtitle": "Hochwertige Materialien für Ihre eigenen Kreationen",
+    // Supplies Page ✨ Added (From Manual Images)
+    "supplies_title": "Floristenbedarf",
+    "supplies_subtitle": "Beziehen Sie die gleichen hochwertigen Materialien, die wir für unsere floralen Arbeiten nutzen – sorgfältig ausgewählt für Qualität und Stil.",
 
     // Product & Shop
     "add_to_cart": "In den Warenkorb",
@@ -84,7 +91,7 @@ const translations: Record<Language, Record<string, string>> = {
     "success_title": "Zahlung erfolgreich!",
     "success_message": "Vielen Dank für Ihre Bestellung. Wir haben Ihre Zahlung erhalten und bereiten Ihr Luxus-Bouquet vor.",
     "success_continue": "WEITER SHOPPEN",
-    "success_email_note": "Eine Bestätigungs-E-Mail wurde an Ihren Posteingang gesendet.",
+    "success_email_note": "Eine Bestätigungs-E-Mail wurde an Ihren Posteigang gesendet.",
 
     // Reviews
     "reviews_title": "Kundenbewertungen",
@@ -102,38 +109,46 @@ const translations: Record<Language, Record<string, string>> = {
     "footer_terms": "AGB",
     "footer_policy": "Datenschutz",
     "footer_shipping": "Versand & Rückgabe",
-    "footer_contact": "Kontakt"
+    "footer_contact": "Kontakt",
+    "legal_business_type": "Rosetas Bouquets - Einzelunternehmen" // ✨ Added for Impressum
   },
   EN: {
     // Navbar & Common
     "nav_shop": "Shop",
-    "nav_supplies": "Florist Supplies", // ✨ Added
+    "nav_supplies": "Florist Supplies", 
     "nav_about": "About Us",
     "admin_login": "Admin Login",
     "cart": "Cart",
 
     // Home Page
-    "hero_title": "Hand-crafted Glitter Roses",
-    "hero_subtitle": "Luxury Bouquets from Essen, Germany",
+    // ✨ FORCED ENGLISH HEADLINE (Updated content as per request)
+    "hero_title": "Not just flowers — a statement.",
+    // ✅ FIXED: English Subtitle set back to location text for switching
+    "hero_subtitle": "Luxury Bouquets from Essen, Germany", 
     "shop_now": "Shop Now",
     "our_collection": "Our Collection",
+
+    // ✨ STORY SECTION
+    "story_badge": "Hand-Crafted in Essen • Our Story",
+    "story_title": "Where Artistry Meets Elegance.",
+    "story_text": "At Rosetas, we don't just sell flowers; we create permanent moments of luxury. Based in Essen, Germany, our studio specializes in hand-crafted satin bouquets designed to capture emotions that never fade.",
 
     // Features Component
     "features_headline_start": "That’s why",
     "features_headline_end": "is the choice",
-    "features_subtitle": "We don't just sell flowers. We create permanent moments of luxury.",
-    "feat_1_title": "Artisan Precision",
-    "feat_1_desc": "Every petal is placed by hand. No mass production. Just perfection.",
-    "feat_2_title": "Crystal Glitter Finish",
-    "feat_2_desc": "Our proprietary glitter application ensures maximum brilliance under any light.",
-    "feat_3_title": "Eternal Beauty",
-    "feat_3_desc": "Preserved to last. A memory that doesn't fade after a week.",
+    "features_subtitle": "Quality and execution you can count on.",
+    "feat_1_title": "The Rosetas Shine",
+    "feat_1_desc": "One look is enough to recognize a Rosetas creation.",
+    "feat_2_title": "More than a gift",
+    "feat_2_desc": "A lasting impression for special moments.",
+    "feat_3_title": "Perfection in Detail",
+    "feat_3_desc": "Consciously selected accents from the first idea to the final touch.",
     "feat_4_title": "The Ultimate Gift",
     "feat_4_desc": "Arrives in premium packaging designed to leave a lasting impression.",
 
     // Supplies Page ✨ Added
-    "supplies_title": "Professional Florist Supplies",
-    "supplies_subtitle": "High-quality materials for your own creations",
+    "supplies_title": "Florist Supplies",
+    "supplies_subtitle": "Source the same premium materials we use in our luxury studio – carefully selected for quality and style.",
 
     // Product & Shop
     "add_to_cart": "Add to Cart",
@@ -192,7 +207,8 @@ const translations: Record<Language, Record<string, string>> = {
     "footer_terms": "Terms & Conditions",
     "footer_policy": "Privacy Policy",
     "footer_shipping": "Shipping & Returns",
-    "footer_contact": "Contact"
+    "footer_contact": "Contact",
+    "legal_business_type": "Rosetas Bouquets - Sole Proprietorship" // ✨ Added for English Impressum
   }
 };
 

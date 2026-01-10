@@ -26,7 +26,6 @@ body {
 }
 
 /* 🚨 TEXT VISIBILITY: Forces descriptions to sharp black ONLY on light backgrounds */
-/* Removed !important from color to allow Footer/Buttons to override it */
 p, span, .text-gray-400, .text-gray-500, .text-muted-foreground {
   color: #1F1F1F; 
   font-weight: 500; 
@@ -75,6 +74,56 @@ footer p, footer span, footer a, footer h2, footer h3 {
   color: #FFFFFF !important; 
   box-shadow: var(--shadow-glow-gold);
   transform: translateY(-2px);
+}
+
+/* ✨ NEW: LUMINOUS BUTTON STYLE (Glowing White Edge) */
+/* Replaces hard black outlines with a radiant, lively glow as requested */
+.btn-luminous {
+  background-color: #E8D3B9; /* Creamy tone she requested */
+  color: #1F1F1F;
+  /* ✅ LUMINOUS FIX: White border and soft radiant glow to replace black outline */
+  border: 2px solid #FFFFFF !important; 
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.6), 
+              0 0 5px rgba(201, 162, 77, 0.1); 
+  font-weight: 800;
+  text-transform: uppercase;
+  transition: all 0.4s ease;
+}
+
+.btn-luminous:hover {
+  background-color: #F6EFE6;
+  /* Glow intensifies on hover for a more "alive" feel */
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.9), 
+              0 0 10px rgba(201, 162, 77, 0.3);
+  transform: translateY(-2px);
+}
+
+/* ✨ REFINED: LIQUID GOLD SHIMMER (Slow, High Contrast White/Black/Gold) */
+@keyframes slow-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-shimmer {
+  /* High contrast liquid effect: Gold base with sharp Black shadows and Crisp White light beam */
+  background: linear-gradient(
+    to right, 
+    #C9A24D 0%, 
+    #C9A24D 30%,
+    #1F1F1F 45%, 
+    #FFFFFF 50%, 
+    #1F1F1F 55%, 
+    #C9A24D 70%,
+    #C9A24D 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  /* 🕰 Slower movement (8 seconds) for a more elegant, expensive feel */
+  animation: slow-shimmer 8s linear infinite;
+  display: inline-block;
+  font-weight: 900; /* Extra bold to let the liquid shimmer shine clearly */
 }
 
 /* Gold Text Polish with Black definition for contrast */

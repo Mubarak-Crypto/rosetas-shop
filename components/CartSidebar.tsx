@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
+import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, AlertCircle } from "lucide-react";
 import Link from "next/link"; 
 import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext"; // ✨ Added Language Import
@@ -9,6 +9,14 @@ import { useLanguage } from "../context/LanguageContext"; // ✨ Added Language 
 export default function CartSidebar() {
   const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal } = useCart();
   const { language, t } = useLanguage(); // ✨ Access translation functions
+
+  // ✨ NEW: Calculate subtotal specifically for Florist Supplies
+  const suppliesSubtotal = cart
+    .filter(item => item.category === 'supplies')
+    .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  const MIN_SUPPLIES_VALUE = 80;
+  const isSuppliesBelowMinimum = suppliesSubtotal > 0 && suppliesSubtotal < MIN_SUPPLIES_VALUE;
 
   return (
     <AnimatePresence>
@@ -127,6 +135,20 @@ export default function CartSidebar() {
             {/* FOOTER (Checkout) */}
             {cart.length > 0 && (
               <div className="p-6 border-t border-black/5 bg-[#F6EFE6] space-y-4">
+                
+                {/* ✨ NEW: Supplies Minimum Value Warning */}
+                {isSuppliesBelowMinimum && (
+                  <div className="p-4 bg-[#C9A24D]/10 border border-[#C9A24D]/30 rounded-xl flex gap-3 items-start animate-pulse">
+                    <AlertCircle className="text-[#C9A24D] shrink-0" size={18} />
+                    <p className="text-[11px] font-bold text-[#1F1F1F] leading-tight">
+                      {language === 'EN' 
+                        ? `Florist Supplies require a minimum of €${MIN_SUPPLIES_VALUE}. Please add €${(MIN_SUPPLIES_VALUE - suppliesSubtotal).toFixed(2)} more to continue.`
+                        : `Für Floristik-Zubehör gilt ein Mindestbestellwert von €${MIN_SUPPLIES_VALUE}. Bitte füge noch €${(MIN_SUPPLIES_VALUE - suppliesSubtotal).toFixed(2)} hinzu.`
+                      }
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-center text-sm text-[#1F1F1F]/60 font-medium">
                   <span>{language === 'EN' ? "Subtotal" : "Zwischensumme"}</span>
                   <span className="text-[#1F1F1F] font-mono text-xl font-bold">€{cartTotal.toFixed(2)}</span>
@@ -136,20 +158,40 @@ export default function CartSidebar() {
                 </p>
                 
                 {/* --- FORCED VISIBILITY CHECKOUT BUTTON --- */}
-                <Link href="/checkout" onClick={() => setIsCartOpen(false)} className="block">
-                  <button className="w-full bg-[#1F1F1F] font-bold py-4 rounded-xl shadow-lg hover:bg-[#C9A24D] transition-all flex items-center justify-center gap-2">
-                    {/* !text-white and style override to defeat global CSS !important black text */}
+                {/* ✨ UPDATED: Logic to disable link if supplies minimum isn't met */}
+                <Link 
+                  href={isSuppliesBelowMinimum ? "#" : "/checkout"} 
+                  onClick={(e) => {
+                    if (isSuppliesBelowMinimum) e.preventDefault();
+                    else setIsCartOpen(false);
+                  }} 
+                  className={`block transition-all ${isSuppliesBelowMinimum ? 'cursor-not-allowed grayscale' : 'cursor-pointer'}`}
+                >
+                  <button 
+                    disabled={isSuppliesBelowMinimum}
+                    /* ✅ VIBRANT UPDATE: Luminous Glow Style (Champagne Gold + Glow + White Border) */
+                    className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-500 font-bold
+                      ${isSuppliesBelowMinimum 
+                        ? 'bg-gray-300 border-2 border-transparent cursor-not-allowed' 
+                        : 'bg-[#C9A24D] border-2 border-white shadow-[0_0_20px_rgba(201,162,77,0.4)] hover:shadow-[0_0_30px_rgba(201,162,77,0.6)] hover:bg-[#B69141]'
+                      }`}
+                  >
                     <span 
                         className="!text-white" 
                         style={{ color: 'white', display: 'inline-block' }}
                     >
-                        {language === 'EN' ? "Checkout Securely" : "Sicher zur Kasse"}
+                        {isSuppliesBelowMinimum 
+                          ? (language === 'EN' ? "Minimum Order Not Met" : "Mindestbestellwert nicht erreicht")
+                          : (language === 'EN' ? "Checkout Securely" : "Sicher zur Kasse")
+                        }
                     </span> 
-                    <ArrowRight 
-                        size={18} 
-                        className="!text-white" 
-                        style={{ color: 'white' }} 
-                    />
+                    {!isSuppliesBelowMinimum && (
+                      <ArrowRight 
+                          size={18} 
+                          className="!text-white" 
+                          style={{ color: 'white' }} 
+                      />
+                    )}
                   </button>
                 </Link>
                 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; // ✨ Added for data revalidation
 import { motion } from "framer-motion"; 
 import { supabase } from "../../../lib/supabase";
-import { Star, Save, Plus, Instagram, MessageCircle, Trash2, CheckCircle, Loader2 } from "lucide-react";
+import { Star, Save, Plus, Instagram, MessageCircle, Trash2, CheckCircle, Loader2, Check } from "lucide-react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 
 export default function AdminReviewsPage() {
@@ -21,7 +21,8 @@ export default function AdminReviewsPage() {
     rating: 5,
     comment: "",
     is_verified: true,
-    source: "whatsapp"
+    source: "whatsapp",
+    status: "approved" // ✨ Default to approved when admin manually adds
   });
 
   useEffect(() => {
@@ -46,9 +47,24 @@ export default function AdminReviewsPage() {
       alert("Error saving review: " + error.message);
     } else {
       setIsAdding(false);
-      setFormData({ product_id: "", customer_name: "", rating: 5, comment: "", is_verified: true, source: "whatsapp" });
+      setFormData({ product_id: "", customer_name: "", rating: 5, comment: "", is_verified: true, source: "whatsapp", status: "approved" });
       await fetchInitialData();
       router.refresh(); // ✨ Force Product Pages to update their review lists
+    }
+  };
+
+  // ✨ NEW: Approve function to make pending reviews live
+  const approveReview = async (id: string) => {
+    const { error } = await supabase
+      .from('reviews')
+      .update({ status: 'approved' })
+      .eq('id', id);
+
+    if (error) {
+      alert("Error approving review: " + error.message);
+    } else {
+      setReviews(reviews.map(r => r.id === id ? { ...r, status: 'approved' } : r));
+      router.refresh();
     }
   };
 
@@ -202,30 +218,43 @@ export default function AdminReviewsPage() {
 
           <div className="grid grid-cols-1 gap-6">
             {reviews.length > 0 ? reviews.map(review => (
-              <div key={review.id} className="bg-white p-8 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border border-black/5 shadow-sm hover:shadow-md transition-shadow">
+              <div key={review.id} className={`bg-white p-8 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border shadow-sm hover:shadow-md transition-shadow ${review.status === 'pending' ? 'border-yellow-200 bg-yellow-50/30' : 'border-black/5'}`}>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <span className="font-black text-xl">{review.customer_name}</span>
                     <div className="flex items-center gap-2 bg-[#F6EFE6] px-3 py-1 rounded-lg">
                        {review.source === 'whatsapp' ? <MessageCircle size={12} className="text-green-600" /> : <Instagram size={12} className="text-pink-600" />}
-                       <span className="text-[10px] font-black uppercase tracking-tighter opacity-60">{review.source}</span>
+                       <span className="text-[10px] font-black uppercase tracking-tighter opacity-60">{review.source === 'website' ? 'direct' : review.source}</span>
                     </div>
                     {review.is_verified && <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 rounded font-black uppercase">Verified</span>}
+                    {review.status === 'pending' && <span className="text-[10px] bg-yellow-500 text-white px-2 py-0.5 rounded font-black uppercase tracking-tighter">Pending Approval</span>}
                   </div>
                   <p className="text-[#1F1F1F] font-medium opacity-80 leading-relaxed italic">"{review.comment}"</p>
                   <p className="text-[10px] font-black text-[#C9A24D] uppercase tracking-widest">Linked to: {review.products?.name}</p>
                 </div>
                 
-                <div className="flex items-center gap-8 self-end md:self-center">
+                <div className="flex items-center gap-4 self-end md:self-center">
                   <div className="flex text-[#C9A24D]">
                     {[...Array(review.rating)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
                   </div>
-                  <button 
-                    onClick={(e) => deleteReview(e, review.id)} 
-                    className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                  >
-                    <Trash2 size={20} />
-                  </button>
+                  
+                  <div className="flex items-center gap-2">
+                    {review.status === 'pending' && (
+                      <button 
+                        onClick={() => approveReview(review.id)}
+                        className="h-12 px-6 rounded-full bg-green-600 text-white flex items-center gap-2 font-bold hover:bg-green-700 transition-all shadow-sm"
+                      >
+                        <Check size={18} strokeWidth={3} /> Approve
+                      </button>
+                    )}
+                    
+                    <button 
+                      onClick={(e) => deleteReview(e, review.id)} 
+                      className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
                 </div>
               </div>
             )) : (

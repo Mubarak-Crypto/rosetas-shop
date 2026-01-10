@@ -64,14 +64,14 @@ export default function Navbar() {
         </Link>
         
         {/* Cart Button */}
-        {/* ✅ VIBRANT UPDATE: Vibrant gold, 2px black border, and 3D hard shadow */}
+        {/* ✅ LUMINOUS UPDATE: Replaced black border with white border and radiant glow for a lively, creamy look */}
         <button 
           onClick={() => setIsCartOpen(true)}
-          className="px-3 py-2 md:px-5 md:py-2 bg-[#C9A24D] border-2 border-[#1F1F1F] rounded-full text-white text-xs md:text-sm hover:bg-[#1F1F1F] transition-all flex items-center gap-2 shadow-[3px_3px_0px_#1F1F1F] active:shadow-none active:translate-x-[1px] active:translate-y-[1px]"
+          className="px-3 py-2 md:px-5 md:py-2 btn-luminous rounded-full transition-all flex items-center gap-2 active:scale-95 shadow-sm"
         >
-          {/* ✅ FIXED: Restored 'CART' text and responsive scaling */}
-          <ShoppingBag strokeWidth={2.5} className="text-white w-4 h-4" />
-          <span className="font-black uppercase tracking-tighter text-white">
+          {/* ✅ FIXED: Restored 'CART' text and applied black icon/text for contrast on cream */}
+          <ShoppingBag strokeWidth={2.5} className="text-[#1F1F1F] w-4 h-4" />
+          <span className="font-black uppercase tracking-tighter text-[#1F1F1F] text-xs md:text-sm">
             {t('cart')} ({cartCount})
           </span> 
         </button>

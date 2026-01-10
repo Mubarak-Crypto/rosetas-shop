@@ -25,6 +25,7 @@ function ShopContent() {
       setIsLoading(true); // Show loading spinner while switching categories
 
       // Start building the query
+      // ✨ Logic Refinement: select("*") includes the video_url column automatically
       let query = supabase
         .from("products")
         .select("*")
@@ -96,7 +97,8 @@ function ShopContent() {
                 price={`€${product.price}`} 
                 category={product.category}
                 image={product.images?.[0] || "/products/red-glitter.jpg"} 
-                videoUrl={product.video_url} // ✨ NEW: Passing video data to show the sparkle badge
+                // ✨ DYNAMIC CONTENT: Plays the unique video associated with this product
+                videoUrl={product.video_url} 
                 delay={index * 0.1} 
               />
             ))}

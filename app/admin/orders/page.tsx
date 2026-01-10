@@ -56,6 +56,10 @@ export default function AdminOrdersPage() {
       const orderToUpdate = orders.find(o => o.id === shippingModal.orderId);
       
       if (orderToUpdate) {
+        // ✨ NEW: Get Product Details for the Review Link
+        // We take the first item from the order to generate the review link
+        const firstItem = orderToUpdate.items && orderToUpdate.items.length > 0 ? orderToUpdate.items[0] : null;
+
         // 3. TRIGGER THE CORRECT API (Fixed to match your folder 'send-shipping-email')
         const response = await fetch('/api/send-shipping-email', {
           method: 'POST',
@@ -66,6 +70,9 @@ export default function AdminOrdersPage() {
             orderId: orderToUpdate.id.toString().slice(0, 8).toUpperCase(), // Format ID nicely
             trackingNumber: trackingNumber,
             carrier: carrier,
+            // ✨ ADDED: Passing product info for the verified review logic
+            productId: firstItem?.productId || firstItem?.id,
+            productName: firstItem?.name || "your bouquet"
           }),
         });
         
