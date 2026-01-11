@@ -29,8 +29,11 @@ export async function POST(req: Request) {
               body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #F6EFE6; margin: 0; padding: 0; }
               .wrapper { width: 100%; background-color: #F6EFE6; padding-bottom: 40px; }
               .main { background-color: #ffffff; max-width: 600px; margin: 0 auto; border-radius: 24px; overflow: hidden; margin-top: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-              .header { padding: 40px; text-align: center; background-color: #F6EFE6; }
-              .logo { font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #1F1F1F; text-transform: uppercase; }
+              .header { padding: 40px; text-align: center; background-color: #1F1F1F; }
+              
+              /* ✨ Fixed Logo Image Styling */
+              .logo-img { height: 70px; width: auto; display: block; margin: 0 auto; }
+              
               .content { padding: 40px; text-align: center; color: #1F1F1F; }
               .stars { color: #D4C29A; font-size: 24px; margin-bottom: 10px; }
               h1 { font-size: 26px; font-weight: 300; margin-bottom: 20px; color: #1F1F1F; }
@@ -38,7 +41,23 @@ export async function POST(req: Request) {
               .tracking-card { background-color: #F9F9F9; border: 1px solid #F0F0F0; border-radius: 16px; padding: 25px; margin: 25px 0; text-align: left; }
               .label { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 5px; display: block; }
               .value { font-size: 16px; font-weight: bold; color: #1F1F1F; margin-bottom: 15px; display: block; }
-              .btn { display: inline-block; padding: 18px 40px; background-color: #D4C29A; color: #ffffff !important; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+              
+              /* ✨ GLOWING WHITE BUTTON STYLE */
+              .btn { 
+                display: inline-block; 
+                padding: 18px 40px; 
+                background-color: #D4C29A; 
+                color: #ffffff !important; 
+                text-decoration: none; 
+                border-radius: 50px; 
+                font-weight: bold; 
+                font-size: 13px; 
+                text-transform: uppercase; 
+                letter-spacing: 1px;
+                border: 2px solid #ffffff; /* White border for the glow foundation */
+                box-shadow: 0 0 15px rgba(255, 255, 255, 0.8); /* The glowing aura */
+              }
+              
               .footer { padding: 30px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #F6EFE6; }
             </style>
           </head>
@@ -46,8 +65,8 @@ export async function POST(req: Request) {
             <div class="wrapper">
               <div class="main">
                 <div class="header">
-                  <div class="logo">Roseta's</div>
-                  <div style="font-size: 9px; color: #D4C29A; margin-top: 4px; letter-spacing: 2px; font-weight: bold;">LUXURY COLLECTION</div>
+                  <img src="https://mgeclvsluzofuniyuywa.supabase.co/storage/v1/object/public/product-images/logo-email.png" alt="Rosetas Logo" class="logo-img">
+                  <div style="font-size: 9px; color: #D4C29A; margin-top: 10px; letter-spacing: 2px; font-weight: bold;">LUXURY COLLECTION</div>
                 </div>
                 <div class="content">
                   <div class="stars">★★★★★</div>
