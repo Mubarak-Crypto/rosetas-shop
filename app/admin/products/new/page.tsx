@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info } from "lucide-react"; // ✨ Added Info icon
+import { useState, useCallback, useEffect } from "react"; // ✨ Added useEffect
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid } from "lucide-react"; // ✨ Added Info & LayoutGrid icon
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -45,6 +45,9 @@ export default function AddProductPage() {
   const [tempValueStock, setTempValueStock] = useState("");
   const [tempList, setTempList] = useState<string[]>([]);
 
+  // ✨ NEW: STOCK MATRIX STATE
+  const [stockMatrix, setStockMatrix] = useState<any[]>([]);
+
   const [extras, setExtras] = useState<Extra[]>([]);
   const [isAddingExtra, setIsAddingExtra] = useState(false);
   const [newExtraName, setNewExtraName] = useState("");
@@ -57,6 +60,33 @@ export default function AddProductPage() {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
+  // ✨ NEW: AUTO-GENERATE MATRIX LOGIC
+  useEffect(() => {
+    if (variants.length > 1) {
+      const generateMatrix = () => {
+        const optionGroups = variants.map(v => ({
+          name: v.name,
+          values: v.values.split(',').map(val => val.split('(')[0].split('|')[0].trim())
+        }));
+
+        // Cartesian product to generate combinations
+        const combos = optionGroups.reduce((a, b) => 
+          a.flatMap((d: any) => b.values.map(v => ({ ...d, [b.name]: v })))
+        , [{}]);
+
+        const newMatrix = combos.map(combo => {
+          const existing = stockMatrix.find(m => 
+            Object.keys(combo).every(key => m[key] === combo[key])
+          );
+          return existing || { ...combo, stock: 0 };
+        });
+
+        setStockMatrix(newMatrix);
+      };
+      generateMatrix();
+    }
+  }, [variants]);
 
   // ✨ UPDATED: HANDLE MULTIPLE VIDEO UPLOADS
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,7 +311,8 @@ export default function AddProductPage() {
           video_url: videoUrls, // ✨ UPDATED: Now saves the array of URLs
           variants,
           extras, // This now includes images!
-          needs_ribbon: needsRibbon // ✨ NEW: Save the Ribbon requirement
+          needs_ribbon: needsRibbon, // ✨ NEW: Save the Ribbon requirement
+          stock_matrix: stockMatrix // ✨ NEW: Save individual variant stock
         }
       ]);
 
@@ -338,7 +369,6 @@ export default function AddProductPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  {/* ✨ START CATEGORY STEP 1 UPDATE */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Category</label>
                     {isCustomCategory ? (
@@ -434,6 +464,47 @@ export default function AddProductPage() {
                 </div>
               </div>
 
+              {/* ✨ NEW: INDIVIDUAL STOCK MATRIX SECTION */}
+              {variants.length > 1 && (
+                <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid className="text-[#C9A24D]" size={20} />
+                    <h3 className="font-bold text-lg">Individual Stock Tracking</h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="text-[10px] font-black uppercase text-gray-400 bg-gray-50">
+                        <tr>
+                          {variants.map(v => <th key={v.name} className="px-4 py-3">{v.name}</th>)}
+                          <th className="px-4 py-3">Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-black/5">
+                        {stockMatrix.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            {variants.map(v => <td key={v.name} className="px-4 py-3 text-xs font-bold">{item[v.name]}</td>)}
+                            <td className="px-4 py-2">
+                              <input 
+                                type="number" 
+                                value={item.stock} 
+                                onChange={(e) => {
+                                  const updated = [...stockMatrix];
+                                  updated[idx].stock = parseInt(e.target.value) || 0;
+                                  setStockMatrix(updated);
+                                }}
+                                className="w-24 bg-gray-50 border border-black/5 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-[#C9A24D]"
+                                placeholder="0"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
                 <h3 className="font-bold text-lg mb-4">Pricing</h3>
                 <div className="grid grid-cols-3 gap-4">
@@ -442,7 +513,7 @@ export default function AddProductPage() {
                     <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Stock</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
                     <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
                   </div>
                 </div>
@@ -460,7 +531,6 @@ export default function AddProductPage() {
                       <div className="relative aspect-[4/5] rounded-lg overflow-hidden border border-black/5">
                         <img src={img} alt={`Product ${idx}`} className="w-full h-full object-cover" />
                         
-                        {/* REORDER CONTROLS INSTEAD OF JUST REMOVE */}
                         <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm p-2 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
                           <button type="button" onClick={() => moveImage(idx, 'left')} disabled={idx === 0} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowLeftIcon size={14}/></button>
                           <button type="button" onClick={() => removeImage(idx)} className="p-1 text-white hover:text-red-500"><Trash2 size={14} /></button>
@@ -468,7 +538,6 @@ export default function AddProductPage() {
                         </div>
                       </div>
 
-                      {/* Mapping Label Added */}
                       <div className="bg-gray-50 rounded px-2 py-1 border border-black/5 text-center">
                         <span className="text-[9px] font-bold text-gray-400 uppercase block leading-tight">Pos {idx + 1}</span>
                         <span className="text-[10px] font-bold text-[#C9A24D] uppercase truncate block">
@@ -478,7 +547,6 @@ export default function AddProductPage() {
                     </div>
                   ))}
                   
-                  {/* UPLOAD BUTTON (Main) */}
                   <label className={`aspect-[4/5] rounded-lg border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
                     {isUploading ? (
                       <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
@@ -514,7 +582,6 @@ export default function AddProductPage() {
                     </div>
                   ))}
                   
-                  {/* UPLOAD BUTTON (Multiple Videos) */}
                   <label className={`w-full aspect-video rounded-xl border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}>
                     {isUploadingVideo ? (
                       <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
@@ -527,7 +594,6 @@ export default function AddProductPage() {
                     <input type="file" className="hidden" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
                   </label>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-2 italic">Upload multiple clips to showcase different angles or packaging.</p>
               </div>
 
               {/* OPTIONS (VARIANTS) */}
@@ -535,7 +601,6 @@ export default function AddProductPage() {
                 <h3 className="font-bold text-lg mb-2">Options</h3>
                 <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
                 
-                {/* ✨ NEW: PRICING & STOCK GUIDE */}
                 <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
                   <Info size={16} className="text-[#C9A24D] mt-0.5 shrink-0" />
                   <div className="space-y-1">
@@ -559,7 +624,6 @@ export default function AddProductPage() {
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3">
                     <input type="text" placeholder="Option Name (e.g. Color)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
                     
-                    {/* ✨ BUILD THE VALUE LIST ONE BY ONE */}
                     <div className="space-y-2 bg-white/50 p-2 rounded-lg border border-black/5">
                         <div className="flex gap-2">
                            <input type="text" placeholder="Value (e.g. Red)" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="flex-[2] bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
@@ -597,7 +661,6 @@ export default function AddProductPage() {
                   {extras.map((ex, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-black/5">
                       <div className="flex items-center gap-3">
-                        {/* Show tiny preview if image exists */}
                         {ex.image ? (
                             <img src={ex.image} alt={ex.name} className="w-8 h-8 rounded object-cover border border-black/5" />
                         ) : (
@@ -614,14 +677,9 @@ export default function AddProductPage() {
                 </div>
                 {isAddingExtra ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3 animate-in fade-in slide-in-from-top-2">
-                    
-                    {/* Name Input */}
                     <div><input type="text" placeholder="Name (e.g. Crown)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none" /></div>
-                    
-                    {/* Price Input */}
                     <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none" /></div>
                     
-                    {/* ✨ EXTRA IMAGE UPLOADER */}
                     <div className="flex items-center gap-3">
                         {newExtraImage ? (
                             <div className="relative w-12 h-12 rounded border border-black/10 overflow-hidden group">
@@ -652,7 +710,6 @@ export default function AddProductPage() {
           </div>
         </form>
 
-        {/* ✨ CROPPER MODAL (Pop up when ANY image is selected) */}
         {cropImage && (
           <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-4">
             <div className="relative w-full max-w-lg h-[60vh] bg-white border border-black/10 rounded-2xl overflow-hidden shadow-2xl">
@@ -670,15 +727,7 @@ export default function AddProductPage() {
             <div className="w-full max-w-lg mt-6 space-y-4 bg-white p-6 rounded-2xl">
                 <div className="flex items-center gap-4">
                   <span className="text-xs font-bold text-[#1F1F1F] uppercase">Zoom</span>
-                  <input 
-                    type="range" 
-                    value={zoom} 
-                    min={1} 
-                    max={3} 
-                    step={0.1} 
-                    onChange={(e) => setZoom(Number(e.target.value))} 
-                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#1F1F1F]" 
-                  />
+                  <input type="range" value={zoom} min={1} max={3} step={0.1} onChange={(e) => setZoom(Number(e.target.value))} className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#1F1F1F]" />
                 </div>
 
                 <div className="flex gap-4">

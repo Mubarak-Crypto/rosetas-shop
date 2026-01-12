@@ -12,7 +12,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// 📖 Full Translation Dictionary - NOW INCLUDES MANUAL OVERRIDES FROM IMAGES
+// 📖 Full Translation Dictionary - UPDATED FOR ENGLISH CONSISTENCY
 const translations: Record<Language, Record<string, string>> = {
   DE: {
     // Navbar & Common
@@ -23,19 +23,17 @@ const translations: Record<Language, Record<string, string>> = {
     "cart": "Warenkorb",
     
     // Home Page
-    // ✨ FORCED ENGLISH HEADLINE (Updated content as per request)
     "hero_title": "Not just flowers — a statement.",
-    // ✅ FIXED: German Subtitle set to her specific request
     "hero_subtitle": "Für Wirkung gemacht.", 
     "shop_now": "Zum Shop gehen",
     "our_collection": "Unsere Kollektion",
     
-    // ✨ STORY SECTION (From Manual Images)
+    // ✨ STORY SECTION (German version confirmed)
     "story_badge": "HANDGEFERTIGT IN ESSEN • UNSERE GESCHICHTE",
     "story_title": "Wo Kunstfertigkeit auf Eleganz trifft.",
     "story_text": "Bei Rosetas entstehen keine gewöhnlichen Blumen, sondern Statements aus Eleganz und Qualität. Seit unserer Gründung im Jahr 2025 stehen wir für hochwertige, handgefertigte Blumenkonzepte, die Emotionen bewahren und Luxus neu definieren.",
 
-    // Features Component (From Manual Images)
+    // Features Component
     "features_headline_start": "Deshalb ist",
     "features_headline_end": "die erste Wahl",
     "features_subtitle": "Qualität, Verständnis und Umsetzung – auf die Sie zählen können.",
@@ -48,11 +46,11 @@ const translations: Record<Language, Record<string, string>> = {
     "feat_4_title": "Das ultimative Geschenk",
     "feat_4_desc": "Wird in einer Premium-Verpackung geliefert, die einen bleibenden Eindruck hinterlässt.",
 
-    // Supplies Page ✨ Added (From Manual Images)
     "supplies_title": "Floristenbedarf",
     "supplies_subtitle": "Beziehen Sie die gleichen hochwertigen Materialien, die wir für unsere floralen Arbeiten nutzen – sorgfältig ausgewählt für Qualität und Stil.",
+    "browse_supplies": "Zubehör durchsuchen",
 
-    // Product & Shop
+    // Product & Shop Logic
     "add_to_cart": "In den Warenkorb",
     "select_options": "Optionen auswählen",
     "ribbon_placeholder": "Bandtext eingeben...",
@@ -63,7 +61,7 @@ const translations: Record<Language, Record<string, string>> = {
     "back_to_shop": "Zurück zum Shop",
     "customize_upgrade": "Anpassen & Erweitern",
     
-    // Checkout Page
+    // Checkout & Success
     "checkout_back": "Zurück zum Shop",
     "checkout_secure": "Sicherer Checkout",
     "checkout_shipping": "Versand",
@@ -87,7 +85,6 @@ const translations: Record<Language, Record<string, string>> = {
     "checkout_empty": "Dein Warenkorb ist leer",
     "checkout_loading_payment": "Sichere Zahlung wird geladen...",
 
-    // Success Page
     "success_title": "Zahlung erfolgreich!",
     "success_message": "Vielen Dank für Ihre Bestellung. Wir haben Ihre Zahlung erhalten und bereiten Ihr Luxus-Bouquet vor.",
     "success_continue": "WEITER SHOPPEN",
@@ -110,7 +107,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer_policy": "Datenschutz",
     "footer_shipping": "Versand & Rückgabe",
     "footer_contact": "Kontakt",
-    "legal_business_type": "Rosetas Bouquets - Einzelunternehmen" // ✨ Added for Impressum
+    "legal_business_type": "Rosetas Bouquets - Einzelunternehmen" 
   },
   EN: {
     // Navbar & Common
@@ -121,17 +118,16 @@ const translations: Record<Language, Record<string, string>> = {
     "cart": "Cart",
 
     // Home Page
-    // ✨ FORCED ENGLISH HEADLINE (Updated content as per request)
     "hero_title": "Not just flowers — a statement.",
-    // ✅ FIXED: English Subtitle set back to location text for switching
-    "hero_subtitle": "Luxury Bouquets from Essen, Germany", 
+    // ✨ UPDATED: Replaced old "Essen Germany" text as requested
+    "hero_subtitle": "Designed to make an impact.", 
     "shop_now": "Shop Now",
     "our_collection": "Our Collection",
 
-    // ✨ STORY SECTION
+    // ✨ STORY SECTION (Updated English Phrasing)
     "story_badge": "Hand-Crafted in Essen • Our Story",
     "story_title": "Where Artistry Meets Elegance.",
-    "story_text": "At Rosetas, we don't just sell flowers; we create permanent moments of luxury. Based in Essen, Germany, our studio specializes in hand-crafted satin bouquets designed to capture emotions that never fade.",
+    "story_text": "At Rosetas, we don’t create ordinary flowers — we create statements of elegance and quality. Since our founding in 2025, we have stood for high-quality, handcrafted floral concepts designed to preserve emotions and redefine luxury.",
 
     // Features Component
     "features_headline_start": "That’s why",
@@ -146,9 +142,9 @@ const translations: Record<Language, Record<string, string>> = {
     "feat_4_title": "The Ultimate Gift",
     "feat_4_desc": "Arrives in premium packaging designed to leave a lasting impression.",
 
-    // Supplies Page ✨ Added
     "supplies_title": "Florist Supplies",
     "supplies_subtitle": "Source the same premium materials we use in our luxury studio – carefully selected for quality and style.",
+    "browse_supplies": "Browse Supplies",
 
     // Product & Shop
     "add_to_cart": "Add to Cart",
@@ -161,7 +157,7 @@ const translations: Record<Language, Record<string, string>> = {
     "back_to_shop": "Back to Shop",
     "customize_upgrade": "Customize & Upgrade",
 
-    // Checkout Page
+    // Checkout & Success
     "checkout_back": "Back to Shop",
     "checkout_secure": "Secure Checkout",
     "checkout_shipping": "Shipping",
@@ -185,7 +181,6 @@ const translations: Record<Language, Record<string, string>> = {
     "checkout_empty": "Your cart is empty",
     "checkout_loading_payment": "Loading secure payment...",
 
-    // Success Page
     "success_title": "Payment Successful!",
     "success_message": "Thank you for your order. We have received your payment and are preparing your luxury bouquet.",
     "success_continue": "CONTINUE SHOPPING",
@@ -208,7 +203,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer_policy": "Privacy Policy",
     "footer_shipping": "Shipping & Returns",
     "footer_contact": "Contact",
-    "legal_business_type": "Rosetas Bouquets - Sole Proprietorship" // ✨ Added for English Impressum
+    "legal_business_type": "Rosetas Bouquets - Sole Proprietorship" 
   }
 };
 
@@ -243,4 +238,4 @@ export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) throw new Error("useLanguage must be used within LanguageProvider");
   return context;
-};
+};  

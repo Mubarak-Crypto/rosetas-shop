@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info } from "lucide-react"; // ✨ Added Info icon
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid } from "lucide-react"; // ✨ Added Info & LayoutGrid icon
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -48,6 +48,9 @@ export default function EditProductPage() {
   const [tempValueStock, setTempValueStock] = useState("");
   const [tempList, setTempList] = useState<string[]>([]);
 
+  // ✨ NEW: STOCK MATRIX STATE
+  const [stockMatrix, setStockMatrix] = useState<any[]>([]);
+
   // Extras
   const [extras, setExtras] = useState<Extra[]>([]);
   const [isAddingExtra, setIsAddingExtra] = useState(false);
@@ -92,12 +95,40 @@ export default function EditProductPage() {
         setVariants(data.variants || []);
         setExtras(data.extras || []);
         setNeedsRibbon(data.needs_ribbon || false); // ✨ Load ribbon toggle status
+        setStockMatrix(data.stock_matrix || []); // ✨ Load existing stock matrix
         setIsLoading(false);
       }
     };
 
     fetchProduct();
   }, [productId, router]);
+
+  // ✨ NEW: AUTO-GENERATE MATRIX LOGIC
+  useEffect(() => {
+    if (variants.length > 1) {
+      const generateMatrix = () => {
+        const optionGroups = variants.map(v => ({
+          name: v.name,
+          values: v.values.split(',').map(val => val.split('(')[0].split('|')[0].trim())
+        }));
+
+        // Cartesian product to get all combos
+        const combos = optionGroups.reduce((a, b) => 
+          a.flatMap((d: any) => b.values.map(v => ({ ...d, [b.name]: v })))
+        , [{}]);
+
+        const newMatrix = combos.map(combo => {
+          const existing = stockMatrix.find(m => 
+            Object.keys(combo).every(key => m[key] === combo[key])
+          );
+          return existing || { ...combo, stock: 0 };
+        });
+
+        setStockMatrix(newMatrix);
+      };
+      generateMatrix();
+    }
+  }, [variants]);
 
   // ✨ UPDATED: HANDLE MULTIPLE VIDEO UPLOADS
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,7 +331,8 @@ export default function EditProductPage() {
         video_url: videoUrls, // ✨ Save multiple video URLs array
         variants,
         extras, // Save Extras (includes images now)
-        needs_ribbon: needsRibbon // ✨ NEW: Save ribbon toggle status
+        needs_ribbon: needsRibbon, // ✨ NEW: Save ribbon toggle status
+        stock_matrix: stockMatrix // ✨ NEW: Save individual stock tracking
       })
       .eq('id', productId);
 
@@ -480,6 +512,46 @@ export default function EditProductPage() {
                 </div>
               </div>
 
+              {/* ✨ NEW: INDIVIDUAL STOCK MATRIX SECTION */}
+              {variants.length > 1 && (
+                <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid className="text-[#C9A24D]" size={20} />
+                    <h3 className="font-bold text-lg">Individual Stock Tracking</h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="text-[10px] font-black uppercase text-gray-400 bg-gray-50">
+                        <tr>
+                          {variants.map(v => <th key={v.name} className="px-4 py-3">{v.name}</th>)}
+                          <th className="px-4 py-3">Stock Count</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-black/5">
+                        {stockMatrix.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                            {variants.map(v => <td key={v.name} className="px-4 py-3 text-xs font-bold">{item[v.name]}</td>)}
+                            <td className="px-4 py-2">
+                              <input 
+                                type="number" 
+                                value={item.stock} 
+                                onChange={(e) => {
+                                  const updated = [...stockMatrix];
+                                  updated[idx].stock = parseInt(e.target.value) || 0;
+                                  setStockMatrix(updated);
+                                }}
+                                className="w-24 bg-gray-50 border border-black/5 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-[#C9A24D]"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
                 <h3 className="font-bold text-lg mb-4">Pricing</h3>
                 <div className="grid grid-cols-3 gap-4">
@@ -488,7 +560,7 @@ export default function EditProductPage() {
                     <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Stock Qty</label>
+                    <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
                     <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
                   </div>
                 </div>
@@ -577,7 +649,7 @@ export default function EditProductPage() {
                 
                 {/* ✨ NEW: PRICING GRID INSTRUCTIONS */}
                 <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
-                  <Info size={16} className="text-[#C9A24D] mt-0.5 shrink-0" />
+                  <span className="text-[#C9A24D] mt-0.5 shrink-0" />
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold">Pricing Grid Guide:</p>
                     <p className="text-[9px] font-medium leading-relaxed">

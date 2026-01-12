@@ -50,6 +50,18 @@ export default function AdminProducts() {
     }
   };
 
+  /**
+   * ✨ NEW HELPER: Calculate Total Stock
+   * Since Rosetta wants individual stock per combination, the main table 
+   * should now show the SUM of all those combination stocks.
+   */
+  const calculateTotalStock = (product: any) => {
+    if (product.variants && Array.isArray(product.variants)) {
+      return product.variants.reduce((acc: number, variant: any) => acc + (Number(variant.stock) || 0), 0);
+    }
+    return product.stock || 0; // Fallback to legacy stock field
+  };
+
   return (
     /* ✅ FIXED: Theme Colors Updated to Cream & Ink */
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
@@ -87,7 +99,7 @@ export default function AdminProducts() {
         {/* Products Table */}
         <div className="bg-white border border-black/5 rounded-2xl overflow-hidden min-h-[300px] shadow-sm">
           
-          {/*  */}
+          {/* */}
           {isLoading ? (
             <div className="flex items-center justify-center h-64 text-[#C9A24D]">
               <Loader2 className="animate-spin" size={48} />
@@ -105,7 +117,7 @@ export default function AdminProducts() {
                   <th className="px-6 py-4">Ribbon</th> {/* ✨ NEW: Ribbon Mandatory Column */}
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
-                  <th className="px-6 py-4">Stock</th>
+                  <th className="px-6 py-4">Total Stock</th> {/* Updated label */}
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -153,7 +165,12 @@ export default function AdminProducts() {
 
                     <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">{product.category}</td>
                     <td className="px-6 py-4 text-sm font-mono font-bold text-[#C9A24D]">€{product.price}</td>
-                    <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">{product.stock} units</td>
+                    
+                    {/* ✨ UPDATED: Logic to show combined stock from all variants */}
+                    <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">
+                      {calculateTotalStock(product)} units
+                    </td>
+
                     <td className="px-6 py-4">
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tight border ${
                          product.status === 'active' 

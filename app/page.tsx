@@ -229,7 +229,7 @@ export default function Home() {
               </div>
 
               <Link href="/supplies">
-                {/* ✅ UPDATED: Added btn-luminous class for a matching glowing look */}
+                {/* ✅ UPDATED: Added btn-luminous class for a matching glowing look and fixed translation bug */}
                 <button className="px-8 py-4 btn-luminous text-[#1F1F1F] font-bold rounded-xl transition-all">
                   {t('browse_supplies')}
                 </button>
