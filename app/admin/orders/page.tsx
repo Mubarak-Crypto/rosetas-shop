@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle } from "lucide-react";
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap } from "lucide-react"; // ✨ Added Globe & Zap icons
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'paid' | 'shipped'>('paid');
-  const [searchTerm, setSearchTerm] = useState(""); // ✨ New Search State
+  const [searchTerm, setSearchTerm] = useState(""); 
 
   // ✨ SHIPPING MODAL STATE
   const [shippingModal, setShippingModal] = useState<{ open: boolean; orderId: number | null }>({ open: false, orderId: null });
@@ -33,44 +33,38 @@ export default function AdminOrdersPage() {
     fetchOrders();
   }, []);
 
-  // ✨ FIXED: Handle Marking as Shipped & Sending Email
+  // ✨ Mark as Shipped & Sending Email
   const handleMarkShipped = async () => {
     if (!shippingModal.orderId || !trackingNumber) return;
     setIsUpdating(true);
 
     try {
-      // 1. Update Database Status
       const { error } = await supabase
         .from('orders')
         .update({ 
           status: 'shipped', 
           tracking_number: trackingNumber,
           carrier: carrier,
-          shipped_at: new Date().toISOString() // Save the exact time
+          shipped_at: new Date().toISOString() 
         })
         .eq('id', shippingModal.orderId);
 
       if (error) throw error;
 
-      // 2. Find Order Details for Email
       const orderToUpdate = orders.find(o => o.id === shippingModal.orderId);
       
       if (orderToUpdate) {
-        // ✨ NEW: Get Product Details for the Review Link
-        // We take the first item from the order to generate the review link
         const firstItem = orderToUpdate.items && orderToUpdate.items.length > 0 ? orderToUpdate.items[0] : null;
 
-        // 3. TRIGGER THE CORRECT API (Fixed to match your folder 'send-shipping-email')
         const response = await fetch('/api/send-shipping-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: orderToUpdate.customer_email || orderToUpdate.email, // Handle both field names
+            email: orderToUpdate.customer_email || orderToUpdate.email, 
             customerName: orderToUpdate.customer_name,
-            orderId: orderToUpdate.id.toString().slice(0, 8).toUpperCase(), // Format ID nicely
+            orderId: orderToUpdate.id.toString().slice(0, 8).toUpperCase(), 
             trackingNumber: trackingNumber,
             carrier: carrier,
-            // ✨ ADDED: Passing product info for the verified review logic
             productId: firstItem?.productId || firstItem?.id,
             productName: firstItem?.name || "your bouquet"
           }),
@@ -78,21 +72,17 @@ export default function AdminOrdersPage() {
         
         if (!response.ok) {
             console.error("Email API failed:", await response.text());
-            // We don't stop the UI update here, but we log the error
         }
 
-        // 4. Update UI Instantly (Move order to 'Shipped' tab)
         setOrders(prev => prev.map(o => 
           o.id === shippingModal.orderId 
             ? { ...o, status: 'shipped', tracking_number: trackingNumber, carrier: carrier } 
             : o
         ));
 
-        // 5. Success Message
         alert(`Order #${shippingModal.orderId} marked as shipped! Email sent.`);
       }
       
-      // Close Modal & Reset
       setShippingModal({ open: false, orderId: null });
       setTrackingNumber("");
       
@@ -104,18 +94,16 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Filter orders based on the active tab AND search term
   const displayedOrders = orders.filter(order => {
-    // Tab Filter
     const matchesTab = activeTab === 'paid' 
       ? (order.status === 'paid' || order.status === 'pending')
       : (order.status === 'shipped' || order.status === 'completed');
 
-    // Search Filter
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
       order.customer_name?.toLowerCase().includes(searchLower) ||
       order.email?.toLowerCase().includes(searchLower) ||
+      order.country?.toLowerCase().includes(searchLower) || // ✨ Searchable by country
       order.id.toString().includes(searchLower);
 
     return matchesTab && matchesSearch;
@@ -158,7 +146,7 @@ export default function AdminOrdersPage() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1F1F1F]/20" size={20} />
               <input 
                 type="text" 
-                placeholder="Search by customer name, email, or Order ID..." 
+                placeholder="Search by name, email, country, or Order ID..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white border border-black/5 rounded-xl py-3 pl-12 pr-4 text-[#1F1F1F] placeholder:text-[#1F1F1F]/20 focus:outline-none focus:border-[#C9A24D] transition-all shadow-sm font-medium"
@@ -183,7 +171,6 @@ export default function AdminOrdersPage() {
                     <div>
                       <div className="flex items-center gap-3">
                          <h3 className="text-xl font-bold text-[#1F1F1F]">{order.customer_name}</h3>
-                         {/* Status Badge */}
                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight border ${
                            order.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
                            order.status === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' :
@@ -191,6 +178,12 @@ export default function AdminOrdersPage() {
                          }`}>
                            {order.status}
                          </span>
+                         {/* ✨ EXPRESS BADGE DISPLAY */}
+                         {order.shipping_method === 'Express' && (
+                           <span className="bg-[#1F1F1F] text-[#C9A24D] px-2 py-1 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 animate-pulse">
+                             <Zap size={10} fill="#C9A24D" /> Priority
+                           </span>
+                         )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-[#1F1F1F]/40 mt-1 font-medium">
                         <span className="flex items-center gap-1"><Mail size={12} /> {order.email || order.customer_email}</span>
@@ -234,13 +227,23 @@ export default function AdminOrdersPage() {
                           <MapPin size={14} className="mt-1 text-[#C9A24D]" />
                           <span className="text-[#1F1F1F] font-medium leading-relaxed">
                             {order.address}<br/>
-                            {order.city}, {order.zip}
+                            {order.city}, {order.zip}<br/>
+                            {/* ✨ DISPLAY THE COUNTRY FIELD */}
+                            <span className="flex items-center gap-1 mt-1 text-[#1F1F1F] font-bold">
+                               <Globe size={12} className="text-[#C9A24D]" /> {order.country || "Germany"}
+                            </span>
                           </span>
                         </p>
                       </div>
                       <div>
-                         <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-2">Contact</h4>
-                         <p className="pl-6 text-[#1F1F1F] font-bold">{order.phone}</p>
+                         <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Method</h4>
+                         <p className={`text-[11px] font-black uppercase ${order.shipping_method === 'Express' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]'}`}>
+                           {order.shipping_method || "Standard"}
+                         </p>
+                      </div>
+                      <div>
+                         <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Contact</h4>
+                         <p className="text-[#1F1F1F] font-bold">{order.phone}</p>
                       </div>
                     </div>
 

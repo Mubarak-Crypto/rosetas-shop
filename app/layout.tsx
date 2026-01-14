@@ -5,6 +5,7 @@ import { CartProvider } from "../context/CartContext";
 import { LanguageProvider } from "../context/LanguageContext"; // ✨ Added Language Import
 import CartSidebar from "../components/CartSidebar";
 import Footer from "../components/Footer"; 
+import Script from "next/script"; // ✨ Added for Tidio Integration
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,6 +35,12 @@ export default function RootLayout({
             <Footer /> 
           </CartProvider>
         </LanguageProvider>
+
+        {/* 💬 Rosetta's Tidio Live Chat Widget */}
+        <Script 
+          src="//code.tidio.co/9omzpnf35weioflov9qjkg9cgo7rt2x6.js" 
+          strategy="afterInteractive" 
+        />
       </body>
     </html>
   );

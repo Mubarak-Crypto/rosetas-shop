@@ -1,38 +1,122 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, Lock, ShieldCheck, Mail, Phone } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { ArrowLeft, Lock, ShieldCheck, Mail, Phone, Globe, Zap, AlertCircle } from "lucide-react"; // ✨ Added AlertCircle for Customs
 import Link from "next/link";
 import { useCart } from "../../context/CartContext";
-import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Language Import
+import { useLanguage } from "../../context/LanguageContext"; 
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { supabase } from "../../lib/supabase"; 
+import AutoComplete from "react-google-autocomplete"; // ✨ Added for Address Validation
 
-// Load your Publishable Key
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-// --- COMPONENT: THE PAYMENT FORM ---
-function PaymentForm({ amount, formData, cart }: { amount: number, formData: any, cart: any[] }) {
+// 🌏 List of EU Countries (No customs needed)
+const euCountries = [
+  "Belgium", "Bulgaria", "Denmark", "Germany", "Estonia", "Finland", "France", 
+  "Greece", "Ireland", "Italy", "Croatia", "Latvia", "Lithuania", "Luxembourg", 
+  "Malta", "Netherlands", "Austria", "Poland", "Portugal", "Romania", 
+  "Sweden", "Slovakia", "Slovenia", "Spain", "Czech Republic", "Hungary", "Cyprus"
+];
+
+// 🌏 Rosetta's Global Shipping Data (Updated with latest rates & blacklist)
+const shippingRates: Record<string, { rate10kg: number; rate20kg: number; express10kg?: number; express20kg?: number }> = {
+  "Belgium": { rate10kg: 25, rate20kg: 31 },
+  "Bulgaria": { rate10kg: 25, rate20kg: 32 },
+  "Denmark": { rate10kg: 24, rate20kg: 30 },
+  "France": { rate10kg: 24.49, rate20kg: 29.99 },
+  "Greece": { rate10kg: 25, rate20kg: 32 },
+  "Italy": { rate10kg: 25, rate20kg: 32 },
+  "Ireland": { rate10kg: 25, rate20kg: 32 },
+  "Croatia": { rate10kg: 25, rate20kg: 32 },
+  "Latvia": { rate10kg: 25, rate20kg: 32 },
+  "Lithuania": { rate10kg: 25, rate20kg: 32 },
+  "Luxembourg": { rate10kg: 25, rate20kg: 32 },
+  "Malta": { rate10kg: 25, rate20kg: 32 },
+  "Monaco": { rate10kg: 25, rate20kg: 32 },
+  "Netherlands": { rate10kg: 25, rate20kg: 32 },
+  "Poland": { rate10kg: 25, rate20kg: 32 },
+  "Portugal": { rate10kg: 25, rate20kg: 32 },
+  "Romania": { rate10kg: 25, rate20kg: 32 },
+  "Sweden": { rate10kg: 25, rate20kg: 32 },
+  "Slovakia": { rate10kg: 25, rate20kg: 32 },
+  "Slovenia": { rate10kg: 25, rate20kg: 32 },
+  "Spain": { rate10kg: 25, rate20kg: 32 },
+  "Czech Republic": { rate10kg: 25, rate20kg: 32 },
+  "Hungary": { rate10kg: 25, rate20kg: 32 },
+  "Cyprus": { rate10kg: 25, rate20kg: 32 },
+  "Albania": { rate10kg: 40, rate20kg: 55 },
+  "Bosnia & Herzegovina": { rate10kg: 40, rate20kg: 55 },
+  "Kosovo": { rate10kg: 39, rate20kg: 55 },
+  "Moldova": { rate10kg: 39, rate20kg: 55 },
+  "Norway": { rate10kg: 40, rate20kg: 55 },
+  "Turkey": { rate10kg: 40, rate20kg: 55 },
+  "Ukraine": { rate10kg: 40, rate20kg: 55 },
+  "Switzerland": { rate10kg: 35, rate20kg: 51 },
+  "Iceland": { rate10kg: 39, rate20kg: 54 },
+  "Liechtenstein": { rate10kg: 39, rate20kg: 54 },
+  "United States": { rate10kg: 80, rate20kg: 150 },
+  "Canada": { rate10kg: 79, rate20kg: 150 },
+  "Mexico": { rate10kg: 79, rate20kg: 146 },
+  "Argentina": { rate10kg: 79, rate20kg: 150 },
+  "Brazil": { rate10kg: 79, rate20kg: 150 },
+  "Bahamas": { rate10kg: 79, rate20kg: 150 },
+  "Barbados": { rate10kg: 79, rate20kg: 150 },
+  "Jamaica": { rate10kg: 79, rate20kg: 147 },
+  "Puerto Rico": { rate10kg: 79, rate20kg: 150 },
+  "Costa Rica": { rate10kg: 79, rate20kg: 150 },
+  "Colombia": { rate10kg: 79, rate20kg: 145 },
+  "Peru": { rate10kg: 79, rate20kg: 150 },
+  "Paraguay": { rate10kg: 79, rate20kg: 150 },
+  "Chile": { rate10kg: 79, rate20kg: 150 },
+  "Egypt": { rate10kg: 65, rate20kg: 78 },
+  "Algeria": { rate10kg: 65, rate20kg: 78 },
+  "Morocco": { rate10kg: 55, rate20kg: 78 },
+  "Tunisia": { rate10kg: 55, rate20kg: 78 },
+  "South Africa": { rate10kg: 65, rate20kg: 105 },
+  "Senegal": { rate10kg: 65, rate20kg: 105 },
+  "Cameroon": { rate10kg: 65, rate20kg: 105 },
+  "Kenya": { rate10kg: 65, rate20kg: 105 },
+  "Nigeria": { rate10kg: 65, rate20kg: 105 },
+  "UAE": { rate10kg: 65, rate20kg: 105 },
+  "Saudi Arabia": { rate10kg: 65, rate20kg: 105 },
+  "Qatar": { rate10kg: 65, rate20kg: 105 },
+  "Oman": { rate10kg: 65, rate20kg: 105 },
+  "Kuwait": { rate10kg: 65, rate20kg: 105 },
+  "China": { rate10kg: 80, rate20kg: 150 },
+  "Hong Kong": { rate10kg: 68, rate20kg: 104 },
+  "Japan": { rate10kg: 65, rate20kg: 105 },
+  "India": { rate10kg: 67, rate20kg: 105 },
+  "Thailand": { rate10kg: 65, rate20kg: 105 },
+  "Vietnam": { rate10kg: 65, rate20kg: 105 },
+  "Indonesia": { rate10kg: 65, rate20kg: 105 },
+  "Malaysia": { rate10kg: 65, rate20kg: 105 },
+  "Singapore": { rate10kg: 65, rate20kg: 105 },
+  "Sri Lanka": { rate10kg: 65, rate20kg: 105 },
+  "Philippines": { rate10kg: 65, rate20kg: 105 },
+  "Taiwan": { rate10kg: 65, rate20kg: 105 },
+  "Maldives": { rate10kg: 65, rate20kg: 105 },
+  "Fiji": { rate10kg: 98, rate20kg: 180 },
+  "French Polynesia": { rate10kg: 99, rate20kg: 180 },
+  "Germany": { rate10kg: 11.49, rate20kg: 19.49, express10kg: 40, express20kg: 45 }
+};
+
+function PaymentForm({ amount, formData, cart, isExpress }: { amount: number, formData: any, cart: any[], isExpress: boolean }) {
   const stripe = useStripe();
   const elements = useElements();
-  const { t } = useLanguage(); // ✨ Access translations
+  const { t } = useLanguage(); 
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!stripe || !elements) return;
-
     setIsLoading(true);
 
-    // 1. CONFIRM PAYMENT WITH STRIPE
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/success`,
-      },
+      confirmParams: { return_url: `${window.location.origin}/success` },
       redirect: "if_required", 
     });
 
@@ -40,134 +124,151 @@ function PaymentForm({ amount, formData, cart }: { amount: number, formData: any
       setMessage(error.message || "An unexpected error occurred.");
       setIsLoading(false);
     } else if (paymentIntent && paymentIntent.status === "succeeded") {
-      
-      // 2. IF PAYMENT SUCCESSFUL, SAVE ORDER TO SUPABASE
-      const { error: dbError } = await supabase.from('orders').insert([
-        {
+      const { error: dbError } = await supabase.from('orders').insert([{
           customer_name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
           phone: formData.phone,
           address: formData.address,
           city: formData.city,
           zip: formData.zip,
+          country: formData.country,
+          shipping_method: isExpress ? "Express" : "Standard", 
           items: cart, 
           total: amount,
           status: 'paid',
           payment_id: paymentIntent.id
-        }
-      ]);
+      }]);
 
-      if (dbError) {
-        console.error("Error saving order:", dbError);
-      }
+      if (dbError) console.error("Error saving order:", dbError);
 
-      // 3. SEND EMAIL NOTIFICATION 
       await fetch("/api/send-order-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerName: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
-          address: `${formData.address}, ${formData.city}`,
+          address: `${formData.address}, ${formData.city}, ${formData.country}`,
           items: cart,
-          total: amount
+          total: amount,
+          shippingMethod: isExpress ? "Express" : "Standard"
         }),
       });
 
-      // 4. REDIRECT TO SUCCESS PAGE
       window.location.href = "/success";
     }
-    
     setIsLoading(false);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <PaymentElement options={{ layout: "tabs" }} />
-      
       {message && <div className="text-red-600 text-sm bg-red-600/10 p-3 rounded font-medium">{message}</div>}
-      
-      <button 
-        disabled={isLoading || !stripe || !elements} 
-        className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] font-bold py-4 rounded-xl shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-      >
-        {/* FORCE WHITE TEXT */}
-        <span style={{ color: 'white', opacity: 1 }} className="!text-white">
-          {isLoading ? t('checkout_processing') : `${t('checkout_pay')} €${amount.toFixed(2)}`}
-        </span>
+      <button disabled={isLoading || !stripe || !elements} className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+        <span style={{ color: 'white' }} className="!text-white">{isLoading ? t('checkout_processing') : `${t('checkout_pay')} €${amount.toFixed(2)}`}</span>
       </button>
-      
-      <p className="text-xs text-center text-[#1F1F1F]/50 flex items-center justify-center gap-1 font-medium">
-        <Lock size={10} /> Secure Encrypted Checkout via Stripe
-      </p>
+      <p className="text-xs text-center text-[#1F1F1F]/50 flex items-center justify-center gap-1 font-medium"><Lock size={10} /> Secure Encrypted Checkout</p>
     </form>
   );
 }
 
-// --- MAIN PAGE COMPONENT ---
 export default function CheckoutPage() {
   const { cart, cartTotal } = useCart();
-  const { t, language } = useLanguage(); // ✨ Access translations
+  const { t, language } = useLanguage(); 
   const [step, setStep] = useState(1);
   const [clientSecret, setClientSecret] = useState("");
+  const [isExpress, setIsExpress] = useState(false); 
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false); // ✨ State for Shipping Policy
+  const [agreedToCustoms, setAgreedToCustoms] = useState(false); // ✨ State for Customs Policy
+  const [agreedToWithdrawal, setAgreedToWithdrawal] = useState(false); // ✨ Added State for Withdrawal Policy
 
   const [formData, setFormData] = useState({
-    email: "", firstName: "", lastName: "", address: "", city: "", zip: "", phone: ""
+    email: "", firstName: "", lastName: "", address: "", city: "", zip: "", phone: "", country: "Germany"
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const { shippingCost, needs20kg } = useMemo(() => {
+    const countryData = shippingRates[formData.country] || { rate10kg: 0, rate20kg: 0 };
+    const weight20kg = cart.some(item => {
+      const optionValues = Object.values(item.options || {}).join(" ");
+      return optionValues.includes("100") || optionValues.includes("200") || optionValues.includes("150");
+    });
+
+    let cost = weight20kg ? countryData.rate20kg : countryData.rate10kg;
+    
+    // Applying Express Surcharge for Germany
+    if (isExpress && formData.country === "Germany") {
+        cost = weight20kg ? (countryData.express20kg || cost) : (countryData.express10kg || cost);
+    }
+
+    return { shippingCost: cost, needs20kg: weight20kg };
+  }, [formData.country, cart, isExpress]);
+
+  const finalTotal = cartTotal + shippingCost;
+
+  // ✨ Check if the country is outside the EU
+  const isNonEU = useMemo(() => !euCountries.includes(formData.country), [formData.country]);
+
+  // ✨ Detect if any product is personalized (Ribbon, custom notes, letter choices)
+  const hasPersonalization = useMemo(() => {
+    return cart.some(item => 
+      item.customText || 
+      (item.options && Object.values(item.options).some(val => 
+        String(val).toLowerCase().includes('letter') || 
+        String(val).toLowerCase().includes('message') ||
+        String(val).toLowerCase().includes('note')
+      ))
+    );
+  }, [cart]);
+
+  // ✨ Validation logic for the "Continue" button
+  const canProceed = useMemo(() => {
+    const hasAddress = formData.email && formData.phone && formData.address && formData.city && formData.zip;
+    const policyValid = agreedToPolicy;
+    const customsValid = isNonEU ? agreedToCustoms : true;
+    const withdrawalValid = (!isNonEU && hasPersonalization) ? agreedToWithdrawal : true; // Withdrawal applies to EU personalized goods
+
+    return hasAddress && policyValid && customsValid && withdrawalValid;
+  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (e.target.name === "country" && e.target.value !== "Germany") setIsExpress(false);
   };
 
   const handleDetailsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.email || !formData.phone || !formData.address) {
-      alert(language === 'EN' ? "Please fill in all mandatory fields." : "Bitte füllen Sie alle Pflichtfelder aus.");
+    if (!canProceed) {
+      alert(language === 'EN' ? "Please complete all fields and agree to the required policies." : "Bitte füllen Sie alle Felder aus und stimmen Sie den erforderlichen Bedingungen zu.");
       return;
     }
-
     setStep(2); 
   };
 
   useEffect(() => {
-    if (step === 2 && cartTotal > 0) {
+    if (step === 2 && finalTotal > 0) {
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Math.round(cartTotal * 100) }),
-      })
-        .then((res) => res.json())
-        .then((data) => setClientSecret(data.clientSecret));
+        body: JSON.stringify({ amount: Math.round(finalTotal * 100) }),
+      }).then((res) => res.json()).then((data) => setClientSecret(data.clientSecret));
     }
-  }, [step, cartTotal]);
+  }, [step, finalTotal]);
 
-  if (cart.length === 0) {
-    return (
-      <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold">{t('checkout_empty')}</h1>
-        <Link href="/" className="text-[#C9A24D] font-bold hover:underline">{t('back_to_shop')}</Link>
-      </div>
-    );
-  }
+  if (cart.length === 0) return (
+    <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex flex-col items-center justify-center gap-4">
+      <h1 className="text-2xl font-bold">{t('checkout_empty')}</h1>
+      <Link href="/" className="text-[#C9A24D] font-bold hover:underline">{t('back_to_shop')}</Link>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#C9A24D] selection:text-white pb-20">
-      
+    <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#C9A24D] pb-20">
       <header className="p-6 border-b border-black/5 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 text-[#1F1F1F]/60 hover:text-[#1F1F1F] transition-colors font-medium">
-          <ArrowLeft size={18} /> {t('checkout_back')}
-        </Link>
-        <div className="flex items-center gap-2 text-green-600 text-sm font-bold">
-          <Lock size={14} /> {t('checkout_secure')}
-        </div>
+        <Link href="/" className="flex items-center gap-2 text-[#1F1F1F]/60 font-medium"><ArrowLeft size={18} /> {t('checkout_back')}</Link>
+        <div className="flex items-center gap-2 text-green-600 text-sm font-bold"><Lock size={14} /> {t('checkout_secure')}</div>
       </header>
 
       <main className="max-w-7xl mx-auto p-6 lg:p-12 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24">
-        
-        {/* LEFT COLUMN */}
         <div className="space-y-8">
-          {/* Progress Bar */}
           <div className="flex items-center gap-4 mb-8">
             <div className={`flex items-center gap-2 text-sm font-bold ${step >= 1 ? "text-[#1F1F1F]" : "text-[#1F1F1F]/40"}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${step >= 1 ? "bg-[#1F1F1F] text-white border-[#1F1F1F]" : "border-black/10"}`}>1</div> {t('checkout_shipping')}
@@ -180,114 +281,181 @@ export default function CheckoutPage() {
 
           {step === 1 ? (
             <form onSubmit={handleDetailsSubmit} className="space-y-6 animate-in fade-in slide-in-from-left-4">
-              
               <div className="space-y-4">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <ShieldCheck className="text-[#C9A24D]" /> {t('checkout_contact')}
-                </h2>
-                
-                <div>
-                  <label className="text-xs font-bold text-[#1F1F1F]/50 uppercase mb-1 block">{t('checkout_email')} *</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-4 text-[#1F1F1F]/30" size={18} />
-                    <input 
-                      required 
-                      type="email" 
-                      name="email" 
-                      placeholder="you@example.com" 
-                      value={formData.email} 
-                      onChange={handleChange} 
-                      className="w-full bg-white/50 border border-black/10 rounded-xl pl-12 pr-4 py-4 focus:border-[#C9A24D] outline-none transition-colors text-[#1F1F1F]" 
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-[#1F1F1F]/50 uppercase mb-1 block">{t('checkout_phone')} *</label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-4 text-[#1F1F1F]/30" size={18} />
-                    <input 
-                      required 
-                      type="tel" 
-                      name="phone" 
-                      placeholder="+49 ..." 
-                      value={formData.phone} 
-                      onChange={handleChange} 
-                      className="w-full bg-white/50 border border-black/10 rounded-xl pl-12 pr-4 py-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" 
-                    />
-                  </div>
+                <h2 className="text-2xl font-bold flex items-center gap-2"><ShieldCheck className="text-[#C9A24D]" /> {t('checkout_contact')}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input required type="email" name="email" placeholder={`${t('checkout_email')} *`} value={formData.email} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
+                  <input required type="tel" name="phone" placeholder={`${t('checkout_phone')} *`} value={formData.phone} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
                 </div>
               </div>
 
               <div className="space-y-4 pt-6 border-t border-black/10">
                 <h2 className="text-2xl font-bold">{t('checkout_address')}</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" />
-                  <input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" />
+                <div className="relative">
+                  <Globe className="absolute left-4 top-4 text-[#1F1F1F]/30" size={18} />
+                  <select name="country" value={formData.country} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl pl-12 pr-4 py-4 focus:border-[#C9A24D] outline-none font-bold cursor-pointer appearance-none">
+                    {Object.keys(shippingRates).sort().map(country => <option key={country} value={country}>{country}</option>)}
+                  </select>
                 </div>
-                <input required type="text" name="address" placeholder={`${t('checkout_street')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" />
-                <div className="grid grid-cols-2 gap-4">
-                  <input required type="text" name="city" placeholder={`${t('checkout_city')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" />
-                  <input required type="text" name="zip" placeholder={`${t('checkout_zip')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl px-4 py-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" />
-                </div>
-              </div>
 
-              {/* --- FIXED BUTTON --- */}
+                {/* 🚀 Express Toggle for Germany */}
+                {formData.country === "Germany" && (
+                    <div className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${isExpress ? 'bg-[#1F1F1F] border-[#1F1F1F] text-white' : 'bg-white/50 border-black/10'}`} onClick={() => setIsExpress(!isExpress)}>
+                        <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${isExpress ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-gray-400'}`}><Zap size={18} /></div>
+                            <div><p className="text-sm font-bold">Express Shipping (Next Day)</p><p className={`text-[10px] ${isExpress ? 'text-white/60' : 'text-gray-400'}`}>Priority handling & fast delivery</p></div>
+                        </div>
+                        <p className="font-bold">€{needs20kg ? "45.00" : "40.00"}</p>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
+                  <input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
+                </div>
+
+                {/* 📍 ADDRESS AUTOCOMPLETE FIELD */}
+                <AutoComplete
+                    apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} 
+                    onPlaceSelected={(place) => {
+                      const addressComponents = place.address_components;
+                      const city = addressComponents.find((c: any) => c.types.includes("locality"))?.long_name || "";
+                      const zip = addressComponents.find((c: any) => c.types.includes("postal_code"))?.long_name || "";
+                      setFormData({ ...formData, address: place.formatted_address, city, zip });
+                    }}
+                    options={{ types: ["address"], fields: ["formatted_address", "address_components"] }}
+                    className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]"
+                    placeholder={`${t('checkout_street')} * (Start typing your address...)`}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <input required type="text" name="city" placeholder={`${t('checkout_city')} *`} value={formData.city} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
+                  <input required type="text" name="zip" placeholder={`${t('checkout_zip')} *`} value={formData.zip} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
+                </div>
+
+                {/* ⚖️ EU RIGHT OF WITHDRAWAL NOTICE (Conditional) */}
+                {hasPersonalization && !isNonEU && (
+                  <div className="space-y-4 mt-6 animate-in slide-in-from-top-2">
+                    <div className="p-4 bg-gray-50 border border-black/5 rounded-xl space-y-2">
+                      <p className="text-[11px] text-[#1F1F1F]/80 leading-relaxed italic">
+                        {language === 'EN' 
+                          ? "This product is personalized and is made specifically according to your individual specifications. Therefore, there is no right of withdrawal in accordance with EU consumer law."
+                          : "Dieses Produkt ist personalisiert und wird speziell nach Ihren individuellen Angaben hergestellt. Daher besteht gemäß EU-Verbraucherrecht kein Widerrufsrecht."
+                        }
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl">
+                      <input 
+                        required
+                        type="checkbox" 
+                        id="withdrawalPolicy"
+                        checked={agreedToWithdrawal}
+                        onChange={(e) => setAgreedToWithdrawal(e.target.checked)}
+                        className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer"
+                      />
+                      <label htmlFor="withdrawalPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">
+                        {language === 'EN' 
+                          ? "I acknowledge that for my personalized items, the right of withdrawal is excluded."
+                          : "Ich nehme zur Kenntnis, dass für meine personalisierten Artikel das Widerrufsrecht ausgeschlossen ist."
+                        } *
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* 🛃 CUSTOMS NOTICE (Only for Non-EU) */}
+                {isNonEU && (
+                  <div className="space-y-4 mt-6 animate-in slide-in-from-top-2">
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800">
+                      <AlertCircle size={20} className="flex-shrink-0" />
+                      <div className="text-xs leading-relaxed">
+                        <p className="font-bold mb-1">
+                          {language === 'EN' ? "Important: Customs & Duties" : "Wichtig: Zoll & Steuern"}
+                        </p>
+                        <p>
+                          {language === 'EN' 
+                            ? "Shipments to countries outside the EU may be subject to import duties and taxes. These costs are the responsibility of the recipient."
+                            : "Lieferungen in Länder außerhalb der EU können Einfuhrzöllen und Steuern unterliegen. Diese Kosten sind vom Empfänger zu tragen."
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl">
+                      <input 
+                        required
+                        type="checkbox" 
+                        id="customsAgreement"
+                        checked={agreedToCustoms}
+                        onChange={(e) => setAgreedToCustoms(e.target.checked)}
+                        className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer"
+                      />
+                      <label htmlFor="customsAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">
+                        {language === 'EN' 
+                          ? "I understand that any customs duties, taxes, or import fees that may apply are my responsibility and must be paid by me."
+                          : "Ich verstehe, dass anfallende Zollgebühren, Steuern oder Einfuhrabgaben in meiner Verantwortung liegen und von mir bezahlt werden müssen."
+                        } *
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* 📦 MANDATORY DELIVERY POLICY CHECKBOX */}
+                <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl mt-4">
+                  <input required type="checkbox" id="deliveryPolicy" checked={agreedToPolicy} onChange={(e) => setAgreedToPolicy(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" />
+                  <label htmlFor="deliveryPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">
+                    {language === 'EN' 
+                      ? "I agree that if delivery fails, my parcel may be delivered to a neighbor or nearby parcel shop. Returns to the sender are excluded."
+                      : "Ich stimme zu, dass mein Paket bei einem erfolglosen Zustellversuch an einen Nachbarn oder Paketshop geliefert werden kann. Rücksendungen sind ausgeschlossen."
+                    } *
+                  </label>
+                </div>
+
+              </div>
               <button 
                 type="submit" 
-                className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] hover:scale-[1.02] py-5 rounded-xl mt-8 transition-all flex items-center justify-center gap-2 shadow-lg"
+                disabled={!canProceed} 
+                className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] py-5 rounded-xl transition-all text-white font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
               >
-                <span style={{ color: 'white', opacity: 1 }} className="!text-white font-bold">
-                  {t('checkout_continue')}
-                </span> 
-                <ArrowLeft className="rotate-180" size={18} style={{ color: 'white' }} />
+                {t('checkout_continue')} <ArrowLeft className="rotate-180" size={18} />
               </button>
             </form>
           ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
               <div className="bg-white/40 border border-black/5 p-6 rounded-2xl flex justify-between items-center shadow-sm">
-                <div>
-                  <p className="text-[#1F1F1F]/50 text-sm font-medium">{t('checkout_shipping')} to:</p>
-                  <p className="font-bold text-[#1F1F1F]">{formData.address}, {formData.city}</p>
-                </div>
+                <div><p className="text-[#1F1F1F]/50 text-sm font-medium">Shipping {isExpress ? "(Express)" : "(Standard)"} to:</p><p className="font-bold">{formData.address}, {formData.city}, {formData.country}</p></div>
                 <button onClick={() => setStep(1)} className="text-[#C9A24D] text-sm font-bold hover:underline">{t('checkout_change')}</button>
               </div>
-
               <h2 className="text-2xl font-bold pt-4">{t('checkout_method')}</h2>
-              
               {clientSecret ? (
-                <div className="bg-white p-6 rounded-2xl text-black shadow-lg">
+                <div className="bg-white p-6 rounded-2xl shadow-lg">
                   <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#1F1F1F' } } }}>
-                    <PaymentForm amount={cartTotal} formData={formData} cart={cart} />
+                    <PaymentForm amount={finalTotal} formData={formData} cart={cart} isExpress={isExpress} />
                   </Elements>
                 </div>
-              ) : (
-                <div className="p-8 text-center text-[#1F1F1F]/40 font-medium">{t('checkout_loading_payment')}</div>
-              )}
+              ) : <div className="p-8 text-center text-[#1F1F1F]/40 font-medium">{t('checkout_loading_payment')}</div>}
             </div>
           )}
         </div>
 
-        {/* RIGHT COLUMN */}
         <div className="bg-white/40 border border-black/5 rounded-3xl p-8 h-fit shadow-sm backdrop-blur-md">
           <h3 className="font-bold text-xl mb-6">{t('checkout_summary')}</h3>
           <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             {cart.map((item) => (
               <div key={item.uniqueId} className="flex gap-4">
-                <div className="w-16 h-16 bg-black rounded-lg overflow-hidden border border-black/10 relative flex-shrink-0">
-                   <img src={item.image} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-sm">{item.name}</h4>
-                  <p className="text-xs text-[#1F1F1F]/60 font-medium">{item.options ? Object.values(item.options).join(", ") : ""}</p>
-                </div>
+                <div className="w-16 h-16 bg-black rounded-lg overflow-hidden border border-black/10 relative flex-shrink-0"><img src={item.image} className="w-full h-full object-cover" /></div>
+                <div className="flex-1"><h4 className="font-bold text-sm">{item.name}</h4><p className="text-xs text-[#1F1F1F]/60 font-medium">{item.options ? Object.values(item.options).join(", ") : ""}</p></div>
                 <div className="font-mono text-sm font-bold">€{(item.price * item.quantity).toFixed(2)}</div>
               </div>
             ))}
           </div>
           <div className="space-y-3 border-t border-black/10 pt-6">
             <div className="flex justify-between text-[#1F1F1F]/60 font-medium"><span>Subtotal</span><span>€{cartTotal.toFixed(2)}</span></div>
-            <div className="flex justify-between text-xl font-bold text-[#1F1F1F] pt-4 border-t border-black/10"><span>{t('checkout_total')}</span><span className="text-[#C9A24D]">€{cartTotal.toFixed(2)}</span></div>
+            <div className="flex justify-between text-[#1F1F1F]/60 font-medium">
+              <span>Shipping ({formData.country} - {isExpress ? "Express" : "Standard"})</span>
+              <span>€{shippingCost.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-xl font-bold text-[#1F1F1F] pt-4 border-t border-black/10"><span>{t('checkout_total')}</span><span className="text-[#C9A24D]">€{finalTotal.toFixed(2)}</span></div>
           </div>
         </div>
       </main>
