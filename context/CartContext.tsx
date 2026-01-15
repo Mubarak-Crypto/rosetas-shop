@@ -17,6 +17,12 @@ type CartItem = {
   
   // ✨ ADDED THIS LINE (Fixes the red underline)
   customText?: string; 
+  
+  // ✨ NEW: Store the promotion label (e.g., "2 for 50")
+  promoLabel?: string;
+
+  // ✨ NEW: Track the maximum available stock for this specific item
+  maxStock: number; 
 };
 
 type CartContextType = {
@@ -52,14 +58,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (newItem: CartItem) => {
     setCart((prev) => {
-      const existing = prev.find((item) => item.uniqueId === newItem.uniqueId);
+      // Check if item exists (matching ID and Options)
+      const existing = prev.find((item) => 
+        item.productId === newItem.productId && 
+        JSON.stringify(item.options) === JSON.stringify(newItem.options) &&
+        JSON.stringify(item.extras) === JSON.stringify(newItem.extras)
+      );
+
       if (existing) {
+        // ✨ LOGIC FIX: Check against maxStock before adding more
+        const totalNewQuantity = existing.quantity + newItem.quantity;
+        
+        if (totalNewQuantity > newItem.maxStock) {
+          alert(`Sorry, we only have ${newItem.maxStock} of these in stock.`);
+          return prev; // Do not update
+        }
+
         return prev.map((item) => 
-          item.uniqueId === newItem.uniqueId 
-            ? { ...item, quantity: item.quantity + newItem.quantity }
+          item.uniqueId === existing.uniqueId 
+            ? { ...item, quantity: totalNewQuantity }
             : item
         );
       } else {
+        // ✨ LOGIC FIX: Check initial add against stock
+        if (newItem.quantity > newItem.maxStock) {
+             alert(`Sorry, we only have ${newItem.maxStock} of these in stock.`);
+             return prev;
+        }
         return [...prev, newItem];
       }
     });
@@ -74,7 +99,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCart((prev) => 
       prev.map((item) => {
         if (item.uniqueId === uniqueId) {
-          return { ...item, quantity: Math.max(1, item.quantity + delta) };
+          const newQuantity = item.quantity + delta;
+          
+          // ✨ LOGIC FIX: Prevent going above maxStock
+          if (newQuantity > item.maxStock) {
+             alert(`Max stock reached (${item.maxStock}).`);
+             return item;
+          }
+
+          return { ...item, quantity: Math.max(1, newQuantity) };
         }
         return item;
       })
@@ -87,7 +120,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+  // ✨ UPDATED: Intelligent Total Calculation
+  const cartTotal = cart.reduce((sum, item) => {
+    let itemTotal = item.price * item.quantity;
+
+    // Check if this item has a special "Bundle Deal" (e.g. "2 for 50")
+    if (item.promoLabel) {
+      // Regex to find patterns like "2 for 50", "2 für 50", "3 for €100"
+      // Looks for a digit, then space, then 'for'/'für', then optional currency, then price digit
+      const match = item.promoLabel.match(/(\d+)\s+(?:for|für)\s+€?(\d+)/i);
+
+      if (match) {
+        const requiredQty = parseInt(match[1]); // e.g. 2
+        const bundlePrice = parseInt(match[2]); // e.g. 50
+
+        if (requiredQty > 0 && item.quantity >= requiredQty) {
+          const bundles = Math.floor(item.quantity / requiredQty);
+          const remainder = item.quantity % requiredQty;
+          
+          // Calculate price: (Number of Bundles * Bundle Price) + (Remainder * Normal Price)
+          itemTotal = (bundles * bundlePrice) + (remainder * item.price);
+        }
+      }
+    }
+
+    return sum + itemTotal;
+  }, 0);
 
   return (
     <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount, isCartOpen, setIsCartOpen }}>

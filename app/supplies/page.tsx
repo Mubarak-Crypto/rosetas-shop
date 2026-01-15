@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Search, Filter } from "lucide-react";
+import { Loader2, Search, Filter, Truck } from "lucide-react"; // ✨ Added Truck icon
 import Navbar from "../../components/Navbar";
 import ProductCard from "../../components/ProductCard";
 import { supabase } from "../../lib/supabase";
@@ -10,6 +10,7 @@ import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Langua
 
 export default function SuppliesPage() {
   const [products, setProducts] = useState<any[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<any>(null); // ✨ NEW: Store global settings
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { language, t } = useLanguage(); // ✨ Access language state
@@ -17,6 +18,15 @@ export default function SuppliesPage() {
   // FETCH SUPPLIES ONLY
   useEffect(() => {
     const fetchSupplies = async () => {
+      // ✨ NEW: Fetch Global Settings for Store-Wide Sale
+      const { data: settingsData } = await supabase
+        .from('storefront_settings')
+        .select('*')
+        .eq('id', '00000000-0000-0000-0000-000000000000')
+        .single();
+      
+      if (settingsData) setGlobalSettings(settingsData);
+
       // We explicitly ask for items where category is 'supplies'
       const { data, error } = await supabase
         .from('products')
@@ -48,7 +58,7 @@ export default function SuppliesPage() {
 
       {/* Header Section */}
       <section className="relative pt-32 pb-12 px-6">
-        <div className="max-w-7xl mx-auto text-center space-y-4">
+        <div className="max-w-7xl mx-auto text-center space-y-6">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -56,6 +66,7 @@ export default function SuppliesPage() {
           >
             {language === 'EN' ? "Florist" : "Floristen"} <span className="text-[#C9A24D]">{language === 'EN' ? "Essentials" : "Bedarf"}</span>
           </motion.h1>
+          
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -64,6 +75,27 @@ export default function SuppliesPage() {
           >
             {t('supplies_subtitle')}
           </motion.p>
+
+          {/* ✨ NEW: Shipping Promise Badge for Florists */}
+          {/* This clearly communicates the "Next Day Dispatch" rule for this specific category */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="inline-flex items-center gap-3 bg-white border border-[#D4C29A] px-6 py-3 rounded-full shadow-sm"
+          >
+            <div className="bg-[#D4C29A]/20 p-2 rounded-full text-[#D4C29A]">
+                <Truck size={18} />
+            </div>
+            <div className="text-left">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#1F1F1F]/40">
+                    {language === 'EN' ? "Fast Delivery" : "Schneller Versand"}
+                </p>
+                <p className="text-sm font-bold text-[#1F1F1F]">
+                    {language === 'EN' ? "Ships within 24-48h" : "Versand innerhalb 24-48h"}
+                </p>
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -106,11 +138,16 @@ export default function SuppliesPage() {
                   key={product.id}
                   id={product.id}
                   title={language === 'EN' && product.name_en ? product.name_en : product.name} 
-                  price={`€${product.price}`} 
+                  price={product.price} // ✨ UPDATED: Pass raw number for math
+                  salePrice={product.sale_price} // ✨ NEW: Individual sale price
+                  isOnSale={product.is_on_sale} // ✨ NEW: Is individual sale active?
+                  globalDiscount={globalSettings?.is_global_sale_active ? globalSettings?.global_discount_percentage : 0} // ✨ NEW: Global discount
                   category={language === 'EN' ? "Supply" : "Bedarf"} // ✨ Translated Category
                   image={product.images?.[0] || "/placeholder.jpg"} 
                   videoUrl={product.video_url} // ✨ NEW: Passing video data to show the sparkle badge
                   delay={index * 0.05} 
+                  promoLabel={product.promo_label} // ✨ NEW: Pass Promo Label
+                  stock={product.stock} // ✨ NEW: Pass Stock Limit
                 />
               ))
             ) : (

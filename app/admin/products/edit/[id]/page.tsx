@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid } from "lucide-react"; // ✨ Added Info & LayoutGrid icon
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag } from "lucide-react"; // ✨ Added Info & LayoutGrid icon
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -37,6 +37,7 @@ export default function EditProductPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [needsRibbon, setNeedsRibbon] = useState(false); // ✨ NEW: Toggle state for ribbon requirement
+  const [promoLabel, setPromoLabel] = useState(""); // ✨ NEW: Promotion Label State
   
   // Variants
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -96,6 +97,7 @@ export default function EditProductPage() {
         setExtras(data.extras || []);
         setNeedsRibbon(data.needs_ribbon || false); // ✨ Load ribbon toggle status
         setStockMatrix(data.stock_matrix || []); // ✨ Load existing stock matrix
+        setPromoLabel(data.promo_label || ""); // ✨ Load Promotion Label
         setIsLoading(false);
       }
     };
@@ -332,7 +334,8 @@ export default function EditProductPage() {
         variants,
         extras, // Save Extras (includes images now)
         needs_ribbon: needsRibbon, // ✨ NEW: Save ribbon toggle status
-        stock_matrix: stockMatrix // ✨ NEW: Save individual stock tracking
+        stock_matrix: stockMatrix, // ✨ NEW: Save individual stock tracking
+        promo_label: promoLabel // ✨ NEW: Save Promotion Label
       })
       .eq('id', productId);
 
@@ -416,8 +419,8 @@ export default function EditProductPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                   {/* ✨ UPDATED CATEGORY SECTION STEP 1 */}
-                   <div className="space-y-2">
+                    {/* ✨ UPDATED CATEGORY SECTION STEP 1 */}
+                    <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Category</label>
                     {isCustomCategory ? (
                       <div className="flex gap-2">
@@ -562,6 +565,19 @@ export default function EditProductPage() {
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
                     <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                  </div>
+                  {/* ✨ NEW: PROMOTION LABEL FIELD */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
+                      <Tag size={10} /> Promotion (Optional)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={promoLabel} 
+                      onChange={(e) => setPromoLabel(e.target.value)} 
+                      placeholder="e.g. 2 for 50" 
+                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30" 
+                    />
                   </div>
                 </div>
               </div>

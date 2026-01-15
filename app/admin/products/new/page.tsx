@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react"; // ✨ Added useEffect
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid } from "lucide-react"; // ✨ Added Info & LayoutGrid icon
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag } from "lucide-react"; // ✨ Added Info & LayoutGrid icon
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -35,6 +35,7 @@ export default function AddProductPage() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [needsRibbon, setNeedsRibbon] = useState(false); // ✨ NEW: Ribbon Toggle State
+  const [promoLabel, setPromoLabel] = useState(""); // ✨ NEW: Promotion Label State
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [isAddingVariant, setIsAddingVariant] = useState(false);
@@ -312,7 +313,8 @@ export default function AddProductPage() {
           variants,
           extras, // This now includes images!
           needs_ribbon: needsRibbon, // ✨ NEW: Save the Ribbon requirement
-          stock_matrix: stockMatrix // ✨ NEW: Save individual variant stock
+          stock_matrix: stockMatrix, // ✨ NEW: Save individual variant stock
+          promo_label: promoLabel // ✨ NEW: Save Promotion Label
         }
       ]);
 
@@ -506,7 +508,7 @@ export default function AddProductPage() {
               )}
 
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-4">Pricing</h3>
+                <h3 className="font-bold text-lg mb-4">Pricing & Promotion</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
@@ -515,6 +517,19 @@ export default function AddProductPage() {
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
                     <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                  </div>
+                  {/* ✨ NEW: PROMOTION LABEL FIELD */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
+                      <Tag size={10} /> Promotion (Optional)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={promoLabel} 
+                      onChange={(e) => setPromoLabel(e.target.value)} 
+                      placeholder="e.g. 2 for 50" 
+                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30" 
+                    />
                   </div>
                 </div>
               </div>

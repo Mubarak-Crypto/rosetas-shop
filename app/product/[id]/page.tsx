@@ -1,41 +1,38 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react"; // Added useRef
+import { useState, useEffect, useRef } from "react"; 
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck } from "lucide-react"; // ✨ Added Play & ShieldCheck icons
+import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool } from "lucide-react"; 
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation"; // ✨ Added useSearchParams for verification logic
+import { useParams, useSearchParams } from "next/navigation"; 
 import Navbar from "../../../components/Navbar";
 import { supabase } from "../../../lib/supabase";
 import { useCart } from "../../../context/CartContext"; 
-import { useLanguage } from "../../../context/LanguageContext"; // ✨ Added Language Import
+import { useLanguage } from "../../../context/LanguageContext"; 
 
 export default function ProductPage() {
   const params = useParams();
-  const searchParams = useSearchParams(); // ✨ NEW: Access URL params for verification
+  const searchParams = useSearchParams(); 
   const { addToCart, setIsCartOpen } = useCart();
-  const { language, t } = useLanguage(); // ✨ NEW: Access language and translation function
-  const videoRef = useRef<HTMLVideoElement>(null); // ✨ NEW: Ref for lightbox video controls
+  const { language, t } = useLanguage(); 
+  const videoRef = useRef<HTMLVideoElement>(null); 
 
-  // ✨ NEW: Check if this user arrived via a private verified review link
   const isVerifiedBuyer = searchParams.get('verify') === 'true';
 
   const [product, setProduct] = useState<any>(null);
+  const [globalSettings, setGlobalSettings] = useState<any>(null); 
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✨ NEW: Review States
   const [reviews, setReviews] = useState<any[]>([]);
   const [newReview, setNewReview] = useState({ customer_name: "", rating: 5, comment: "" });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
-  // Interaction State
   const [activeImage, setActiveImage] = useState<string>("");
-  const [activeVideo, setActiveVideo] = useState<string | null>(null); // ✨ NEW: Track which video is playing
-  const [showVideo, setShowVideo] = useState<boolean>(false); // ✨ NEW: Video toggle state
+  const [activeVideo, setActiveVideo] = useState<string | null>(null); 
+  const [showVideo, setShowVideo] = useState<boolean>(false); 
   
-  // ✨ NEW: Smart Zoom State (Can be main image OR extra image)
   const [zoomImage, setZoomImage] = useState<string | null>(null); 
-  const [zoomVideo, setZoomVideo] = useState<string | null>(null); // ✨ NEW: Video zoom state
+  const [zoomVideo, setZoomVideo] = useState<string | null>(null); 
   
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
@@ -43,55 +40,45 @@ export default function ProductPage() {
   // Ribbon Text State
   const [customText, setCustomText] = useState(""); 
   
+  // ✨ NEW: Placement State (Only active when input is visible)
+  const [textPlacement, setTextPlacement] = useState<'ribbon' | 'paper'>('ribbon');
+
   // State for selected Extras
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
 
-  // 1. FETCH PRODUCT DATA & REVIEWS
   useEffect(() => {
     const fetchProductData = async () => {
       if (!params.id) return;
 
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', params.id)
-        .single();
+      const [productRes, settingsRes, reviewsRes] = await Promise.all([
+        supabase.from('products').select('*').eq('id', params.id).single(),
+        supabase.from('storefront_settings').select('*').eq('id', '00000000-0000-0000-0000-000000000000').single(),
+        supabase.from('reviews').select('*').eq('product_id', params.id).eq('status', 'approved').order('created_at', { ascending: false })
+      ]);
 
-      if (error) {
-        console.error("Error:", error);
-      } else if (data) {
-        setProduct(data);
-        if (data.images && data.images.length > 0) setActiveImage(data.images[0]);
+      if (productRes.data) {
+        setProduct(productRes.data);
+        if (productRes.data.images && productRes.data.images.length > 0) setActiveImage(productRes.data.images[0]);
         
-        // ✨ UPDATED: Multiple Video Logic
-        const videos = Array.isArray(data.video_url) ? data.video_url : (data.video_url ? [data.video_url] : []);
-        // ✅ FIXED: Ensure valid video source exists before showing video view
+        const videos = Array.isArray(productRes.data.video_url) ? productRes.data.video_url : (productRes.data.video_url ? [productRes.data.video_url] : []);
         if (videos.length > 0 && videos[0] && videos[0].trim() !== "") {
           setActiveVideo(videos[0]);
           setShowVideo(true);
         }
-
-        // ✨ NEW: Fetch Reviews for this product
-        const { data: reviewData } = await supabase
-          .from('reviews')
-          .select('*')
-          .eq('product_id', params.id)
-          .eq('status', 'approved') // ✅ RESTRICTION: Only show approved reviews publicly
-          .order('created_at', { ascending: false });
-        
-        if (reviewData) setReviews(reviewData);
       }
+
+      if (settingsRes.data) setGlobalSettings(settingsRes.data);
+      if (reviewsRes.data) setReviews(reviewsRes.data);
+
       setIsLoading(false);
     };
 
     fetchProductData();
   }, [params.id]);
 
-  // ✨ UPDATED: INDEX BRIDGE IMAGE SWAP LOGIC
   const handleOptionSelect = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
     
-    // Logic Gate: Only switch images if the variant is color-related
     const isColorVariant = optionName.toLowerCase() === 'color' || optionName.toLowerCase() === 'farbe';
 
     if (isColorVariant && product?.images && product.images.length > 0) {
@@ -99,7 +86,6 @@ export default function ProductPage() {
       const variant = product.variants.find((v: any) => v.name === optionName);
       
       if (variant && variant.values) {
-        // Values array logic preserved to maintain index bridge
         const valuesArray = variant.values.toString().split(',').map((s: string) => s.trim());
         const clickedIndex = valuesArray.indexOf(value);
         if (product.images[clickedIndex]) {
@@ -110,14 +96,28 @@ export default function ProductPage() {
   };
 
   const toggleExtra = (extraName: string) => {
+    let limit = product.max_extras || 4;
+    const selectedValues = Object.values(selectedOptions).join(" ");
+    
+    if (selectedValues.includes("100")) {
+        limit = 50; 
+    } else if (selectedValues.includes("50")) {
+        limit = 10; 
+    }
+
     if (selectedExtras.includes(extraName)) {
       setSelectedExtras(prev => prev.filter(e => e !== extraName)); 
     } else {
-      setSelectedExtras(prev => [...prev, extraName]); 
+      if (selectedExtras.length < limit) {
+        setSelectedExtras(prev => [...prev, extraName]); 
+      } else {
+        alert(language === 'EN' 
+          ? `For this bouquet size, you can select up to ${limit} extras.` 
+          : `Für diese Straußgröße kannst du maximal ${limit} Extras auswählen.`);
+      }
     }
   };
 
-  // ✨ NEW: Logic to find stock for current selection
   const getSelectedVariantStock = () => {
     if (!product || !product.variants) return 999;
     
@@ -138,7 +138,6 @@ export default function ProductPage() {
     return hasStockInfo ? lowestStock : (product.stock || 0);
   };
 
-  // ✨ NEW: Helper to extract price from variants like "50 Roses (€100)"
   const getBasePrice = () => {
     if (!product) return 0;
     let currentBase = product.price;
@@ -153,8 +152,35 @@ export default function ProductPage() {
     return currentBase;
   };
 
+  const getDiscountedBasePrice = (basePrice: number) => {
+    if (globalSettings?.is_global_sale_active) {
+        return basePrice * (1 - (globalSettings.global_discount_percentage / 100));
+    }
+    if (product?.is_on_sale && product.sale_price) {
+        if (Math.abs(basePrice - product.price) < 0.01) return product.sale_price;
+        const discountFactor = product.sale_price / product.price;
+        return basePrice * discountFactor;
+    }
+    return basePrice;
+  };
+
   const calculateUnitTotal = () => {
-    const base = getBasePrice(); // ✨ Use dynamic base price from variant
+    const base = getBasePrice(); 
+    const discountedBase = getDiscountedBasePrice(base); 
+    
+    let extrasCost = 0;
+    if (product.extras && Array.isArray(product.extras)) {
+      product.extras.forEach((extra: any) => {
+        if (selectedExtras.includes(extra.name)) {
+          extrasCost += extra.price;
+        }
+      });
+    }
+    return discountedBase + extrasCost;
+  };
+
+  const calculateOriginalUnitTotal = () => {
+    const base = getBasePrice();
     let extrasCost = 0;
     if (product.extras && Array.isArray(product.extras)) {
       product.extras.forEach((extra: any) => {
@@ -172,27 +198,33 @@ export default function ProductPage() {
     const unitPrice = calculateUnitTotal();
     const optionsKey = JSON.stringify(selectedOptions);
     const extrasKey = JSON.stringify(selectedExtras.sort());
-    const uniqueId = `${product.id}-${optionsKey}-${extrasKey}-${customText}`;
+    
+    // ✨ UPDATED: Combine text with placement (Old logic + Placement choice)
+    let finalCustomText = customText;
+    if (customText.trim() !== "") {
+        finalCustomText += textPlacement === 'ribbon' ? " (On Ribbon)" : " (On Paper)";
+    }
+
+    const uniqueId = `${product.id}-${optionsKey}-${extrasKey}-${finalCustomText}`;
 
     addToCart({
       productId: product.id,
       uniqueId,
-      // ✨ Use logic for translated name
       name: language === 'EN' && product.name_en ? product.name_en : product.name, 
       price: unitPrice,
       image: activeImage || "/placeholder.jpg",
       quantity: quantity,
       options: selectedOptions,
       extras: selectedExtras,
-      // ✅ FIXED: Passing category ensures the €80 limit triggers correctly
       category: product.category,
-      customText: customText
+      customText: finalCustomText, 
+      promoLabel: product.promo_label,
+      maxStock: getSelectedVariantStock()
     });
     
     setIsCartOpen(true);
   };
 
-  // ✨ NEW: Handle Review Submission
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmittingReview(true);
@@ -204,14 +236,13 @@ export default function ProductPage() {
         rating: newReview.rating,
         comment: newReview.comment,
         source: 'website',
-        is_verified: true, // ✅ Set to true as they used a private link
-        status: 'pending' // ✅ Admin must still approve manually
+        is_verified: true, 
+        status: 'pending' 
       }
     ]);
 
     if (!error) {
       setNewReview({ customer_name: "", rating: 5, comment: "" });
-      // Show a success alert or message here if desired
     }
     setIsSubmittingReview(false);
   };
@@ -227,24 +258,43 @@ export default function ProductPage() {
   if (!product) return null;
 
   const unitPrice = calculateUnitTotal();
+  const originalUnitPrice = calculateOriginalUnitTotal();
+  
   const totalPrice = unitPrice * quantity;
-  const currentVariantStock = getSelectedVariantStock(); // ✨ Get variant stock
+  const originalTotalPrice = originalUnitPrice * quantity;
+  
+  const isOnSale = unitPrice < originalUnitPrice; 
+
+  const currentVariantStock = getSelectedVariantStock(); 
 
   const allOptionsSelected = product.variants 
     ? product.variants.every((v: any) => selectedOptions[v.name]) 
     : true;
 
-  // ✨ UPDATED: Logic now uses the database 'needs_ribbon' toggle instead of checking category
-  const isRibbonRequired = product.needs_ribbon === true;
-  const isRibbonValid = isRibbonRequired ? customText.trim().length > 0 : true;
-  const isCurrentlyInStock = currentVariantStock > 0; // ✨ Check specific selection stock
+  // ✨ RESTORED OLD LOGIC: Ribbon Text Input Visibility
+  // 1. Check if ANY selected extra contains "Ribbon", "Schleife", "Band" (Case insensitive)
+  const hasRibbonExtraSelected = selectedExtras.some(extra => 
+    extra.toLowerCase().includes("ribbon") || 
+    extra.toLowerCase().includes("schleife") ||
+    extra.toLowerCase().includes("band")
+  );
+
+  // 2. The input is required IF the DB says so (base product) OR if an extra triggers it.
+  const isInputVisible = product.needs_ribbon === true || hasRibbonExtraSelected;
+  const isRibbonValid = isInputVisible ? customText.trim().length > 0 : true;
+
+  const isCurrentlyInStock = currentVariantStock > 0; 
   const canAddToCart = allOptionsSelected && isRibbonValid && isCurrentlyInStock;
+
+  const isSupplyProduct = product.category === 'supplies' || product.category === 'Floristenbedarf';
 
   const avgRating = reviews.length > 0 
     ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length 
     : 5.0;
 
   const productVideos = Array.isArray(product.video_url) ? product.video_url : (product.video_url ? [product.video_url] : []);
+
+  const hasPromo = product.promo_label && product.promo_label.length > 0;
 
   return (
     <main className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] selection:bg-[#C9A24D] selection:text-white pb-20">
@@ -257,12 +307,24 @@ export default function ProductPage() {
           <motion.div 
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
-            /* ✨ LUXURY UPDATE: Added luminous glow and white border instead of black */
             className="relative aspect-[4/5] w-full bg-white rounded-[3rem] shadow-[0_20px_50px_rgba(255,255,255,0.8),0_0_20px_rgba(201,162,77,0.1)] border border-white flex items-center justify-center overflow-hidden group"
           >
+            <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
+                {isOnSale && (
+                    <div className="bg-red-600 text-white text-xs font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                        <Tag size={12} fill="white" /> SALE
+                    </div>
+                )}
+                {hasPromo && (
+                    <div className="bg-white text-[#1F1F1F] border border-[#C9A24D] text-xs font-bold uppercase tracking-widest px-4 py-2 rounded-full shadow-md flex items-center gap-2 animate-in slide-in-from-left-2 fade-in duration-700">
+                        <Sparkles size={12} className="text-[#C9A24D]" /> 
+                        {product.promo_label}
+                    </div>
+                )}
+            </div>
+
             {showVideo && activeVideo ? (
                 <div className="relative w-full h-full cursor-zoom-in" onClick={() => setZoomVideo(activeVideo)}>
-                  {/* ✅ FIXED: Plays inline and loops automatically on page load */}
                   <video 
                       key={activeVideo}
                       src={activeVideo} 
@@ -366,8 +428,19 @@ export default function ProductPage() {
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-[#1F1F1F]">
               {language === 'EN' && product.name_en ? product.name_en : product.name}
             </h1>
+            
             <div className="flex items-end gap-4">
-              <span className="text-3xl font-bold text-[#1F1F1F]">€{totalPrice.toFixed(2)}</span>
+              <div className="flex flex-col">
+                  {isOnSale && (
+                      <span className="text-lg text-red-400 font-bold line-through decoration-2 opacity-60">
+                          €{originalTotalPrice.toFixed(2)}
+                      </span>
+                  )}
+                  <span className={`text-3xl font-bold ${isOnSale ? "text-red-600" : "text-[#1F1F1F]"}`}>
+                      €{totalPrice.toFixed(2)}
+                  </span>
+              </div>
+
               {isCurrentlyInStock ? (
                 <span className="text-green-600 text-sm mb-1.5 flex items-center gap-1 font-bold"><Check size={14} /> {t('in_stock')} ({currentVariantStock})</span>
               ) : (
@@ -391,7 +464,7 @@ export default function ProductPage() {
             {language === 'EN' && product.description_en ? product.description_en : product.description}
           </p>
 
-          {/* ✨ GRID LAYOUT FOR VARIANTS - FIXED */}
+          {/* VARIANTS */}
           {product.variants && product.variants.length > 0 && (
             <div className="space-y-6">
               {product.variants.map((variant: any, idx: number) => {
@@ -402,8 +475,6 @@ export default function ProductPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {values.map((val: string) => {
                         const isSelected = selectedOptions[variant.name] === val;
-                        
-                        // Parse "50 Roses (€100) | Stock: 5"
                         const cleanLabel = val.split('(')[0].split('|')[0].trim();
                         const subLabel = val.includes('(') ? val.split('(')[1].split(')')[0] : "";
                         const itemStockMatch = val.match(/\| Stock:\s*(\d+)/);
@@ -414,7 +485,6 @@ export default function ProductPage() {
                             key={`${variant.name}-${val}`}
                             onClick={() => handleOptionSelect(variant.name, val)}
                             disabled={itemStock <= 0}
-                            /* ✨ FORCED INLINE STYLING: Fixes text visibility and prevents black blob */
                             style={{
                               backgroundColor: isSelected ? "#1F1F1F" : (itemStock <= 0 ? "#F9F9F9" : "white"),
                               color: isSelected ? "white" : (itemStock <= 0 ? "#CCC" : "#1F1F1F"),
@@ -451,35 +521,7 @@ export default function ProductPage() {
             </div>
           )}
           
-          {/* ✨ PERSONALIZATION SECTION */}
-          {product.needs_ribbon && (
-            <div className="space-y-3 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2">
-              <div className="flex justify-between items-end">
-                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#D4C29A]">
-                  <span>{t('ribbon_label')}</span>
-                </label>
-              </div>
-
-              <input 
-                type="text" 
-                placeholder={t('ribbon_placeholder')} 
-                value={customText} 
-                onChange={(e) => setCustomText(e.target.value)}
-                className={`w-full bg-white border rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none transition-all placeholder:text-gray-300 ${
-                    !customText.trim() 
-                    ? "border-red-200 focus:border-red-500" 
-                    : "border-black/5 focus:border-[#D4C29A]"
-                }`}
-              />
-              
-              {!customText.trim() && (
-                <p className="text-red-500 text-xs flex items-center gap-1 font-bold animate-pulse">
-                  <AlertCircle size={12} /> {t('ribbon_error')}
-                </p>
-              )}
-            </div>
-          )}
-
+          {/* EXTRAS (The Trigger) */}
           {product.extras && product.extras.length > 0 && (
             <div className="space-y-4 pt-4 border-t border-black/5">
               <label className="text-xs font-bold text-[#1F1F1F]/40 block mb-2 uppercase tracking-widest">
@@ -538,14 +580,64 @@ export default function ProductPage() {
             </div>
           )}
 
+          {/* ✨ RESTORED & ENHANCED: Input visible ONLY if triggered by Extra */}
+          {isInputVisible && (
+            <div className="space-y-3 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2">
+              <div className="flex justify-between items-center">
+                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#D4C29A]">
+                  <PenTool size={14} /> <span>{t('ribbon_label')}</span>
+                </label>
+                
+                {/* ✨ NEW: Placement Switcher (Inside the triggered box) */}
+                <div className="flex bg-white rounded-lg border border-black/10 p-1">
+                    <button 
+                        onClick={() => setTextPlacement('ribbon')}
+                        className={`text-[10px] px-3 py-1.5 rounded-md font-bold transition-all ${textPlacement === 'ribbon' ? 'bg-[#D4C29A] text-white shadow-sm' : 'text-[#1F1F1F]/50 hover:text-[#1F1F1F]'}`}
+                    >
+                        {language === 'EN' ? "On Ribbon" : "Auf Schleife"}
+                    </button>
+                    <button 
+                        onClick={() => setTextPlacement('paper')}
+                        className={`text-[10px] px-3 py-1.5 rounded-md font-bold transition-all ${textPlacement === 'paper' ? 'bg-[#D4C29A] text-white shadow-sm' : 'text-[#1F1F1F]/50 hover:text-[#1F1F1F]'}`}
+                    >
+                        {language === 'EN' ? "On Paper" : "Auf Papier"}
+                    </button>
+                </div>
+              </div>
+
+              <input 
+                type="text" 
+                placeholder={textPlacement === 'ribbon' ? (language === 'EN' ? "Your Ribbon Text..." : "Dein Schleifentext...") : (language === 'EN' ? "Your Paper Message..." : "Deine Papiernachricht...")} 
+                value={customText} 
+                onChange={(e) => setCustomText(e.target.value)}
+                className={`w-full bg-white border rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none transition-all placeholder:text-gray-300 ${
+                  !customText.trim() 
+                    ? "border-red-200 focus:border-red-500" 
+                    : "border-black/5 focus:border-[#D4C29A]"
+                }`}
+              />
+              
+              {!customText.trim() && (
+                <p className="text-red-500 text-xs flex items-center gap-1 font-bold animate-pulse">
+                  <AlertCircle size={12} /> {t('ribbon_error')}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-black/5 mt-4">
             <div className="flex items-center bg-white rounded-full border border-black/5 px-4 py-3 w-fit shadow-sm">
               <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:text-[#D4C29A] text-gray-300 transition-colors"><Minus size={18} /></button>
               <span className="w-12 text-center font-bold text-[#1F1F1F]">{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)} className="p-1 hover:text-[#D4C29A] text-gray-300 transition-colors"><Plus size={18} /></button>
+              <button 
+                onClick={() => setQuantity(Math.min(currentVariantStock, quantity + 1))} 
+                disabled={quantity >= currentVariantStock}
+                className={`p-1 transition-colors ${quantity >= currentVariantStock ? "text-gray-200 cursor-not-allowed" : "hover:text-[#D4C29A] text-gray-300"}`}
+              >
+                <Plus size={18} />
+              </button>
             </div>
             
-            {/* ✨ LUXURY UPDATE: Cart Button remains Champagne Gold (#D4C29A) */}
             <button 
               onClick={handleAddToCart} 
               disabled={!canAddToCart} 
@@ -563,10 +655,28 @@ export default function ProductPage() {
               </span>
             </button>
           </div>
+
+          {isSupplyProduct && (
+            <div className="mt-8 bg-[#F6EFE6] border border-[#D4C29A] p-4 rounded-2xl flex items-start gap-3">
+              <div className="bg-[#D4C29A]/20 p-2 rounded-full text-[#D4C29A]">
+                <Truck size={20} />
+              </div>
+              <div>
+                <h4 className="font-bold text-[#1F1F1F] text-sm uppercase tracking-wider mb-1">
+                  {language === 'EN' ? "Fast Delivery" : "Schnelle Lieferung"}
+                </h4>
+                <p className="text-xs text-[#1F1F1F]/70 leading-relaxed font-medium">
+                  {language === 'EN' 
+                    ? "Orders shipped next day or latest 2nd day after receipt. Delivery: 2–7 days within Germany."
+                    : "Versand am nächsten Tag oder spätestens am zweiten Tag nach Eingang. Lieferzeit: 2–7 Tage innerhalb Deutschlands."}
+                </p>
+              </div>
+            </div>
+          )}
+
         </motion.div>
       </div>
 
-      {/* REVIEWS SECTION */}
       <section className="max-w-7xl mx-auto px-6 pt-24 border-t border-black/5 mt-24">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
           <div className="space-y-8">
@@ -584,7 +694,6 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* ✅ Verified Review Logic */}
             {isVerifiedBuyer ? (
               <form onSubmit={handleReviewSubmit} className="bg-white p-6 rounded-3xl shadow-sm border border-black/5 space-y-4">
                 <h3 className="font-bold uppercase tracking-widest text-xs opacity-40">{t('write_review')}</h3>
@@ -617,7 +726,7 @@ export default function ProductPage() {
             ) : (
               <div className="bg-white/40 p-10 rounded-3xl border border-dashed border-[#D4C29A]/20 text-center space-y-4 shadow-sm">
                 <div className="w-12 h-12 bg-[#D4C29A]/10 rounded-full flex items-center justify-center mx-auto">
-                   <ShieldCheck className="text-[#D4C29A]" size={24} />
+                    <ShieldCheck className="text-[#D4C29A]" size={24} />
                 </div>
                 <div>
                   <h3 className="font-bold text-[#1F1F1F] mb-1">
@@ -702,7 +811,6 @@ export default function ProductPage() {
                     className="relative w-full max-w-4xl"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* ✅ FIXED: Removed 'muted' so full sound plays in Zoom View */}
                     <video 
                         ref={videoRef}
                         src={zoomVideo} 

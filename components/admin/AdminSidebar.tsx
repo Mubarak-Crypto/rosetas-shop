@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star } from "lucide-react"; // ✨ Added Star icon
+import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag } from "lucide-react"; // ✨ Added Tag icon
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
@@ -100,7 +100,35 @@ export default function AdminSidebar() {
             Products
           </Link>
 
-          {/* ✨ Manage Reviews Link */}
+          {/* ✨ Sales Manager Link */}
+          <Link 
+            href="/admin/sales" 
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              isActive("/admin/sales") 
+                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Tag size={20} />
+            Sales & Discounts
+          </Link>
+
+          {/* Storefront Link */}
+          <Link 
+            href="/admin/settings" 
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              isActive("/admin/settings") 
+                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Layout size={20} />
+            Storefront
+          </Link>
+
+          {/* Manage Reviews Link */}
           <Link 
             href="/admin/reviews" 
             onClick={() => setIsOpen(false)}
