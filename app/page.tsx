@@ -6,6 +6,7 @@ import { ChevronRight, Star, Loader2, ArrowRight, Scissors, Sparkles, Heart, Cro
 import ProductCard from "../components/ProductCard"; 
 import Features from "../components/Features"; 
 import Navbar from "../components/Navbar";
+import CharityImpact from "../components/CharityImpact"; 
 import { supabase } from "../lib/supabase"; 
 import Link from "next/link";
 import { useLanguage } from "../context/LanguageContext"; 
@@ -50,7 +51,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] selection:bg-[#D4C29A] selection:text-white overflow-x-hidden relative font-sans">
       
       <style jsx global>{`
-        /* ✨ UPDATED FONTS: Playfair Display & Allura */
+        /* ✨ FONTS PRESERVED EXACTLY AS REQUESTED */
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Allura&display=swap');
         
         @keyframes shine-glide {
@@ -75,30 +76,31 @@ export default function Home() {
           animation: shine-glide 4s linear infinite;
         }
 
-        /* ✨ NEW: Explicit Playfair Class */
         .font-playfair {
             font-family: 'Playfair Display', serif;
         }
 
-        /* ✨ UPDATED: Now using Allura */
         .handwritten-font {
             font-family: 'Allura', cursive;
         }
       `}</style>
 
-      {/* Background Effects - Lighter Tone */}
+      {/* Background Effects */}
       <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#D4C29A]/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-[#D4C29A]/5 rounded-full blur-[100px] pointer-events-none" />
 
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24 lg:pt-20 lg:pb-32 grid lg:grid-cols-2 gap-12 items-center">
+      {/* ✨ FIX APPLIED: Changed 'lg:grid-cols-2' to 'xl:grid-cols-2'. 
+         This forces iPads/Tablets to stack the layout (Text Top / Image Bottom), 
+         ensuring the button is never covered. Side-by-side only happens on large screens (PC/Laptop). */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24 lg:pt-20 lg:pb-32 grid xl:grid-cols-2 gap-12 items-center">
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
-          className="space-y-8"
+          className="space-y-8 relative z-20" // Added z-20 to ensure it sits on top
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#D4C29A]/30 bg-[#D4C29A]/10 text-[#D4C29A] text-xs font-bold tracking-widest uppercase shadow-sm">
@@ -106,15 +108,16 @@ export default function Home() {
             {language === 'EN' ? "The Premium Collection" : "Die Premium-Kollektion"}
           </div>
 
-          {/* ✨ UPDATED TITLE TYPOGRAPHY with Playfair & Allura */}
-          <h1 className="text-5xl md:text-8xl font-bold leading-tight text-[#1F1F1F] tracking-tight font-playfair">
-            Not just Flowers <br /> 
-            <span className="whitespace-nowrap flex items-center gap-4 mt-2">
+          {/* ✨ STRUCTURE PRESERVED: 2 Lines, Whitespace-nowrap kept */}
+          <h1 className="text-5xl md:text-7xl xl:text-8xl font-bold leading-tight text-[#1F1F1F] tracking-tight font-playfair">
+            {/* Line 1 */}
+            <span className="block whitespace-nowrap">Not just Flowers</span>
+            
+            {/* Line 2 */}
+            <span className="flex items-center gap-4 mt-2 whitespace-nowrap">
               <span className="opacity-40 text-4xl md:text-6xl font-light font-sans">—</span>
-              
-              {/* ✨ FIXED: Added padding to accomodate Allura's loops */}
               <span 
-                className="handwritten-font text-6xl md:text-9xl silver-glow-text pr-6 py-2" 
+                className="handwritten-font text-6xl md:text-8xl xl:text-9xl silver-glow-text pr-6 py-2" 
                 style={{ lineHeight: 1.3 }}
               >
                 A Statement
@@ -127,15 +130,15 @@ export default function Home() {
           </p>
 
           <div className="flex flex-wrap gap-4 pt-4">
-            {/* ✨ GLOW BUTTON - FIXED COLOR */}
+            {/* ✨ BUTTON PRESERVED */}
             <button 
               onClick={scrollToShop}
-              className="group relative px-8 py-5 rounded-full transition-all flex items-center gap-3 active:scale-95"
+              className="group relative px-8 py-5 rounded-full transition-all flex items-center gap-3 active:scale-95 z-30" // High Z-index
               style={{
-                boxShadow: '0 0 25px rgba(205, 175, 149, 0.9), 0 0 50px rgba(205, 175, 149, 0.6)', /* PeachPuff3 Glow */
+                boxShadow: '0 0 25px rgba(205, 175, 149, 0.9), 0 0 50px rgba(205, 175, 149, 0.6)', 
                 border: '1px solid #CDAF95',
-                backgroundColor: '#CDAF95', // ✨ Beige (PeachPuff3) Background
-                color: '#1F1F1F' // ✨ Black Text
+                backgroundColor: '#CDAF95',
+                color: '#1F1F1F'
               }}
             >
               <span className="flex items-center gap-2 font-bold">
@@ -146,11 +149,12 @@ export default function Home() {
           </div>
         </motion.div>
 
+        {/* Hero Image - Stacks below text on Tablets now */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative h-[350px] lg:h-[500px] w-full flex items-center justify-center"
+          className="relative h-[350px] lg:h-[500px] w-full flex items-center justify-center mt-8 xl:mt-0"
         >
           <div className="relative w-full max-w-md aspect-[4/5] rounded-[3rem] bg-white border border-black/5 flex items-center justify-center overflow-hidden shadow-2xl">
             {settings?.show_hero_image && settings?.hero_image_url ? (
@@ -232,15 +236,14 @@ export default function Home() {
         </div>
 
         <div className="pt-8">
-          {/* ✨ GLOW BUTTON 2 - FIXED COLOR */}
           <button 
             onClick={scrollToShop}
             className="px-10 py-4 font-bold rounded-full transition-all flex items-center gap-2 mx-auto active:scale-95"
             style={{
               boxShadow: '0 0 25px rgba(205, 175, 149, 0.9), 0 0 50px rgba(205, 175, 149, 0.6)', 
               border: '1px solid #CDAF95',
-              backgroundColor: '#CDAF95', // ✨ Beige
-              color: '#1F1F1F' // ✨ Black
+              backgroundColor: '#CDAF95',
+              color: '#1F1F1F'
             }}
           >
             {t('shop_now')} <ArrowDown size={18} />
@@ -257,14 +260,13 @@ export default function Home() {
           </div>
           
           <Link href="/shop">
-            {/* ✨ UPDATED: "View All" Button now matches "Shop Now" beige style */}
             <button 
                 className="px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs flex items-center gap-2 transition-all hover:scale-105 active:scale-95 border backdrop-blur-sm"
                 style={{
-                    backgroundColor: '#CDAF95', // ✨ Beige Background
-                    color: '#1F1F1F', // ✨ Black Text
+                    backgroundColor: '#CDAF95',
+                    color: '#1F1F1F',
                     borderColor: '#CDAF95',
-                    boxShadow: '0 0 15px rgba(205, 175, 149, 0.6)' // ✨ Matching Glow
+                    boxShadow: '0 0 15px rgba(205, 175, 149, 0.6)'
                 }}
             >
               {language === 'EN' ? "View All" : "Alle anzeigen"} <ChevronRight size={14} />
@@ -329,6 +331,8 @@ export default function Home() {
             </div>
         </div>
       </section>
+
+      <CharityImpact />
 
       <Features />
 

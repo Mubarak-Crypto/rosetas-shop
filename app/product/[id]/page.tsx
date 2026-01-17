@@ -2,19 +2,22 @@
 
 import { useState, useEffect, useRef } from "react"; 
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool } from "lucide-react"; 
+import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash } from "lucide-react"; 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation"; 
 import Navbar from "../../../components/Navbar";
 import { supabase } from "../../../lib/supabase";
 import { useCart } from "../../../context/CartContext"; 
 import { useLanguage } from "../../../context/LanguageContext"; 
+import { useWishlist } from "../../../context/WishlistContext"; 
+import RelatedProducts from "../../../components/RelatedProducts"; 
 
 export default function ProductPage() {
   const params = useParams();
   const searchParams = useSearchParams(); 
   const { addToCart, setIsCartOpen } = useCart();
   const { language, t } = useLanguage(); 
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist(); 
   const videoRef = useRef<HTMLVideoElement>(null); 
 
   const isVerifiedBuyer = searchParams.get('verify') === 'true';
@@ -37,14 +40,26 @@ export default function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
   
-  // Ribbon Text State
-  const [customText, setCustomText] = useState(""); 
+  // --- PERSONALIZATION STATES ---
   
-  // ✨ NEW: Placement State (Only active when input is visible)
-  const [textPlacement, setTextPlacement] = useState<'ribbon' | 'paper'>('ribbon');
+  // 1. Ribbon Text
+  const [customText, setCustomText] = useState(""); 
+  const [textPlacement, setTextPlacement] = useState<'option1' | 'option2'>('option1');
+
+  // 2. Letter Service (Long Text + Fonts)
+  const [letterText, setLetterText] = useState("");
+  const [letterFont, setLetterFont] = useState<'Classic' | 'Modern' | 'Handwritten'>('Classic');
+
+  // 3. Short Note (Max 5 Words)
+  const [shortNoteText, setShortNoteText] = useState("");
 
   // State for selected Extras
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
+  // State for Nested Extra Variants
+  const [extraVariants, setExtraVariants] = useState<Record<string, string>>({});
+  
+  // ✨ NEW: State for Extra Quantities
+  const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const fetchProductData = async () => {
@@ -79,7 +94,7 @@ export default function ProductPage() {
   const handleOptionSelect = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
     
-    const isColorVariant = optionName.toLowerCase() === 'color' || optionName.toLowerCase() === 'farbe';
+    const isColorVariant = optionName.toLowerCase() === 'color' || optionName.toLowerCase() === 'farbe' || optionName.toLowerCase() === 'colour';
 
     if (isColorVariant && product?.images && product.images.length > 0) {
       setShowVideo(false); 
@@ -96,26 +111,71 @@ export default function ProductPage() {
   };
 
   const toggleExtra = (extraName: string) => {
-    let limit = product.max_extras || 4;
+    // ✨ UPDATED LOGIC:
+    // Default limit is effectively unlimited (100)
+    let limit = 100;
     const selectedValues = Object.values(selectedOptions).join(" ");
     
-    if (selectedValues.includes("100")) {
-        limit = 50; 
-    } else if (selectedValues.includes("50")) {
-        limit = 10; 
+    // STRICT LIMIT ONLY APPLIES IF "20" IS SELECTED
+    if (selectedValues.includes("20")) {
+        limit = 4; 
     }
 
     if (selectedExtras.includes(extraName)) {
       setSelectedExtras(prev => prev.filter(e => e !== extraName)); 
+      const newVariants = { ...extraVariants };
+      delete newVariants[extraName];
+      setExtraVariants(newVariants);
+      
+      // ✨ Clean up quantities
+      const newQuantities = { ...extraQuantities };
+      delete newQuantities[extraName];
+      setExtraQuantities(newQuantities);
+      
+      // Clear associated text if extra is deselected
+      const extraObj = product.extras.find((e: any) => e.name === extraName);
+      if (extraObj?.inputType === 'letter' || extraName.toLowerCase().includes("letter")) setLetterText("");
+      if (extraObj?.inputType === 'short_note' || extraName.toLowerCase().includes("note")) setShortNoteText("");
+
     } else {
       if (selectedExtras.length < limit) {
         setSelectedExtras(prev => [...prev, extraName]); 
+        // ✨ Initialize quantity to 1
+        setExtraQuantities(prev => ({ ...prev, [extraName]: 1 }));
       } else {
         alert(language === 'EN' 
-          ? `For this bouquet size, you can select up to ${limit} extras.` 
-          : `Für diese Straußgröße kannst du maximal ${limit} Extras auswählen.`);
+          ? `For the 20 Roses size, you can select up to ${limit} extras.` 
+          : `Für die Größe 20 Rosen können Sie maximal ${limit} Extras auswählen.`);
       }
     }
+  };
+
+  // ✨ NEW: Handle Quantity Change for Extras
+  const updateExtraQuantity = (extraName: string, delta: number) => {
+      setExtraQuantities(prev => {
+          const current = prev[extraName] || 1;
+          const newQty = Math.max(1, current + delta);
+          // Optional cap at 50 to prevent crazy numbers
+          return { ...prev, [extraName]: Math.min(newQty, 50) };
+      });
+  };
+
+  const selectExtraVariant = (extraName: string, variant: string) => {
+    setExtraVariants(prev => ({ ...prev, [extraName]: variant }));
+  };
+
+  // Handle Short Note Change (Max 5 Words)
+  const handleShortNoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      const words = val.trim().split(/\s+/);
+      
+      // Allow if empty or if words <= 5. If words > 5, prevent adding more (unless deleting)
+      if (val === "" || words.length <= 5 || (words.length === 6 && val.endsWith(" "))) {
+          setShortNoteText(val);
+      } else if (words.length > 5) {
+          // Optional: Strictly cut off the 6th word if pasted
+          // setShortNoteText(words.slice(0, 5).join(" "));
+      }
   };
 
   const getSelectedVariantStock = () => {
@@ -164,6 +224,7 @@ export default function ProductPage() {
     return basePrice;
   };
 
+  // ✨ UPDATED: Calculate Total with Extra Quantities
   const calculateUnitTotal = () => {
     const base = getBasePrice(); 
     const discountedBase = getDiscountedBasePrice(base); 
@@ -172,7 +233,8 @@ export default function ProductPage() {
     if (product.extras && Array.isArray(product.extras)) {
       product.extras.forEach((extra: any) => {
         if (selectedExtras.includes(extra.name)) {
-          extrasCost += extra.price;
+          const qty = extra.allowQuantity ? (extraQuantities[extra.name] || 1) : 1;
+          extrasCost += (extra.price * qty);
         }
       });
     }
@@ -185,24 +247,98 @@ export default function ProductPage() {
     if (product.extras && Array.isArray(product.extras)) {
       product.extras.forEach((extra: any) => {
         if (selectedExtras.includes(extra.name)) {
-          extrasCost += extra.price;
+          const qty = extra.allowQuantity ? (extraQuantities[extra.name] || 1) : 1;
+          extrasCost += (extra.price * qty);
         }
       });
     }
     return base + extrasCost;
   };
 
+  // Helper to get dynamic labels
+  const getLabel1 = () => product?.pers_label_1 || (language === 'EN' ? "On Ribbon" : "Auf Schleife");
+  const getLabel2 = () => product?.pers_label_2 || (language === 'EN' ? "On Paper" : "Auf Papier");
+
+  // Helper: Get Translated Name
+  const getTranslatedOptionName = (variant: any) => {
+      if (language === 'EN' && variant.name_en) return variant.name_en;
+      return variant.name;
+  };
+
+  // Helper: Get Translated Value List
+  const getTranslatedValues = (variant: any) => {
+      if (language === 'EN' && variant.values_en) {
+          return variant.values_en.split(',').map((s: string) => s.trim());
+      }
+      return variant.values.toString().split(',').map((s: string) => s.trim());
+  };
+
   const handleAddToCart = () => {
     if (!product) return;
 
     const unitPrice = calculateUnitTotal();
-    const optionsKey = JSON.stringify(selectedOptions);
-    const extrasKey = JSON.stringify(selectedExtras.sort());
     
-    // ✨ UPDATED: Combine text with placement (Old logic + Placement choice)
-    let finalCustomText = customText;
+    // Transform selected options to user's language for Cart
+    const translatedOptions: Record<string, string> = {};
+    Object.keys(selectedOptions).forEach(key => {
+        const variant = product.variants.find((v: any) => v.name === key);
+        if (variant) {
+             const selectedValDE = selectedOptions[key];
+             const deValues = variant.values.split(',').map((s: string) => s.trim());
+             const index = deValues.indexOf(selectedValDE);
+             
+             let finalValue = selectedValDE;
+             if (language === 'EN' && variant.values_en) {
+                 const enValues = variant.values_en.split(',').map((s: string) => s.trim());
+                 if (enValues[index]) finalValue = enValues[index];
+             }
+             
+             const finalKey = language === 'EN' && variant.name_en ? variant.name_en : variant.name;
+             translatedOptions[finalKey] = finalValue.split('|')[0].trim(); // Clean stock info
+        } else {
+             translatedOptions[key] = selectedOptions[key];
+        }
+    });
+
+    const optionsKey = JSON.stringify(translatedOptions);
+    
+    // ✨ UPDATED: Format Extras to include Quantity in Cart
+    const finalExtras = selectedExtras.map(extraName => {
+        const extraObj = product.extras.find((e: any) => e.name === extraName);
+        const displayName = (language === 'EN' && extraObj?.name_en) ? extraObj.name_en : extraName;
+        
+        const variant = extraVariants[extraName];
+        let nameString = variant ? `${displayName} (${variant})` : displayName;
+
+        // Append (x3) if quantity > 1
+        if (extraObj?.allowQuantity && extraQuantities[extraName] > 1) {
+            nameString += ` (x${extraQuantities[extraName]})`;
+        }
+        
+        return nameString;
+    }).sort();
+
+    const extrasKey = JSON.stringify(finalExtras);
+    
+    // COMBINE ALL TEXT INPUTS INTO ONE STRING FOR CART
+    let finalCustomText = "";
+
+    // 1. Ribbon
     if (customText.trim() !== "") {
-        finalCustomText += textPlacement === 'ribbon' ? " (On Ribbon)" : " (On Paper)";
+        const placementLabel = textPlacement === 'option1' ? getLabel1() : getLabel2();
+        finalCustomText += `Ribbon (${placementLabel}): ${customText}`;
+    }
+
+    // 2. Letter
+    if (letterText.trim() !== "") {
+        if (finalCustomText) finalCustomText += " | ";
+        finalCustomText += `Letter (${letterFont} Font): ${letterText}`;
+    }
+
+    // 3. Short Note
+    if (shortNoteText.trim() !== "") {
+        if (finalCustomText) finalCustomText += " | ";
+        finalCustomText += `Short Note: ${shortNoteText}`;
     }
 
     const uniqueId = `${product.id}-${optionsKey}-${extrasKey}-${finalCustomText}`;
@@ -214,10 +350,10 @@ export default function ProductPage() {
       price: unitPrice,
       image: activeImage || "/placeholder.jpg",
       quantity: quantity,
-      options: selectedOptions,
-      extras: selectedExtras,
+      options: translatedOptions, 
+      extras: finalExtras, 
       category: product.category,
-      customText: finalCustomText, 
+      customText: finalCustomText, // Passes combined text
       promoLabel: product.promo_label,
       maxStock: getSelectedVariantStock()
     });
@@ -271,17 +407,32 @@ export default function ProductPage() {
     ? product.variants.every((v: any) => selectedOptions[v.name]) 
     : true;
 
-  // ✨ RESTORED OLD LOGIC: Ribbon Text Input Visibility
-  // 1. Check if ANY selected extra contains "Ribbon", "Schleife", "Band" (Case insensitive)
-  const hasRibbonExtraSelected = selectedExtras.some(extra => 
-    extra.toLowerCase().includes("ribbon") || 
-    extra.toLowerCase().includes("schleife") ||
-    extra.toLowerCase().includes("band")
-  );
+  // --- UPDATED EXTRA LOGIC CHECKS ---
+  const hasRibbonExtraSelected = selectedExtras.some(extraName => {
+    const e = extraName.toLowerCase();
+    return e.includes("ribbon") || e.includes("schleife") || e.includes("band") || e.includes("personal");
+  });
 
-  // 2. The input is required IF the DB says so (base product) OR if an extra triggers it.
-  const isInputVisible = product.needs_ribbon === true || hasRibbonExtraSelected;
-  const isRibbonValid = isInputVisible ? customText.trim().length > 0 : true;
+  const hasLetterExtraSelected = selectedExtras.some(extraName => {
+    const extraObj = product.extras.find((e: any) => e.name === extraName);
+    const e = extraName.toLowerCase();
+    // Check InputType (From Admin) OR fallback to name guessing
+    return extraObj?.inputType === 'letter' || e.includes("letter") || e.includes("brief");
+  });
+
+  const hasShortNoteExtraSelected = selectedExtras.some(extraName => {
+    const extraObj = product.extras.find((e: any) => e.name === extraName);
+    const e = extraName.toLowerCase();
+    // Check InputType (From Admin) OR fallback to name guessing
+    return extraObj?.inputType === 'short_note' || e.includes("note") || e.includes("notiz") || e.includes("karte") || e.includes("card");
+  });
+
+  // Visiblity Flags
+  const isRibbonInputVisible = product.needs_ribbon === true || hasRibbonExtraSelected;
+  const isLetterInputVisible = hasLetterExtraSelected;
+  const isShortNoteInputVisible = hasShortNoteExtraSelected;
+
+  const isRibbonValid = isRibbonInputVisible ? customText.trim().length > 0 : true;
 
   const isCurrentlyInStock = currentVariantStock > 0; 
   const canAddToCart = allOptionsSelected && isRibbonValid && isCurrentlyInStock;
@@ -296,6 +447,30 @@ export default function ProductPage() {
 
   const hasPromo = product.promo_label && product.promo_label.length > 0;
 
+  // Wishlist Logic
+  const isLiked = isInWishlist(product.id);
+
+  const handleWishlistToggle = () => {
+    if (isLiked) {
+        removeFromWishlist(product.id);
+    } else {
+        addToWishlist({
+            id: product.id,
+            title: language === 'EN' && product.name_en ? product.name_en : product.name,
+            price: product.price,
+            salePrice: product.sale_price,
+            isOnSale: product.is_on_sale,
+            image: activeImage || "/placeholder.jpg",
+            category: product.category,
+            videoUrl: product.video_url,
+            promoLabel: product.promo_label,
+            stock: product.stock
+        });
+    }
+  };
+
+  const activeColor = selectedOptions['Color'] || selectedOptions['Farbe'] || selectedOptions['Colour'] || "";
+
   return (
     <main className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] selection:bg-[#C9A24D] selection:text-white pb-20">
       <Navbar />
@@ -309,6 +484,7 @@ export default function ProductPage() {
             animate={{ opacity: 1, x: 0 }}
             className="relative aspect-[4/5] w-full bg-white rounded-[3rem] shadow-[0_20px_50px_rgba(255,255,255,0.8),0_0_20px_rgba(201,162,77,0.1)] border border-white flex items-center justify-center overflow-hidden group"
           >
+            {/* ... (Existing Image logic same as before) ... */}
             <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
                 {isOnSale && (
                     <div className="bg-red-600 text-white text-xs font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
@@ -468,22 +644,29 @@ export default function ProductPage() {
           {product.variants && product.variants.length > 0 && (
             <div className="space-y-6">
               {product.variants.map((variant: any, idx: number) => {
-                const values = variant.values ? variant.values.toString().split(',').map((s: string) => s.trim()) : [];
+                const values = getTranslatedValues(variant);
+                const deValues = variant.values.toString().split(',').map((s: string) => s.trim());
+                
                 return (
                   <div key={`${variant.name}-${idx}`}>
-                    <label className="text-xs font-bold text-[#1F1F1F]/40 block mb-4 uppercase tracking-widest">{variant.name}</label>
+                    <label className="text-xs font-bold text-[#1F1F1F]/40 block mb-4 uppercase tracking-widest">
+                        {getTranslatedOptionName(variant)}
+                    </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {values.map((val: string) => {
-                        const isSelected = selectedOptions[variant.name] === val;
+                      {values.map((val: string, valIdx: number) => {
+                        const deVal = deValues[valIdx];
+                        const isSelected = selectedOptions[variant.name] === deVal;
+                        
                         const cleanLabel = val.split('(')[0].split('|')[0].trim();
                         const subLabel = val.includes('(') ? val.split('(')[1].split(')')[0] : "";
-                        const itemStockMatch = val.match(/\| Stock:\s*(\d+)/);
+                        
+                        const itemStockMatch = deVal.match(/\| Stock:\s*(\d+)/);
                         const itemStock = itemStockMatch ? parseInt(itemStockMatch[1]) : 999;
 
                         return (
                           <button
                             key={`${variant.name}-${val}`}
-                            onClick={() => handleOptionSelect(variant.name, val)}
+                            onClick={() => handleOptionSelect(variant.name, deVal)}
                             disabled={itemStock <= 0}
                             style={{
                               backgroundColor: isSelected ? "#1F1F1F" : (itemStock <= 0 ? "#F9F9F9" : "white"),
@@ -521,7 +704,7 @@ export default function ProductPage() {
             </div>
           )}
           
-          {/* EXTRAS (The Trigger) */}
+          {/* EXTRAS */}
           {product.extras && product.extras.length > 0 && (
             <div className="space-y-4 pt-4 border-t border-black/5">
               <label className="text-xs font-bold text-[#1F1F1F]/40 block mb-2 uppercase tracking-widest">
@@ -531,48 +714,102 @@ export default function ProductPage() {
               <div className="grid grid-cols-1 gap-3">
                 {product.extras.map((extra: any, idx: number) => {
                   const isSelected = selectedExtras.includes(extra.name);
-                  
+                  const extraDisplayName = (language === 'EN' && extra.name_en) ? extra.name_en : extra.name;
+                  const quantity = extraQuantities[extra.name] || 1;
+
                   return (
-                    <div 
-                      key={idx}
-                      className={`flex items-center p-2 rounded-xl border transition-all ${
-                        isSelected 
-                          ? "bg-[#D4C29A]/10 border-[#D4C29A] shadow-sm" 
-                          : "bg-white border-black/5 hover:border-black/20"
-                      }`}
-                    >
-                        {extra.image && (
-                            <div 
-                                className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
-                                onClick={(e) => {
-                                    e.stopPropagation(); 
-                                    setZoomImage(extra.image);
-                                }}
+                    <div key={idx} className="flex flex-col gap-2">
+                        <div 
+                        className={`flex items-center p-2 rounded-xl border transition-all ${
+                            isSelected 
+                            ? "bg-[#D4C29A]/10 border-[#D4C29A] shadow-sm" 
+                            : "bg-white border-black/5 hover:border-black/20"
+                        }`}
+                        >
+                            {extra.image && (
+                                <div 
+                                    className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
+                                    onClick={(e) => {
+                                        e.stopPropagation(); 
+                                        setZoomImage(extra.image);
+                                    }}
+                                >
+                                    <img src={extra.image} className="w-full h-full object-cover" alt={extra.name} />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
+                                        <ZoomIn size={14} className="text-white" />
+                                    </div>
+                                </div>
+                            )}
+
+                            <button 
+                                onClick={() => toggleExtra(extra.name)}
+                                className="flex-1 flex items-center justify-between h-full text-left px-2"
                             >
-                                <img src={extra.image} className="w-full h-full object-cover" alt={extra.name} />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
-                                    <ZoomIn size={14} className="text-white" />
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors flex-shrink-0 ${
+                                    isSelected ? "bg-[#D4C29A] border-[#D4C29A]" : "border-gray-300"
+                                    }`}>
+                                    {isSelected && <Check size={14} style={{ color: 'white' }} />}
+                                    </div>
+                                    
+                                    <span className={`text-sm font-bold ${isSelected ? "text-[#1F1F1F]" : "text-[#1F1F1F]/40"}`}>
+                                        {extraDisplayName}
+                                    </span>
+                                </div>
+                                
+                                {/* ✨ UPDATED: Logic to show price based on quantity */}
+                                <span className={`text-sm font-bold ml-2 ${extra.price < 0 ? "text-red-500" : "text-[#D4C29A]"}`}>
+                                    {extra.price < 0 
+                                      ? `-€${Math.abs(extra.price).toFixed(2)}` 
+                                      : `+€${(extra.price * (isSelected && extra.allowQuantity ? quantity : 1)).toFixed(2)}`
+                                    }
+                                </span>
+                            </button>
+
+                            {/* ✨ NEW: QUANTITY SELECTOR (Only if selected AND allowed) */}
+                            {isSelected && extra.allowQuantity && (
+                                <div className="flex items-center bg-white rounded-lg border border-[#D4C29A] ml-4 overflow-hidden shadow-sm h-8">
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, -1); }}
+                                        className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
+                                    >
+                                        <Minus size={12} />
+                                    </button>
+                                    <span className="w-8 text-center text-xs font-bold text-[#1F1F1F]">{quantity}</span>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, 1); }}
+                                        className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
+                                    >
+                                        <Plus size={12} />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* NESTED VARIANT SELECTOR */}
+                        {isSelected && extra.variants && extra.variants.length > 0 && (
+                            <div className="pl-20 pr-4 animate-in slide-in-from-top-2 fade-in">
+                                <p className="text-[10px] font-bold text-[#1F1F1F]/40 uppercase mb-1.5 ml-1">Select Option:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {extra.variants.map((v: string) => {
+                                        const isVariantActive = extraVariants[extra.name] === v;
+                                        return (
+                                            <button
+                                                key={v}
+                                                onClick={() => selectExtraVariant(extra.name, v)}
+                                                className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all ${
+                                                    isVariantActive 
+                                                    ? "bg-[#1F1F1F] text-white border-[#1F1F1F]" 
+                                                    : "bg-white text-[#1F1F1F]/60 border-black/10 hover:border-black/30"
+                                                }`}
+                                            >
+                                                {v}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}
-
-                        <button 
-                            onClick={() => toggleExtra(extra.name)}
-                            className="flex-1 flex items-center justify-between h-full text-left px-2"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors flex-shrink-0 ${
-                                isSelected ? "bg-[#D4C29A] border-[#D4C29A]" : "border-gray-300"
-                                }`}>
-                                {isSelected && <Check size={14} style={{ color: 'white' }} />}
-                                </div>
-                                
-                                <span className={`text-sm font-bold ${isSelected ? "text-[#1F1F1F]" : "text-[#1F1F1F]/40"}`}>
-                                {extra.name}
-                                </span>
-                            </div>
-                            <span className="text-sm text-[#D4C29A] font-bold ml-2">+€{extra.price}</span>
-                        </button>
                     </div>
                   );
                 })}
@@ -580,52 +817,97 @@ export default function ProductPage() {
             </div>
           )}
 
-          {/* ✨ RESTORED & ENHANCED: Input visible ONLY if triggered by Extra */}
-          {isInputVisible && (
-            <div className="space-y-3 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2">
-              <div className="flex justify-between items-center">
-                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#D4C29A]">
-                  <PenTool size={14} /> <span>{t('ribbon_label')}</span>
-                </label>
-                
-                {/* ✨ NEW: Placement Switcher (Inside the triggered box) */}
-                <div className="flex bg-white rounded-lg border border-black/10 p-1">
-                    <button 
-                        onClick={() => setTextPlacement('ribbon')}
-                        className={`text-[10px] px-3 py-1.5 rounded-md font-bold transition-all ${textPlacement === 'ribbon' ? 'bg-[#D4C29A] text-white shadow-sm' : 'text-[#1F1F1F]/50 hover:text-[#1F1F1F]'}`}
-                    >
-                        {language === 'EN' ? "On Ribbon" : "Auf Schleife"}
-                    </button>
-                    <button 
-                        onClick={() => setTextPlacement('paper')}
-                        className={`text-[10px] px-3 py-1.5 rounded-md font-bold transition-all ${textPlacement === 'paper' ? 'bg-[#D4C29A] text-white shadow-sm' : 'text-[#1F1F1F]/50 hover:text-[#1F1F1F]'}`}
-                    >
-                        {language === 'EN' ? "On Paper" : "Auf Papier"}
-                    </button>
+          {/* --- PERSONALIZATION FIELDS --- */}
+          <div className="space-y-6 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2">
+            
+            {/* 1. RIBBON TEXT (Conditional) */}
+            {isRibbonInputVisible && (
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#D4C29A]">
+                            <PenTool size={14} /> 
+                            <span>{language === 'EN' ? "Ribbon Text" : "Schleifentext"}</span>
+                        </label>
+                        <div className="flex bg-white rounded-lg border border-black/10 p-1">
+                            <button 
+                                onClick={() => setTextPlacement('option1')}
+                                className={`text-[10px] px-3 py-1.5 rounded-md font-bold transition-all ${textPlacement === 'option1' ? 'bg-[#D4C29A] text-white shadow-sm' : 'text-[#1F1F1F]/50 hover:text-[#1F1F1F]'}`}
+                            >
+                                {getLabel1()}
+                            </button>
+                            <button 
+                                onClick={() => setTextPlacement('option2')}
+                                className={`text-[10px] px-3 py-1.5 rounded-md font-bold transition-all ${textPlacement === 'option2' ? 'bg-[#D4C29A] text-white shadow-sm' : 'text-[#1F1F1F]/50 hover:text-[#1F1F1F]'}`}
+                            >
+                                {getLabel2()}
+                            </button>
+                        </div>
+                    </div>
+                    <input 
+                        type="text" 
+                        placeholder={language === 'EN' ? "Enter Ribbon Text..." : "Schleifentext eingeben..."}
+                        value={customText} 
+                        onChange={(e) => setCustomText(e.target.value)}
+                        className={`w-full bg-white border rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none transition-all placeholder:text-gray-300 ${
+                            !customText.trim() ? "border-red-200 focus:border-red-500" : "border-black/5 focus:border-[#D4C29A]"
+                        }`}
+                    />
+                    {!customText.trim() && (
+                        <p className="text-red-500 text-xs flex items-center gap-1 font-bold animate-pulse">
+                            <AlertCircle size={12} /> {t('ribbon_error')}
+                        </p>
+                    )}
                 </div>
-              </div>
+            )}
 
-              <input 
-                type="text" 
-                placeholder={textPlacement === 'ribbon' ? (language === 'EN' ? "Your Ribbon Text..." : "Dein Schleifentext...") : (language === 'EN' ? "Your Paper Message..." : "Deine Papiernachricht...")} 
-                value={customText} 
-                onChange={(e) => setCustomText(e.target.value)}
-                className={`w-full bg-white border rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none transition-all placeholder:text-gray-300 ${
-                  !customText.trim() 
-                    ? "border-red-200 focus:border-red-500" 
-                    : "border-black/5 focus:border-[#D4C29A]"
-                }`}
-              />
-              
-              {!customText.trim() && (
-                <p className="text-red-500 text-xs flex items-center gap-1 font-bold animate-pulse">
-                  <AlertCircle size={12} /> {t('ribbon_error')}
-                </p>
-              )}
-            </div>
-          )}
+            {/* 2. LETTER SERVICE (Conditional - Only if "Letter" Extra Selected) */}
+            {isLetterInputVisible && (
+                <div className="space-y-3 pt-4 border-t border-dashed border-black/5">
+                    <div className="flex justify-between items-center mb-2">
+                        <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#D4C29A]">
+                            <FileText size={14} /> 
+                            <span>{language === 'EN' ? "Your Personal Letter" : "Ihr persönlicher Brief"}</span>
+                        </label>
+                        <div className="flex bg-white rounded-lg border border-black/10 p-1">
+                            <button onClick={() => setLetterFont('Classic')} className={`text-[10px] px-3 py-1.5 rounded-md font-serif font-bold transition-all ${letterFont === 'Classic' ? 'bg-[#1F1F1F] text-white' : 'text-[#1F1F1F]/50'}`}>Classic</button>
+                            <button onClick={() => setLetterFont('Modern')} className={`text-[10px] px-3 py-1.5 rounded-md font-sans font-bold transition-all ${letterFont === 'Modern' ? 'bg-[#1F1F1F] text-white' : 'text-[#1F1F1F]/50'}`}>Modern</button>
+                            <button onClick={() => setLetterFont('Handwritten')} className={`text-[10px] px-3 py-1.5 rounded-md italic font-bold transition-all ${letterFont === 'Handwritten' ? 'bg-[#1F1F1F] text-white' : 'text-[#1F1F1F]/50'}`}>Script</button>
+                        </div>
+                    </div>
+                    <textarea 
+                        rows={8}
+                        placeholder={language === 'EN' ? "Write your message here (up to 2 pages)..." : "Schreiben Sie hier Ihre Nachricht (bis zu 2 Seiten)..."}
+                        value={letterText}
+                        onChange={(e) => setLetterText(e.target.value)}
+                        className={`w-full bg-white border border-black/5 rounded-xl px-4 py-4 text-[#1F1F1F] focus:outline-none focus:border-[#D4C29A] transition-all placeholder:text-gray-300 resize-y 
+                            ${letterFont === 'Classic' ? 'font-serif' : letterFont === 'Modern' ? 'font-sans' : 'italic'}
+                        `}
+                    />
+                </div>
+            )}
+
+            {/* 3. SHORT NOTE (Conditional - Only if "Note" Extra Selected) */}
+            {isShortNoteInputVisible && (
+                <div className="space-y-3 pt-4 border-t border-dashed border-black/5">
+                    <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#D4C29A]">
+                        <MessageSquare size={14} /> 
+                        <span>{language === 'EN' ? "Short Note (Max 5 Words)" : "Kurze Notiz (Max 5 Wörter)"}</span>
+                    </label>
+                    <input 
+                        type="text"
+                        placeholder={language === 'EN' ? "e.g., I Love You, Sarah" : "z.B. Ich liebe dich, Sarah"}
+                        value={shortNoteText}
+                        onChange={handleShortNoteChange}
+                        className="w-full bg-white border border-black/5 rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none focus:border-[#D4C29A] transition-all placeholder:text-gray-300"
+                    />
+                    <p className="text-[10px] text-right font-bold text-[#1F1F1F]/30">{shortNoteText.trim().split(/\s+/).filter(Boolean).length} / 5 Words</p>
+                </div>
+            )}
+
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-black/5 mt-4">
+            {/* Quantity and Add to Cart Section */}
             <div className="flex items-center bg-white rounded-full border border-black/5 px-4 py-3 w-fit shadow-sm">
               <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:text-[#D4C29A] text-gray-300 transition-colors"><Minus size={18} /></button>
               <span className="w-12 text-center font-bold text-[#1F1F1F]">{quantity}</span>
@@ -654,6 +936,13 @@ export default function ProductPage() {
                   : !isCurrentlyInStock ? t('out_of_stock') : !allOptionsSelected ? t('select_options') : t('ribbon_placeholder')}
               </span>
             </button>
+
+            <button 
+                onClick={handleWishlistToggle}
+                className="w-14 h-14 min-w-[3.5rem] rounded-full border-2 border-[#D4C29A]/30 flex items-center justify-center hover:bg-[#D4C29A]/10 transition-colors group"
+            >
+                <Heart size={24} className={`transition-colors ${isLiked ? "fill-[#E76A8D] text-[#E76A8D]" : "text-[#E76A8D] group-hover:scale-110"}`} />
+            </button>
           </div>
 
           {isSupplyProduct && (
@@ -677,7 +966,17 @@ export default function ProductPage() {
         </motion.div>
       </div>
 
+      <section className="max-w-7xl mx-auto px-6">
+        <RelatedProducts 
+            category={product.category} 
+            currentId={product.id} 
+            currentName={language === 'EN' ? product.name_en : product.name}
+            selectedColor={activeColor} 
+        />
+      </section>
+
       <section className="max-w-7xl mx-auto px-6 pt-24 border-t border-black/5 mt-24">
+        {/* Review Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
           <div className="space-y-8">
             <div>

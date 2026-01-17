@@ -3,9 +3,11 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "../context/CartContext";
 import { LanguageProvider } from "../context/LanguageContext"; // ✨ Added Language Import
+import { WishlistProvider } from "../context/WishlistContext"; // ✨ NEW: Import Wishlist Provider
 import CartSidebar from "../components/CartSidebar";
 import Footer from "../components/Footer"; 
 import Script from "next/script"; // ✨ Added for Tidio Integration
+import SocialProof from "../components/SocialProof"; // ✨ NEW: Import Social Proof
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,14 +27,20 @@ export default function RootLayout({
         {/* ✨ Wrapped with LanguageProvider to enable DE/EN switching */}
         <LanguageProvider>
           <CartProvider>
-            {/* 1. The Main Content of the page */}
-            {children}
+            {/* ✨ NEW: Wrapped with WishlistProvider for Saved Items */}
+            <WishlistProvider>
+              {/* 1. The Main Content of the page */}
+              {children}
 
-            {/* 2. The Slide-out Cart (Hidden until clicked) */}
-            <CartSidebar /> 
-            
-            {/* 3. The Footer (Now visible at the bottom) */}
-            <Footer /> 
+              {/* 2. The Slide-out Cart (Hidden until clicked) */}
+              <CartSidebar /> 
+              
+              {/* ✨ NEW: Live Sales Notification (Only shows real orders) */}
+              <SocialProof />
+
+              {/* 3. The Footer (Now visible at the bottom) */}
+              <Footer /> 
+            </WishlistProvider>
           </CartProvider>
         </LanguageProvider>
 

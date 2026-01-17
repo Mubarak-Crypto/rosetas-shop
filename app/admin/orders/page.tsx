@@ -3,11 +3,15 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap } from "lucide-react"; // ✨ Added Globe & Zap icons
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers } from "lucide-react"; // ✨ Added Layers icon for "All"
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // ✨ NEW: Category Tab State ('all' | 'bouquets' | 'supplies')
+  const [activeCategory, setActiveCategory] = useState<'all' | 'bouquets' | 'supplies'>('all');
+  
   const [activeTab, setActiveTab] = useState<'paid' | 'shipped'>('paid');
   const [searchTerm, setSearchTerm] = useState(""); 
 
@@ -95,18 +99,32 @@ export default function AdminOrdersPage() {
   };
 
   const displayedOrders = orders.filter(order => {
+    // 1. FILTER BY STATUS (Pending vs Shipped)
     const matchesTab = activeTab === 'paid' 
       ? (order.status === 'paid' || order.status === 'pending')
       : (order.status === 'shipped' || order.status === 'completed');
 
+    // 2. FILTER BY CATEGORY (All vs Bouquets vs Supplies)
+    let matchesCategory = true;
+    
+    if (activeCategory === 'supplies') {
+        // Show if order has ANY supply item
+        matchesCategory = order.items?.some((i: any) => i.category === 'supplies');
+    } else if (activeCategory === 'bouquets') {
+        // Show if order has ANY item that is NOT supplies (bouquets, gifts, etc.)
+        matchesCategory = order.items?.some((i: any) => i.category !== 'supplies');
+    }
+    // If activeCategory is 'all', matchesCategory remains true
+
+    // 3. SEARCH FILTER
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
       order.customer_name?.toLowerCase().includes(searchLower) ||
       order.email?.toLowerCase().includes(searchLower) ||
-      order.country?.toLowerCase().includes(searchLower) || // ✨ Searchable by country
+      order.country?.toLowerCase().includes(searchLower) || 
       order.id.toString().includes(searchLower);
 
-    return matchesTab && matchesSearch;
+    return matchesTab && matchesCategory && matchesSearch;
   });
 
   return (
@@ -124,29 +142,53 @@ export default function AdminOrdersPage() {
                 <Package className="text-[#C9A24D]" /> Order Management
               </h1>
               
-              {/* TABS SWITCHER - Styled for Vanilla Theme */}
-              <div className="bg-white/50 p-1 rounded-xl flex gap-1 border border-black/5 self-start md:self-auto shadow-sm">
-                <button 
-                  onClick={() => setActiveTab('paid')}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'paid' ? 'bg-[#1F1F1F] text-white shadow-lg' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
-                >
-                  <Clock size={16} /> Pending
-                </button>
-                <button 
-                  onClick={() => setActiveTab('shipped')}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'shipped' ? 'bg-[#C9A24D] text-white shadow-lg' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
-                >
-                  <Truck size={16} /> Shipped History
-                </button>
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* ✨ NEW: CATEGORY SWITCHER (All | Bouquets | Supplies) */}
+                <div className="bg-white p-1 rounded-xl flex gap-1 border border-black/5 shadow-sm">
+                   <button 
+                    onClick={() => setActiveCategory('all')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeCategory === 'all' ? 'bg-[#C9A24D] text-white shadow-md' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+                  >
+                    <Layers size={16} /> All
+                  </button>
+                   <button 
+                    onClick={() => setActiveCategory('bouquets')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeCategory === 'bouquets' ? 'bg-[#C9A24D] text-white shadow-md' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+                  >
+                    <Flower2 size={16} /> Bouquets
+                  </button>
+                  <button 
+                    onClick={() => setActiveCategory('supplies')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeCategory === 'supplies' ? 'bg-[#C9A24D] text-white shadow-md' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+                  >
+                    <LayoutGrid size={16} /> Supplies
+                  </button>
+                </div>
+
+                {/* STATUS SWITCHER */}
+                <div className="bg-white/50 p-1 rounded-xl flex gap-1 border border-black/5 self-start md:self-auto shadow-sm">
+                  <button 
+                    onClick={() => setActiveTab('paid')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'paid' ? 'bg-[#1F1F1F] text-white shadow-lg' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+                  >
+                    <Clock size={16} /> Pending
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('shipped')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'shipped' ? 'bg-[#C9A24D] text-white shadow-lg' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+                  >
+                    <Truck size={16} /> History
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* SEARCH BAR - Styled for Vanilla Theme */}
+            {/* SEARCH BAR */}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#1F1F1F]/20" size={20} />
               <input 
                 type="text" 
-                placeholder="Search by name, email, country, or Order ID..." 
+                placeholder={`Search ${activeCategory === 'all' ? '' : activeCategory} orders by name, email, or ID...`} 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full bg-white border border-black/5 rounded-xl py-3 pl-12 pr-4 text-[#1F1F1F] placeholder:text-[#1F1F1F]/20 focus:outline-none focus:border-[#C9A24D] transition-all shadow-sm font-medium"
@@ -159,7 +201,9 @@ export default function AdminOrdersPage() {
           ) : displayedOrders.length === 0 ? (
             <div className="bg-white/40 p-12 rounded-3xl text-center border border-dashed border-black/10 text-[#1F1F1F]/40 flex flex-col items-center gap-4">
               <Package size={48} className="opacity-10" />
-              <p className="font-bold uppercase tracking-widest text-sm">No {activeTab} orders found {searchTerm && "matching your search"}.</p>
+              <p className="font-bold uppercase tracking-widest text-sm">
+                No {activeCategory === 'all' ? '' : activeCategory} orders found in {activeTab} {searchTerm && "matching your search"}.
+              </p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -170,20 +214,20 @@ export default function AdminOrdersPage() {
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-black/5 pb-4">
                     <div>
                       <div className="flex items-center gap-3">
-                         <h3 className="text-xl font-bold text-[#1F1F1F]">{order.customer_name}</h3>
-                         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight border ${
-                           order.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
-                           order.status === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                           'bg-yellow-50 text-yellow-700 border-yellow-100'
-                         }`}>
-                           {order.status}
-                         </span>
-                         {/* ✨ EXPRESS BADGE DISPLAY */}
-                         {order.shipping_method === 'Express' && (
-                           <span className="bg-[#1F1F1F] text-[#C9A24D] px-2 py-1 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 animate-pulse">
-                             <Zap size={10} fill="#C9A24D" /> Priority
-                           </span>
-                         )}
+                          <h3 className="text-xl font-bold text-[#1F1F1F]">{order.customer_name}</h3>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight border ${
+                            order.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
+                            order.status === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                            'bg-yellow-50 text-yellow-700 border-yellow-100'
+                          }`}>
+                            {order.status}
+                          </span>
+                          {/* ✨ EXPRESS BADGE DISPLAY */}
+                          {order.shipping_method === 'Express' && (
+                            <span className="bg-[#1F1F1F] text-[#C9A24D] px-2 py-1 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 animate-pulse">
+                              <Zap size={10} fill="#C9A24D" /> Priority
+                            </span>
+                          )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-[#1F1F1F]/40 mt-1 font-medium">
                         <span className="flex items-center gap-1"><Mail size={12} /> {order.email || order.customer_email}</span>
@@ -236,14 +280,14 @@ export default function AdminOrdersPage() {
                         </p>
                       </div>
                       <div>
-                         <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Method</h4>
-                         <p className={`text-[11px] font-black uppercase ${order.shipping_method === 'Express' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]'}`}>
-                           {order.shipping_method || "Standard"}
-                         </p>
+                          <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Method</h4>
+                          <p className={`text-[11px] font-black uppercase ${order.shipping_method === 'Express' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]'}`}>
+                            {order.shipping_method || "Standard"}
+                          </p>
                       </div>
                       <div>
-                         <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Contact</h4>
-                         <p className="text-[#1F1F1F] font-bold">{order.phone}</p>
+                          <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Contact</h4>
+                          <p className="text-[#1F1F1F] font-bold">{order.phone}</p>
                       </div>
                     </div>
 

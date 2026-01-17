@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react"; // ✨ Added useEffect
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag } from "lucide-react"; // ✨ Added Info & LayoutGrid icon
+import { useState, useCallback, useEffect } from "react"; 
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash } from "lucide-react"; 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -9,60 +9,91 @@ import AdminSidebar from "../../../../components/admin/AdminSidebar";
 import { supabase } from "../../../../lib/supabase";
 
 // TYPES
-type Variant = { name: string; values: string; };
-type Extra = { name: string; price: number; image?: string }; // ✨ Added image prop
+type Variant = { name: string; name_en?: string; values: string; values_en?: string; };
+// ✨ UPDATED: Added inputType to Extra
+type InputType = "none" | "short_note" | "letter";
+// ✨ UPDATED: Added allowQuantity to Extra
+type Extra = { 
+    name: string; 
+    name_en?: string; 
+    price: number; 
+    image?: string; 
+    variants?: string[]; 
+    inputType?: InputType;
+    allowQuantity?: boolean; // ✨ NEW FIELD
+}; 
 type Area = { x: number; y: number; width: number; height: number; };
 
 // Helper: which type of image are we cropping?
 type UploadType = "product" | "extra"; 
 
+// Helper Type for the Temp List Builder
+type TempVariantItem = { de: string; en: string; stock: string };
+
 export default function AddProductPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); // ✅ FIXED: Changed setter from setIsLoading to setIsUploading
-  const [isUploadingVideo, setIsUploadingVideo] = useState(false); // ✨ NEW: Video upload state
+  const [isUploading, setIsUploading] = useState(false); 
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false); 
   
   // --- STATE VARIABLES ---
   const [images, setImages] = useState<string[]>([]);
-  const [videoUrls, setVideoUrls] = useState<string[]>([]); // ✨ UPDATED: Now an array for multiple videos
+  const [videoUrls, setVideoUrls] = useState<string[]>([]); 
   const [name, setName] = useState("");
-  const [nameEn, setNameEn] = useState(""); // ✨ NEW: English Name State
+  const [nameEn, setNameEn] = useState(""); 
   const [category, setCategory] = useState(""); 
-  const [isCustomCategory, setIsCustomCategory] = useState(false); // ✨ NEW: Toggle for manual entry
+  const [isCustomCategory, setIsCustomCategory] = useState(false); 
   const [status, setStatus] = useState("active");
   const [description, setDescription] = useState("");
-  const [descriptionEn, setDescriptionEn] = useState(""); // ✨ NEW: English Description State
+  const [descriptionEn, setDescriptionEn] = useState(""); 
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
-  const [needsRibbon, setNeedsRibbon] = useState(false); // ✨ NEW: Ribbon Toggle State
-  const [promoLabel, setPromoLabel] = useState(""); // ✨ NEW: Promotion Label State
+  const [needsRibbon, setNeedsRibbon] = useState(false); 
+  const [promoLabel, setPromoLabel] = useState(""); 
+  
+  // Personalization Labels
+  const [persLabel1, setPersLabel1] = useState("");
+  const [persLabel2, setPersLabel2] = useState("");
 
   const [variants, setVariants] = useState<Variant[]>([]);
   const [isAddingVariant, setIsAddingVariant] = useState(false);
   const [newVariantName, setNewVariantName] = useState("");
+  const [newVariantNameEn, setNewVariantNameEn] = useState("");
   const [newVariantValues, setNewVariantValues] = useState("");
-  // ✨ NEW: Helper states for building a variant list with stock
+  
+  // Helper states for building values
   const [tempValueName, setTempValueName] = useState("");
+  const [tempValueNameEn, setTempValueNameEn] = useState(""); 
   const [tempValueStock, setTempValueStock] = useState("");
-  const [tempList, setTempList] = useState<string[]>([]);
+  const [tempList, setTempList] = useState<TempVariantItem[]>([]);
 
-  // ✨ NEW: STOCK MATRIX STATE
+  // STOCK MATRIX STATE
   const [stockMatrix, setStockMatrix] = useState<any[]>([]);
 
   const [extras, setExtras] = useState<Extra[]>([]);
   const [isAddingExtra, setIsAddingExtra] = useState(false);
   const [newExtraName, setNewExtraName] = useState("");
+  const [newExtraNameEn, setNewExtraNameEn] = useState("");
   const [newExtraPrice, setNewExtraPrice] = useState("");
-  const [newExtraImage, setNewExtraImage] = useState(""); // ✨ Temp state for extra image
+  const [newExtraImage, setNewExtraImage] = useState(""); 
+  // ✨ NEW: State for Input Type
+  const [newExtraInputType, setNewExtraInputType] = useState<InputType>("none");
+  // ✨ NEW: State for Quantity Toggle
+  const [newExtraAllowQty, setNewExtraAllowQty] = useState(false);
+  
+  // Extra Variants State (Temporary Builder)
+  const [isAddingExtraVariants, setIsAddingExtraVariants] = useState(false);
+  const [tempExtraVariant, setTempExtraVariant] = useState("");
+  const [extraVariantsList, setExtraVariantsList] = useState<string[]>([]);
 
   // --- CROPPER STATE ---
   const [cropImage, setCropImage] = useState<string | null>(null);
-  const [uploadType, setUploadType] = useState<UploadType>("product"); // ✨ Track what we are uploading
+  const [uploadType, setUploadType] = useState<UploadType>("product"); 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
-  // ✨ NEW: AUTO-GENERATE MATRIX LOGIC
+  // AUTO-GENERATE MATRIX LOGIC
   useEffect(() => {
     if (variants.length > 1) {
       const generateMatrix = () => {
@@ -71,7 +102,6 @@ export default function AddProductPage() {
           values: v.values.split(',').map(val => val.split('(')[0].split('|')[0].trim())
         }));
 
-        // Cartesian product to generate combinations
         const combos = optionGroups.reduce((a, b) => 
           a.flatMap((d: any) => b.values.map(v => ({ ...d, [b.name]: v })))
         , [{}]);
@@ -89,7 +119,7 @@ export default function AddProductPage() {
     }
   }, [variants]);
 
-  // ✨ UPDATED: HANDLE MULTIPLE VIDEO UPLOADS
+  // HANDLE MULTIPLE VIDEO UPLOADS
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -109,7 +139,6 @@ export default function AddProductPage() {
         .from('products')
         .getPublicUrl(filePath);
 
-      // ✨ Append to the array instead of replacing
       setVideoUrls(prev => [...prev, publicUrl]);
     } catch (e: any) {
       alert("Error uploading video: " + e.message);
@@ -125,7 +154,7 @@ export default function AddProductPage() {
   // 1. SELECT IMAGE (Don't upload yet, just show cropper)
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: UploadType = "product") => {
     if (e.target.files && e.target.files.length > 0) {
-      setUploadType(type); // Set type so we know where to save it later
+      setUploadType(type); 
       const reader = new FileReader();
       reader.addEventListener("load", () => {
         setCropImage(reader.result as string);
@@ -185,31 +214,27 @@ export default function AddProductPage() {
     try {
       const croppedBlob = await getCroppedImg(cropImage, croppedAreaPixels);
       
-      // Create filename
       const prefix = uploadType === "extra" ? "extra-" : "prod-";
-      const fileName = `${prefix}${Date.now()}.jpg`; // Simplified filename to avoid issues
+      const fileName = `${prefix}${Date.now()}.jpg`; 
       const filePath = `${fileName}`; 
 
-      // Upload to Supabase
       const { error: uploadError } = await supabase.storage
         .from('products')
         .upload(filePath, croppedBlob);
 
       if (uploadError) throw uploadError;
 
-      // Get Public URL
       const { data: { publicUrl } } = supabase.storage
         .from('products')
         .getPublicUrl(filePath);
 
-      // ✨ DECIDE WHERE TO PUT THE URL BASED ON TYPE
       if (uploadType === "product") {
           setImages([...images, publicUrl]);
       } else {
-          setNewExtraImage(publicUrl); // Save to the extra we are building
+          setNewExtraImage(publicUrl); 
       }
 
-      setCropImage(null); // Close Cropper
+      setCropImage(null); 
       setZoom(1);
 
     } catch (e: any) {
@@ -223,7 +248,6 @@ export default function AddProductPage() {
     setImages(images.filter((_, i) => i !== index));
   };
 
-  // ✨ NEW: REORDER IMAGES (Added to keep the same structure)
   const moveImage = (index: number, direction: 'left' | 'right') => {
     const newImages = [...images];
     const newIndex = direction === 'left' ? index - 1 : index + 1;
@@ -232,28 +256,49 @@ export default function AddProductPage() {
     setImages(newImages);
   };
 
-  // Helper to get labels from the variant "Values" box
   const getColorLabels = () => {
     const colorVariant = variants.find(v => v.name.toLowerCase() === 'color' || v.name.toLowerCase() === 'farbe');
     if (!colorVariant) return [];
-    // Only return the part before the stock separator
     return colorVariant.values.split(',').map(v => v.split('|')[0].trim());
   };
 
   // --- LOGIC: VARIANTS ---
   const handleAddVariantItem = () => {
     if (!tempValueName) return;
-    // Format: "Red | Stock: 5" or "Red (€50) | Stock: 5"
-    const entry = `${tempValueName}${tempValueStock ? ` | Stock: ${tempValueStock}` : ''}`;
-    setTempList([...tempList, entry]);
+    // ✨ Push object instead of string
+    const newItem: TempVariantItem = {
+        de: tempValueName,
+        en: tempValueNameEn || tempValueName, // Fallback to DE if empty
+        stock: tempValueStock
+    };
+    
+    setTempList([...tempList, newItem]);
+    
+    // Reset inputs
     setTempValueName("");
+    setTempValueNameEn("");
     setTempValueStock("");
   };
 
   const handleAddVariant = () => {
     if (!newVariantName || tempList.length === 0) return;
-    setVariants([...variants, { name: newVariantName, values: tempList.join(', ') }]);
+    
+    // ✨ Construct the strings for DB
+    // DE: "Rot | Stock: 5, Blau"
+    const valuesDE = tempList.map(item => item.stock ? `${item.de} | Stock: ${item.stock}` : item.de).join(', ');
+    
+    // EN: "Red, Blue" (Stock logic handled via DE key, so EN list is cleaner, but must match index)
+    const valuesEN = tempList.map(item => item.en).join(', ');
+
+    setVariants([...variants, { 
+        name: newVariantName, 
+        name_en: newVariantNameEn || undefined,
+        values: valuesDE,
+        values_en: valuesEN
+    }]);
+
     setNewVariantName("");
+    setNewVariantNameEn("");
     setTempList([]);
     setIsAddingVariant(false);
   };
@@ -263,18 +308,33 @@ export default function AddProductPage() {
   };
 
   // --- LOGIC: EXTRAS ---
+  const handleAddExtraVariantItem = () => {
+    if (!tempExtraVariant) return;
+    setExtraVariantsList([...extraVariantsList, tempExtraVariant]);
+    setTempExtraVariant("");
+  };
+
   const handleAddExtra = () => {
     if (!newExtraName || !newExtraPrice) return;
+    // ✨ Save name_en, inputType, and allowQuantity
     setExtras([...extras, { 
-        name: newExtraName, 
+        name: newExtraName,
+        name_en: newExtraNameEn || undefined,
         price: parseFloat(newExtraPrice),
-        image: newExtraImage // ✨ Save the image URL with the extra
+        image: newExtraImage,
+        variants: extraVariantsList.length > 0 ? extraVariantsList : undefined,
+        inputType: newExtraInputType, // ✨ SAVED
+        allowQuantity: newExtraAllowQty // ✨ SAVED: Quantity Selection
     }]);
     
-    // Reset Form
     setNewExtraName("");
+    setNewExtraNameEn(""); 
     setNewExtraPrice("");
     setNewExtraImage(""); 
+    setExtraVariantsList([]); 
+    setNewExtraInputType("none"); 
+    setNewExtraAllowQty(false); // Reset
+    setIsAddingExtraVariants(false);
     setIsAddingExtra(false);
   };
   
@@ -301,20 +361,23 @@ export default function AddProductPage() {
       .insert([
         { 
           name, 
-          name_en: nameEn, // ✨ Save English Name
+          name_en: nameEn, 
           description,
-          description_en: descriptionEn, // ✨ Save English Description
+          description_en: descriptionEn, 
           price: finalPrice,
           category: category.trim(),
           stock: finalStock,
           status,
           images,
-          video_url: videoUrls, // ✨ UPDATED: Now saves the array of URLs
+          video_url: videoUrls, 
           variants,
-          extras, // This now includes images!
-          needs_ribbon: needsRibbon, // ✨ NEW: Save the Ribbon requirement
-          stock_matrix: stockMatrix, // ✨ NEW: Save individual variant stock
-          promo_label: promoLabel // ✨ NEW: Save Promotion Label
+          extras, 
+          needs_ribbon: needsRibbon, 
+          stock_matrix: stockMatrix, 
+          promo_label: promoLabel, 
+          
+          pers_label_1: persLabel1 || null,
+          pers_label_2: persLabel2 || null
         }
       ]);
 
@@ -352,7 +415,6 @@ export default function AddProductPage() {
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
                 <h3 className="font-bold text-lg mb-4">Product Details</h3>
                 
-                {/* ✨ BILINGUAL NAMES SECTION */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1.5">
@@ -427,7 +489,6 @@ export default function AddProductPage() {
                   </div>
                 </div>
 
-                {/* ✨ BILINGUAL DESCRIPTIONS SECTION */}
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1.5">
@@ -446,11 +507,11 @@ export default function AddProductPage() {
                 </div>
               </div>
 
-              {/* ✨ NEW: PERSONALIZATION CONFIGURATION SECTION */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
                 <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
                   <Bookmark className="text-[#C9A24D]" size={20} /> Personalization Mode
                 </h3>
+                
                 <div className="p-4 bg-[#F6EFE6] rounded-xl border border-[#C9A24D]/20 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-[#1F1F1F]">Require Mandatory Ribbon Text?</p>
@@ -464,9 +525,35 @@ export default function AddProductPage() {
                     <div className="w-6 h-6 bg-white rounded-full shadow-md" />
                   </button>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
+                            <PenTool size={12}/> Label 1 (Default: Ribbon)
+                        </label>
+                        <input 
+                            type="text" 
+                            placeholder="e.g. On Vase" 
+                            value={persLabel1}
+                            onChange={(e) => setPersLabel1(e.target.value)}
+                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
+                            <PenTool size={12}/> Label 2 (Default: Paper)
+                        </label>
+                        <input 
+                            type="text" 
+                            placeholder="e.g. On Box" 
+                            value={persLabel2}
+                            onChange={(e) => setPersLabel2(e.target.value)}
+                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none"
+                        />
+                    </div>
+                </div>
               </div>
 
-              {/* ✨ NEW: INDIVIDUAL STOCK MATRIX SECTION */}
               {variants.length > 1 && (
                 <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-6">
                   <div className="flex items-center gap-2">
@@ -518,7 +605,6 @@ export default function AddProductPage() {
                     <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
                     <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
                   </div>
-                  {/* ✨ NEW: PROMOTION LABEL FIELD */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
                       <Tag size={10} /> Promotion (Optional)
@@ -537,7 +623,7 @@ export default function AddProductPage() {
 
             {/* RIGHT COLUMN */}
             <div className="space-y-6">
-              {/* IMAGES (Main Product) */}
+              {/* IMAGES */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-4">Images</h3>
                 <div className="grid grid-cols-2 gap-4 mb-4">
@@ -579,7 +665,7 @@ export default function AddProductPage() {
                 </p>
               </div>
 
-              {/* ✨ UPDATED: MULTIPLE PRODUCT VIDEOS SECTION */}
+              {/* PRODUCT VIDEOS */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-4">Product Videos</h3>
                 <div className="grid grid-cols-1 gap-4">
@@ -629,7 +715,15 @@ export default function AddProductPage() {
                 <div className="space-y-3 mb-4">
                   {variants.map((v, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-black/5">
-                      <div className="max-w-[80%]"><span className="text-xs font-bold text-gray-400 block uppercase">{v.name}</span><span className="text-xs text-[#1F1F1F] font-medium break-words leading-tight">{v.values}</span></div>
+                      <div className="max-w-[80%]">
+                        <span className="text-xs font-bold text-gray-400 block uppercase">
+                            {v.name} {v.name_en ? <span className="text-[#C9A24D]">/ {v.name_en}</span> : ''}
+                        </span>
+                        <div className="flex flex-col gap-1 mt-1">
+                            <span className="text-[10px] font-bold text-gray-400">DE: <span className="text-[#1F1F1F] font-medium">{v.values}</span></span>
+                            {v.values_en && <span className="text-[10px] font-bold text-[#C9A24D]/70">EN: <span className="text-[#1F1F1F] font-medium">{v.values_en}</span></span>}
+                        </div>
+                      </div>
                       <button type="button" onClick={() => removeVariant(idx)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
                     </div>
                   ))}
@@ -637,20 +731,29 @@ export default function AddProductPage() {
 
                 {isAddingVariant ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3">
-                    <input type="text" placeholder="Option Name (e.g. Color)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                    <div className="grid grid-cols-2 gap-2">
+                        <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                        <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                    </div>
                     
                     <div className="space-y-2 bg-white/50 p-2 rounded-lg border border-black/5">
-                        <div className="flex gap-2">
-                           <input type="text" placeholder="Value (e.g. Red)" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="flex-[2] bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                           <input type="number" placeholder="Stock" value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="flex-1 bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                           <button type="button" onClick={handleAddVariantItem} className="bg-[#C9A24D] text-white px-2 rounded-lg"><Plus size={16}/></button>
+                        <div className="grid grid-cols-3 gap-2">
+                           <input type="text" placeholder="Value (DE)" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                           <input type="text" placeholder="Value (EN)" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                           <div className="flex gap-2">
+                               <input type="number" placeholder="Stock" value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                               <button type="button" onClick={handleAddVariantItem} className="bg-[#C9A24D] text-white px-3 rounded-lg flex items-center justify-center"><Plus size={16}/></button>
+                           </div>
                         </div>
                         {tempList.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-2">
                                 {tempList.map((t, i) => (
-                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex items-center gap-1.5">
-                                        <span className="text-[10px] font-bold">{t}</span>
-                                        <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10}/></button>
+                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5">
+                                        <div className="flex items-center gap-2 justify-between">
+                                            <span className="text-[10px] font-bold">{t.de}</span>
+                                            <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
+                                        </div>
+                                        <span className="text-[9px] text-[#C9A24D]">{t.en}</span>
                                     </div>
                                 ))}
                             </div>
@@ -669,7 +772,7 @@ export default function AddProductPage() {
                 )}
               </div>
 
-              {/* EXTRAS (With Image Support) */}
+              {/* EXTRAS (With Image & Variant Support) */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-2">Upsells / Extras</h3>
                 <div className="space-y-3 mb-4">
@@ -682,8 +785,30 @@ export default function AddProductPage() {
                             <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center"><ImageIcon size={12} className="text-gray-400"/></div>
                         )}
                         <div>
-                            <span className="text-sm text-[#1F1F1F] font-bold block">{ex.name}</span>
-                            <span className="text-xs text-[#C9A24D] font-bold">+€{ex.price}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm text-[#1F1F1F] font-bold block">
+                                    {ex.name} {ex.name_en ? <span className="text-[#C9A24D]">/ {ex.name_en}</span> : ''}
+                                </span>
+                                {/* ✨ VISUAL INDICATOR FOR INPUT TYPE */}
+                                {ex.inputType === 'letter' && <div className="text-[10px] bg-[#1F1F1F] text-white px-1.5 rounded flex items-center gap-1"><FileText size={10}/> Letter</div>}
+                                {ex.inputType === 'short_note' && <div className="text-[10px] bg-[#1F1F1F] text-white px-1.5 rounded flex items-center gap-1"><MessageSquare size={10}/> Note</div>}
+                                
+                                {/* ✨ VISUAL INDICATOR FOR QUANTITY */}
+                                {ex.allowQuantity && <div className="text-[10px] bg-[#C9A24D] text-white px-1.5 rounded flex items-center gap-1"><Hash size={10}/> Qty</div>}
+                            </div>
+                            <span className={`text-xs font-bold ${ex.price < 0 ? "text-red-500" : "text-[#C9A24D]"}`}>
+                                {ex.price < 0 ? `-€${Math.abs(ex.price)}` : `+€${ex.price}`}
+                            </span>
+                            
+                            {ex.variants && ex.variants.length > 0 && (
+                                <div className="flex gap-1 mt-1">
+                                    {ex.variants.map(v => (
+                                        <span key={v} className="text-[9px] bg-white border border-black/10 px-1.5 rounded flex items-center gap-1">
+                                            {v}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                       </div>
                       <button type="button" onClick={() => removeExtra(idx)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
@@ -692,9 +817,53 @@ export default function AddProductPage() {
                 </div>
                 {isAddingExtra ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3 animate-in fade-in slide-in-from-top-2">
-                    <div><input type="text" placeholder="Name (e.g. Crown)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none" /></div>
-                    <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none" /></div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <input type="text" placeholder="Name (DE)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none" />
+                        <input type="text" placeholder="Name (EN)" value={newExtraNameEn} onChange={(e) => setNewExtraNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none text-[#C9A24D]" />
+                    </div>
+
+                    <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15 or -10)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none" /></div>
                     
+                    {/* INPUT LOGIC SELECTOR */}
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase">Input Logic (Conditional)</label>
+                        <div className="flex gap-2">
+                            <button 
+                                type="button" 
+                                onClick={() => setNewExtraInputType('none')} 
+                                className={`flex-1 py-2 text-xs font-bold rounded-lg border ${newExtraInputType === 'none' ? 'bg-[#1F1F1F] text-white border-[#1F1F1F]' : 'bg-white text-gray-400 border-black/10'}`}
+                            >
+                                None
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => setNewExtraInputType('short_note')} 
+                                className={`flex-1 py-2 text-xs font-bold rounded-lg border flex items-center justify-center gap-1 ${newExtraInputType === 'short_note' ? 'bg-[#1F1F1F] text-white border-[#1F1F1F]' : 'bg-white text-gray-400 border-black/10'}`}
+                            >
+                                <MessageSquare size={12}/> Short Note
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={() => setNewExtraInputType('letter')} 
+                                className={`flex-1 py-2 text-xs font-bold rounded-lg border flex items-center justify-center gap-1 ${newExtraInputType === 'letter' ? 'bg-[#1F1F1F] text-white border-[#1F1F1F]' : 'bg-white text-gray-400 border-black/10'}`}
+                            >
+                                <FileText size={12}/> Letter (A4)
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* ✨ NEW: QUANTITY TOGGLE */}
+                    <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
+                        <span className="text-xs font-bold text-[#1F1F1F]">Enable Quantity Selection?</span>
+                        <button 
+                            type="button"
+                            onClick={() => setNewExtraAllowQty(!newExtraAllowQty)}
+                            className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${newExtraAllowQty ? 'bg-[#C9A24D] justify-end' : 'bg-gray-200 justify-start'}`}
+                        >
+                            <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                        </button>
+                    </div>
+
                     <div className="flex items-center gap-3">
                         {newExtraImage ? (
                             <div className="relative w-12 h-12 rounded border border-black/10 overflow-hidden group">
@@ -712,6 +881,37 @@ export default function AddProductPage() {
                         <span className="text-[10px] text-gray-400 font-bold uppercase">
                              {newExtraImage ? "Image Uploaded" : "Add photo"}
                         </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-black/5">
+                        {!isAddingExtraVariants ? (
+                            <button type="button" onClick={() => setIsAddingExtraVariants(true)} className="text-[10px] font-bold text-[#C9A24D] flex items-center gap-1 hover:underline">
+                                <Palette size={12} /> Add Color Variants (Optional)
+                            </button>
+                        ) : (
+                            <div className="space-y-2 bg-white/50 p-2 rounded-lg border border-black/5">
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Color (e.g. Gold)" 
+                                        value={tempExtraVariant} 
+                                        onChange={(e) => setTempExtraVariant(e.target.value)} 
+                                        className="flex-1 bg-white border border-black/5 rounded-lg px-2 py-1 text-xs outline-none focus:border-[#C9A24D]" 
+                                    />
+                                    <button type="button" onClick={handleAddExtraVariantItem} className="bg-[#1F1F1F] text-white px-2 rounded text-xs font-bold">Add</button>
+                                    <button type="button" onClick={() => { setIsAddingExtraVariants(false); setExtraVariantsList([]); }} className="text-xs text-red-400"><X size={14} /></button>
+                                </div>
+                                {extraVariantsList.length > 0 && (
+                                    <div className="flex flex-wrap gap-1">
+                                        {extraVariantsList.map((v, i) => (
+                                            <span key={i} className="text-[9px] bg-white border border-black/10 px-1.5 rounded flex items-center gap-1">
+                                                {v}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex gap-2 pt-1"><button type="button" onClick={handleAddExtra} className="flex-1 bg-[#1F1F1F] text-white text-xs font-bold py-2 rounded-lg hover:bg-[#C9A24D] transition-colors">Add</button><button type="button" onClick={() => setIsAddingExtra(false)} className="flex-1 bg-black/5 text-xs font-bold py-2 rounded-lg">Cancel</button></div>

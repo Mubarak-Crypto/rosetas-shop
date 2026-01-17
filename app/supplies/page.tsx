@@ -73,7 +73,10 @@ export default function SuppliesPage() {
             transition={{ delay: 0.1 }}
             className="text-[#1F1F1F]/60 max-w-2xl mx-auto font-medium"
           >
-            {t('supplies_subtitle')}
+            {/* ✨ UPDATED: Specific English Text as requested */}
+            {language === 'EN' 
+              ? "Source the same high-quality materials we use for our floral creations — carefully selected for quality and style."
+              : t('supplies_subtitle')}
           </motion.p>
 
           {/* ✨ NEW: Shipping Promise Badge for Florists */}

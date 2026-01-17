@@ -1,0 +1,163 @@
+"use client";
+
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { motion } from "framer-motion";
+import { Droplets, Heart, HandHeart, CheckCircle, ArrowRight, Calendar, MapPin, Download } from "lucide-react";
+import Link from "next/link";
+
+export default function ImpactReportPage() {
+  return (
+    <main className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#E3D7C5] selection:text-[#1F1F1F]">
+      <Navbar />
+
+      {/* HERO SECTION */}
+      <section className="relative pt-32 pb-20 px-6">
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#E3D7C5]/30 text-[#1F1F1F] rounded-full text-[10px] font-black uppercase tracking-widest border border-[#E3D7C5]"
+          >
+             <span className="w-1.5 h-1.5 rounded-full bg-[#1F1F1F] animate-pulse" />
+             Transparency Report 2024-2025
+          </motion.div>
+          
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-7xl font-serif font-extrabold text-[#1F1F1F] tracking-tight"
+          >
+            Beauty With A Purpose.
+          </motion.h1>
+          
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-lg md:text-xl text-[#1F1F1F]/60 max-w-2xl mx-auto leading-relaxed font-medium"
+          >
+            We believe luxury shouldn't just look good—it should do good. 
+            Here is exactly how your orders are changing lives around the world.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* STATS GRID */}
+      <section className="px-6 pb-20">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+                { label: "Wells Constructed", value: "05", icon: Droplets },
+                { label: "Families Supported", value: "150+", icon: HandHeart },
+                { label: "Donated to Charity", value: "10%", icon: Heart, sub: "Of Total Profits" },
+            ].map((stat, idx) => (
+                <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="bg-white rounded-[2rem] p-8 border border-[#1F1F1F]/5 text-center shadow-sm hover:shadow-lg transition-all"
+                >
+                    <div className="w-12 h-12 bg-[#F6EFE6] rounded-full flex items-center justify-center mx-auto mb-4 text-[#1F1F1F]">
+                        <stat.icon size={24} strokeWidth={1.5} />
+                    </div>
+                    <div className="text-4xl font-serif font-bold text-[#1F1F1F] mb-2">{stat.value}</div>
+                    <div className="text-xs font-black uppercase tracking-widest text-[#1F1F1F]/40">{stat.label}</div>
+                    {stat.sub && <div className="text-[10px] font-bold text-[#D4C29A] mt-1">{stat.sub}</div>}
+                </motion.div>
+            ))}
+        </div>
+      </section>
+
+      {/* FEATURED PROJECT: THE WELL */}
+      <section className="px-6 py-20 bg-white border-y border-[#1F1F1F]/5">
+        <div className="max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                
+                {/* Image Side */}
+                <motion.div 
+                    initial={{ opacity: 0, x: -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    className="relative rounded-[2.5rem] overflow-hidden aspect-[4/3] group shadow-2xl"
+                >
+                    <img 
+                        src="/water-well.jpg" 
+                        alt="Completed Water Well" 
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold text-[#1F1F1F] flex items-center gap-2 shadow-lg">
+                        <CheckCircle size={14} className="text-green-500" />
+                        Verified Complete
+                    </div>
+                </motion.div>
+
+                {/* Text Side */}
+                <motion.div 
+                    initial={{ opacity: 0, x: 50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    className="space-y-8"
+                >
+                    <div>
+                        <div className="flex items-center gap-2 text-[#D4C29A] font-black uppercase tracking-widest text-xs mb-4">
+                            <MapPin size={14} /> Project #001 • Arid Region
+                        </div>
+                        <h2 className="text-4xl font-serif font-bold text-[#1F1F1F] mb-4">The Rosetas Water Well</h2>
+                        <p className="text-[#1F1F1F]/60 text-lg leading-relaxed">
+                            Water is life. In many parts of the world, women and children walk hours just to find clean water. 
+                            Thanks to your support, we funded the construction of a deep-water well that now serves an entire village.
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 bg-[#F6EFE6] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                <Calendar size={18} />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-[#1F1F1F]">Completed in 2024</h4>
+                                <p className="text-sm text-[#1F1F1F]/50">Project was fully funded and construction finished within 3 months.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 bg-[#F6EFE6] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                <Heart size={18} />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-[#1F1F1F]">Community Impact</h4>
+                                <p className="text-sm text-[#1F1F1F]/50">Provides safe drinking water for over 300 people daily, reducing disease and allowing children to attend school.</p>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+
+            </div>
+        </div>
+      </section>
+
+      {/* UPCOMING PROJECTS / PLEDGE */}
+      <section className="px-6 py-24">
+        <div className="max-w-4xl mx-auto text-center space-y-8">
+            <h2 className="text-3xl font-bold text-[#1F1F1F]">Our Commitment Continues</h2>
+            <p className="text-[#1F1F1F]/60 text-lg leading-relaxed">
+                This is just the beginning. For Ramadan 2026, we have pledged to double our efforts. 
+                Every order you place helps us reach our next goal: <span className="text-[#1F1F1F] font-bold">Building a second well and providing 500 food parcels.</span>
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                <Link href="/shop">
+                    <button className="px-8 py-4 bg-[#1F1F1F] text-white rounded-full font-bold uppercase tracking-widest text-xs hover:bg-[#D4C29A] hover:text-[#1F1F1F] transition-all flex items-center gap-2 shadow-xl">
+                        Shop & Support <ArrowRight size={14} />
+                    </button>
+                </Link>
+            </div>
+        </div>
+      </section>
+
+      <Footer />
+    </main>
+  );
+}

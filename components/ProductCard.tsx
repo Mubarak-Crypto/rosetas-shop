@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Plus, ShoppingBag, Video, Tag, Sparkles } from "lucide-react"; // ✨ Added Sparkles icon
+import { Plus, ShoppingBag, Video, Tag, Sparkles, Heart } from "lucide-react"; 
 import Link from "next/link";
 import { useLanguage } from "../context/LanguageContext";
-import { useCart } from "../context/CartContext"; // ✨ Added useCart hook
+import { useCart } from "../context/CartContext"; 
+import { useWishlist } from "../context/WishlistContext"; 
 
 interface ProductProps {
   id: number;
@@ -17,8 +18,8 @@ interface ProductProps {
   image: string;
   delay: number;
   videoUrl?: string | string[];
-  promoLabel?: string; // ✨ NEW: Promotion Text (e.g. "2 for €50")
-  stock?: number; // ✨ NEW: Receive stock prop to enforce limits
+  promoLabel?: string; 
+  stock?: number; 
 }
 
 export default function ProductCard({ 
@@ -27,7 +28,8 @@ export default function ProductCard({
 }: ProductProps) {
   
   const { language } = useLanguage(); 
-  const { addToCart } = useCart(); // ✨ Use addToCart from context
+  const { addToCart } = useCart(); 
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist(); 
   
   const videoSrc = Array.isArray(videoUrl) ? videoUrl[0] : videoUrl;
   const hasVideo = videoSrc && videoSrc.trim().length > 0;
@@ -47,7 +49,7 @@ export default function ProductCard({
     isDiscounted = true;
   }
 
-  // ✨ NEW: Handle Quick Add to Cart with Stock Check
+  // Handle Quick Add to Cart with Stock Check
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigating to product page
     e.stopPropagation();
@@ -64,9 +66,34 @@ export default function ProductCard({
       extras: [],
       promoLabel,
       
-      // ✨ NEW: Pass stock limit (default to 999 if undefined)
+      // Pass stock limit (default to 999 if undefined)
       maxStock: typeof stock === 'number' ? stock : 999 
     });
+  };
+
+  // Handle Wishlist Toggle
+  const isLiked = isInWishlist(id.toString()); // Ensure ID is string for context match
+
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    e.stopPropagation();
+
+    if (isLiked) {
+        removeFromWishlist(id.toString());
+    } else {
+        addToWishlist({
+            id: id.toString(),
+            title,
+            price: originalPrice,
+            salePrice,
+            isOnSale,
+            image,
+            category,
+            videoUrl,
+            promoLabel,
+            stock
+        });
+    }
   };
 
   return (
@@ -82,15 +109,16 @@ export default function ProductCard({
 
         <div className="h-72 w-full bg-black/10 flex items-center justify-center relative overflow-hidden">
           
+          {/* Top Left Badges */}
           <div className="absolute top-3 left-3 z-30 flex flex-col gap-2">
-            {/* ✨ SALE BADGE */}
+            {/* SALE BADGE */}
             {isDiscounted && (
               <div className="bg-red-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
                 <Tag size={10} fill="white" /> SALE
               </div>
             )}
 
-            {/* ✨ NEW: PROMOTION BADGE (Buy 2 Get 1, etc.) */}
+            {/* PROMOTION BADGE (Buy 2 Get 1, etc.) */}
             {promoLabel && (
               <div className="bg-white text-[#1F1F1F] border border-[#C9A24D] text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5 animate-in slide-in-from-left-2 fade-in duration-500">
                 <Sparkles size={10} className="text-[#C9A24D]" /> 
@@ -98,6 +126,17 @@ export default function ProductCard({
               </div>
             )}
           </div>
+
+          {/* ✨ WISHLIST BUTTON (Top Right) - Updated to Pink */}
+          <button 
+            onClick={handleWishlistToggle}
+            className="absolute top-3 right-3 z-30 w-8 h-8 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-110 transition-transform active:scale-95 group/heart"
+          >
+            <Heart 
+              size={16} 
+              className={`transition-colors ${isLiked ? "fill-[#E76A8D] text-[#E76A8D]" : "text-[#1F1F1F] group-hover/heart:text-[#E76A8D]"}`} 
+            />
+          </button>
 
           {hasVideo ? (
             <video
@@ -118,7 +157,7 @@ export default function ProductCard({
           )}
           
           {hasVideo && (
-            <div className="absolute top-3 right-3 z-20 bg-[#1F1F1F] backdrop-blur-md px-2 py-1 rounded-lg border border-white/20 flex items-center gap-1.5 shadow-2xl">
+            <div className="absolute bottom-3 left-3 z-20 bg-[#1F1F1F] backdrop-blur-md px-2 py-1 rounded-lg border border-white/20 flex items-center gap-1.5 shadow-2xl">
               <Video size={12} style={{ color: '#C9A24D' }} />
               <span className="text-[10px] font-bold uppercase tracking-widest text-white" style={{ color: 'white' }}>
                 {language === 'EN' ? "Video" : "Video"}
@@ -132,7 +171,7 @@ export default function ProductCard({
             style={{ color: 'white' }} 
           />
 
-          {/* ✨ UPDATED: Quick Add Button now uses handleAddToCart logic */}
+          {/* Quick Add Button now uses handleAddToCart logic */}
           <button 
             onClick={handleAddToCart}
             className="absolute bottom-4 right-4 w-10 h-10 bg-[#C9A24D] text-white border-2 border-white rounded-full flex items-center justify-center translate-y-12 group-hover:translate-y-0 transition-all duration-300 hover:scale-110 shadow-[0_0_15px_rgba(201,162,77,0.5)] z-20"
@@ -145,7 +184,7 @@ export default function ProductCard({
           </button>
         </div>
 
-        {/* ✨ FIXED: Reduced padding from py-3 to py-2 to make the white area thinner */}
+        {/* FIXED: Reduced padding from py-3 to py-2 to make the white area thinner */}
         <div className="px-4 py-2 flex-1 flex flex-col justify-end">
           <p className="text-[10px] text-[#1F1F1F]/60 uppercase tracking-widest mb-1 font-bold">{translatedCategory}</p>
           <h3 className="text-sm font-bold text-[#1F1F1F] mb-1 group-hover:text-[#C9A24D] transition-colors leading-tight">{title}</h3>

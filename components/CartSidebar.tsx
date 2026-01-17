@@ -1,22 +1,27 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, AlertCircle } from "lucide-react";
+import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, AlertCircle, Truck, Check, PenTool } from "lucide-react"; 
 import Link from "next/link"; 
 import { useCart } from "../context/CartContext";
-import { useLanguage } from "../context/LanguageContext"; // ✨ Added Language Import
+import { useLanguage } from "../context/LanguageContext"; 
 
 export default function CartSidebar() {
   const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal } = useCart();
-  const { language, t } = useLanguage(); // ✨ Access translation functions
+  const { language, t } = useLanguage(); 
 
-  // ✨ NEW: Calculate subtotal specifically for Florist Supplies
+  // ✨ Calculate subtotal specifically for Florist Supplies
   const suppliesSubtotal = cart
     .filter(item => item.category === 'supplies')
     .reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const MIN_SUPPLIES_VALUE = 80;
   const isSuppliesBelowMinimum = suppliesSubtotal > 0 && suppliesSubtotal < MIN_SUPPLIES_VALUE;
+  
+  // ✨ Progress Bar Logic
+  const hasSupplies = suppliesSubtotal > 0;
+  const missingAmount = Math.max(0, MIN_SUPPLIES_VALUE - suppliesSubtotal);
+  const progressPercentage = Math.min(100, (suppliesSubtotal / MIN_SUPPLIES_VALUE) * 100);
 
   return (
     <AnimatePresence>
@@ -59,6 +64,40 @@ export default function CartSidebar() {
               </button>
             </div>
 
+            {/* ✨ NEW: FREE SHIPPING / MINIMUM ORDER PROGRESS BAR (Only for Supplies) */}
+            {hasSupplies && (
+                <div className="px-6 py-4 bg-white border-b border-black/5">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-1.5 rounded-full ${!isSuppliesBelowMinimum ? "bg-green-100 text-green-600" : "bg-[#D4C29A]/20 text-[#D4C29A]"}`}>
+                            {!isSuppliesBelowMinimum ? <Check size={14} strokeWidth={3} /> : <Truck size={14} />}
+                        </div>
+                        <p className="text-xs font-bold text-[#1F1F1F]">
+                            {!isSuppliesBelowMinimum ? (
+                                <span className="text-green-600">
+                                    {language === 'EN' ? "Free Shipping Unlocked!" : "Kostenloser Versand freigeschaltet!"}
+                                </span>
+                            ) : (
+                                <>
+                                    {language === 'EN' ? "Only " : "Nur noch "}
+                                    <span className="text-[#C9A24D]">€{missingAmount.toFixed(2)}</span>
+                                    {language === 'EN' ? " more for Free Shipping" : " bis zum kostenlosen Versand"}
+                                </>
+                            )}
+                        </p>
+                    </div>
+                    {/* Bar Track */}
+                    <div className="h-1.5 w-full bg-black/5 rounded-full overflow-hidden">
+                        {/* Bar Fill */}
+                        <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progressPercentage}%` }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                            className={`h-full rounded-full ${!isSuppliesBelowMinimum ? "bg-green-500" : "bg-[#D4C29A]"}`}
+                        />
+                    </div>
+                </div>
+            )}
+
             {/* CART ITEMS LIST */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {cart.length === 0 ? (
@@ -98,10 +137,23 @@ export default function CartSidebar() {
 
                         {item.extras && item.extras.length > 0 && (
                           <div className="text-[10px] text-[#C9A24D] mt-1 flex flex-wrap gap-1 font-bold">
-                            {item.extras.map(e => (
+                            {item.extras.map((e: string) => (
                               <span key={e} className="bg-[#C9A24D]/10 px-1.5 py-0.5 rounded border border-[#C9A24D]/20">+ {e}</span>
                             ))}
                           </div>
+                        )}
+
+                        {/* ✨ DISPLAY SIMPLIFIED CUSTOM TEXT IN CART */}
+                        {item.customText && (
+                            <div className="mt-2 text-[10px] bg-white/50 p-1.5 rounded-lg border border-black/5 inline-block">
+                                <span className="text-gray-400 font-bold uppercase tracking-widest mr-1">
+                                    <PenTool size={10} className="inline mr-1 mb-0.5"/> 
+                                    {language === 'EN' ? "Text:" : "Text:"}
+                                </span>
+                                <span className="text-[#1F1F1F] font-bold italic">
+                                    "{item.customText}"
+                                </span>
+                            </div>
                         )}
                       </div>
 
@@ -136,14 +188,14 @@ export default function CartSidebar() {
             {cart.length > 0 && (
               <div className="p-6 border-t border-black/5 bg-[#F6EFE6] space-y-4">
                 
-                {/* ✨ NEW: Supplies Minimum Value Warning */}
+                {/* ✨ UPDATED: Supplies Minimum Value Warning (Uses dynamic math) */}
                 {isSuppliesBelowMinimum && (
-                  <div className="p-4 bg-[#C9A24D]/10 border border-[#C9A24D]/30 rounded-xl flex gap-3 items-start animate-pulse">
-                    <AlertCircle className="text-[#C9A24D] shrink-0" size={18} />
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex gap-3 items-start animate-pulse">
+                    <AlertCircle className="text-red-500 shrink-0" size={18} />
                     <p className="text-[11px] font-bold text-[#1F1F1F] leading-tight">
                       {language === 'EN' 
-                        ? `Florist Supplies require a minimum of €${MIN_SUPPLIES_VALUE}. Please add €${(MIN_SUPPLIES_VALUE - suppliesSubtotal).toFixed(2)} more to continue.`
-                        : `Für Floristik-Zubehör gilt ein Mindestbestellwert von €${MIN_SUPPLIES_VALUE}. Bitte füge noch €${(MIN_SUPPLIES_VALUE - suppliesSubtotal).toFixed(2)} hinzu.`
+                        ? `Florist Supplies require a minimum of €${MIN_SUPPLIES_VALUE}. Please add €${missingAmount.toFixed(2)} more to continue.`
+                        : `Für Floristik-Zubehör gilt ein Mindestbestellwert von €${MIN_SUPPLIES_VALUE}. Bitte füge noch €${missingAmount.toFixed(2)} hinzu.`
                       }
                     </p>
                   </div>
@@ -158,7 +210,6 @@ export default function CartSidebar() {
                 </p>
                 
                 {/* --- FORCED VISIBILITY CHECKOUT BUTTON --- */}
-                {/* ✨ UPDATED: Logic to disable link if supplies minimum isn't met */}
                 <Link 
                   href={isSuppliesBelowMinimum ? "#" : "/checkout"} 
                   onClick={(e) => {
@@ -169,11 +220,11 @@ export default function CartSidebar() {
                 >
                   <button 
                     disabled={isSuppliesBelowMinimum}
-                    /* ✅ VIBRANT UPDATE: Luminous Glow Style (Champagne Gold + Glow + White Border) */
+                    /* ✅ VIBRANT UPDATE: Updated to Fresh Green Color #add9af */
                     className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-500 font-bold
                       ${isSuppliesBelowMinimum 
                         ? 'bg-gray-300 border-2 border-transparent cursor-not-allowed' 
-                        : 'bg-[#C9A24D] border-2 border-white shadow-[0_0_20px_rgba(201,162,77,0.4)] hover:shadow-[0_0_30px_rgba(201,162,77,0.6)] hover:bg-[#B69141]'
+                        : 'bg-[#add9af] border-2 border-white shadow-[0_0_20px_rgba(173,217,175,0.4)] hover:shadow-[0_0_30px_rgba(173,217,175,0.6)] hover:bg-[#9ccc9e]'
                       }`}
                   >
                     <span 
