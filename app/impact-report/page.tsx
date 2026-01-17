@@ -3,10 +3,43 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
-import { Droplets, Heart, HandHeart, CheckCircle, ArrowRight, Calendar, MapPin, Download } from "lucide-react";
+import { Droplets, Heart, HandHeart, CheckCircle, ArrowRight, Calendar, MapPin, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+// Define the shape of a project from your Database
+type Project = {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  created_at: string;
+};
 
 export default function ImpactReportPage() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ✨ Fetch Projects from Supabase
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const { data, error } = await supabase
+          .from('charity_projects')
+          .select('*')
+          .order('created_at', { ascending: false }); // Newest first
+
+        if (data) setProjects(data);
+      } catch (e) {
+        console.error("Error fetching projects:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchProjects();
+  }, []);
+
   return (
     <main className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#E3D7C5] selection:text-[#1F1F1F]">
       <Navbar />
@@ -71,72 +104,94 @@ export default function ImpactReportPage() {
         </div>
       </section>
 
-      {/* FEATURED PROJECT: THE WELL */}
-      <section className="px-6 py-20 bg-white border-y border-[#1F1F1F]/5">
-        <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                
-                {/* Image Side */}
-                <motion.div 
-                    initial={{ opacity: 0, x: -50 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    className="relative rounded-[2.5rem] overflow-hidden aspect-[4/3] group shadow-2xl"
-                >
-                    <img 
-                        src="/water-well.jpg" 
-                        alt="Completed Water Well" 
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold text-[#1F1F1F] flex items-center gap-2 shadow-lg">
-                        <CheckCircle size={14} className="text-green-500" />
-                        Verified Complete
-                    </div>
-                </motion.div>
-
-                {/* Text Side */}
-                <motion.div 
-                    initial={{ opacity: 0, x: 50 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    className="space-y-8"
-                >
-                    <div>
-                        <div className="flex items-center gap-2 text-[#D4C29A] font-black uppercase tracking-widest text-xs mb-4">
-                            <MapPin size={14} /> Project #001 • Arid Region
-                        </div>
-                        <h2 className="text-4xl font-serif font-bold text-[#1F1F1F] mb-4">The Rosetas Water Well</h2>
-                        <p className="text-[#1F1F1F]/60 text-lg leading-relaxed">
-                            Water is life. In many parts of the world, women and children walk hours just to find clean water. 
-                            Thanks to your support, we funded the construction of a deep-water well that now serves an entire village.
-                        </p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-[#F6EFE6] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <Calendar size={18} />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-[#1F1F1F]">Completed in 2024</h4>
-                                <p className="text-sm text-[#1F1F1F]/50">Project was fully funded and construction finished within 3 months.</p>
-                            </div>
-                        </div>
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-[#F6EFE6] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <Heart size={18} />
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-[#1F1F1F]">Community Impact</h4>
-                                <p className="text-sm text-[#1F1F1F]/50">Provides safe drinking water for over 300 people daily, reducing disease and allowing children to attend school.</p>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-
-            </div>
+      {/* DYNAMIC PROJECTS LIST */}
+      {isLoading ? (
+        <div className="py-20 flex justify-center">
+            <Loader2 className="animate-spin text-[#C9A24D]" size={40} />
         </div>
-      </section>
+      ) : projects.length > 0 ? (
+        <div className="space-y-0"> {/* Container for stack of projects */}
+            {projects.map((project, index) => {
+                // Zig-zag logic: If index is odd (1, 3, 5...), image goes to right.
+                const isEven = index % 2 === 0;
+
+                return (
+                    <section key={project.id} className="px-6 py-20 bg-white border-y border-[#1F1F1F]/5 first:border-t-0">
+                        <div className="max-w-6xl mx-auto">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                                
+                                {/* Image Side - Order swaps based on index */}
+                                <motion.div 
+                                    initial={{ opacity: 0, x: isEven ? -50 : 50 }}
+                                    whileInView={{ opacity: 1, x: 0 }}
+                                    viewport={{ once: true }}
+                                    className={`relative rounded-[2.5rem] overflow-hidden aspect-[4/3] group shadow-2xl ${isEven ? 'lg:order-1' : 'lg:order-2'}`}
+                                >
+                                    <img 
+                                        src={project.image_url || "/water-well.jpg"} 
+                                        alt={project.title} 
+                                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                    />
+                                    <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold text-[#1F1F1F] flex items-center gap-2 shadow-lg">
+                                        <CheckCircle size={14} className="text-green-500" />
+                                        Verified Project
+                                    </div>
+                                </motion.div>
+
+                                {/* Text Side */}
+                                <motion.div 
+                                    initial={{ opacity: 0, x: isEven ? 50 : -50 }}
+                                    whileInView={{ opacity: 1, x: 0 }}
+                                    viewport={{ once: true }}
+                                    className={`space-y-8 ${isEven ? 'lg:order-2' : 'lg:order-1'}`}
+                                >
+                                    <div>
+                                        <div className="flex items-center gap-2 text-[#D4C29A] font-black uppercase tracking-widest text-xs mb-4">
+                                            <MapPin size={14} /> Project #{String(projects.length - index).padStart(3, '0')} • Active
+                                        </div>
+                                        <h2 className="text-4xl font-serif font-bold text-[#1F1F1F] mb-4">{project.title}</h2>
+                                        <p className="text-[#1F1F1F]/60 text-lg leading-relaxed whitespace-pre-line">
+                                            {project.description}
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 bg-[#F6EFE6] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                                <Calendar size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-[#1F1F1F]">Timeline</h4>
+                                                <p className="text-sm text-[#1F1F1F]/50">
+                                                    {new Date(project.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-4">
+                                            <div className="w-10 h-10 bg-[#F6EFE6] rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                                <Heart size={18} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-[#1F1F1F]">Impact</h4>
+                                                <p className="text-sm text-[#1F1F1F]/50">
+                                                    Your purchases made this possible. 10% of profits went directly to this cause.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+
+                            </div>
+                        </div>
+                    </section>
+                );
+            })}
+        </div>
+      ) : (
+        <div className="text-center py-20 px-6">
+            <p className="text-[#1F1F1F]/40 italic">New projects are being updated...</p>
+        </div>
+      )}
 
       {/* UPCOMING PROJECTS / PLEDGE */}
       <section className="px-6 py-24">
