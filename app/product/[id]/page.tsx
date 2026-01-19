@@ -154,7 +154,6 @@ export default function ProductPage() {
 
         if (extra.allowMultiple) {
             // -- Multiple Selection Logic --
-            // If currentVal is already an array, use it. If it's a string, make it array. If undefined, empty array.
             const currentList = Array.isArray(currentVal) 
                 ? currentVal 
                 : (currentVal ? [currentVal] : []);
@@ -188,9 +187,12 @@ export default function ProductPage() {
         return product.stock === -1 ? 999 : (product.stock || 0);
     }
 
-    if (product.stock_matrix && product.stock_matrix.length > 0) {
+    // ✨ SAFETY GUARD: Ensure matrix is an array to prevent crashes on old data
+    const matrix = Array.isArray(product.stock_matrix) ? product.stock_matrix : [];
+
+    if (matrix.length > 0) {
         // Find the matrix item that matches ALL selected options
-        const match = product.stock_matrix.find((item: any) => {
+        const match = matrix.find((item: any) => {
             return Object.keys(selectedOptions).every(key => {
                 // ✨ FIX: Strip "| Stock: 5" from selected option to match matrix "Red"
                 const selectedClean = selectedOptions[key].split('|')[0].trim();
@@ -204,8 +206,7 @@ export default function ProductPage() {
         
         // ✨ NEW: If partial selection or no selection yet, don't return 0.
         // Return 999 (Available) if ANY stock exists in the matrix.
-        // This prevents "Out of Stock" from showing on load.
-        const hasAnyStock = product.stock_matrix.some((item: any) => item.stock === -1 || item.stock > 0);
+        const hasAnyStock = matrix.some((item: any) => item.stock === -1 || item.stock > 0);
         if (hasAnyStock) return 999;
     }
     
@@ -248,7 +249,6 @@ export default function ProductPage() {
           const qty = extra.allowQuantity ? (extraQuantities[extra.name] || 1) : 1;
           
           // ✨ NEW: Multi-Select Pricing Logic
-          // If extra allows multiple variants (e.g. Letters), calculate count
           let variantCount = 1;
           const variants = extraVariants[extra.name];
           if (extra.allowMultiple && Array.isArray(variants)) {
@@ -433,7 +433,12 @@ export default function ProductPage() {
 
   const hasRibbonExtraSelected = selectedExtras.some(extraName => {
     const e = extraName.toLowerCase();
-    return e.includes("ribbon") || e.includes("schleife") || e.includes("band") || e.includes("personal");
+    
+    // ✨ FIX: Ignore "Mini" items (like Mini Bow/Mini Schleife) so they don't trigger the text box
+    if (e.includes("mini")) return false; 
+
+    // ✨ UPDATED: Triggers now include "Band" (case insensitive via toLowerCase) and "personalisieren"
+    return e.includes("ribbon") || e.includes("band") || e.includes("personalisieren") || e.includes("personal");
   });
 
   const hasLetterExtraSelected = selectedExtras.some(extraName => {
@@ -667,9 +672,11 @@ export default function ProductPage() {
                             
                             // Check Matrix for stock
                             let itemStock = 999; 
-                            if(product.stock_matrix) {
+                            // ✨ SAFEGUARD: Use array check before .find
+                            const matrix = Array.isArray(product.stock_matrix) ? product.stock_matrix : [];
+                            if(matrix.length > 0) {
                                 // ✨ Check against clean DB value
-                                const match = product.stock_matrix.find((m: any) => m[variant.name] === deVal.split('|')[0].trim());
+                                const match = matrix.find((m: any) => m[variant.name] === deVal.split('|')[0].trim());
                                 if(match) itemStock = match.stock === -1 ? 999 : match.stock;
                             }
 
@@ -732,16 +739,16 @@ export default function ProductPage() {
                             >
                                 {extra.image && (
                                     <div 
-                                        className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
-                                        onClick={(e) => {
-                                            e.stopPropagation(); 
-                                            setZoomImage(extra.image);
-                                        }}
+                                                    className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); 
+                                                        setZoomImage(extra.image);
+                                                    }}
                                     >
-                                        <img src={extra.image} className="w-full h-full object-cover" alt={extra.name} />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
-                                            <ZoomIn size={14} className="text-white" />
-                                        </div>
+                                            <img src={extra.image} className="w-full h-full object-cover" alt={extra.name} />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
+                                                <ZoomIn size={14} className="text-white" />
+                                            </div>
                                     </div>
                                 )}
 
@@ -771,19 +778,19 @@ export default function ProductPage() {
 
                                 {isSelected && extra.allowQuantity && (
                                     <div className="flex items-center bg-white rounded-lg border border-[#D4C29A] ml-4 overflow-hidden shadow-sm h-8">
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, -1); }}
-                                            className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
-                                        >
-                                            <Minus size={12} />
-                                        </button>
-                                        <span className="w-8 text-center text-xs font-bold text-[#1F1F1F]">{quantity}</span>
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, 1); }}
-                                            className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
-                                        >
-                                            <Plus size={12} />
-                                        </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, -1); }}
+                                                className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
+                                            >
+                                                <Minus size={12} />
+                                            </button>
+                                            <span className="w-8 text-center text-xs font-bold text-[#1F1F1F]">{quantity}</span>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, 1); }}
+                                                className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
+                                            >
+                                                <Plus size={12} />
+                                            </button>
                                     </div>
                                 )}
                             </div>

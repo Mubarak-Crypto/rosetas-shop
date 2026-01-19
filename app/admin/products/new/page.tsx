@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react"; 
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers } from "lucide-react"; // ✨ Added Layers icon
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2 } from "lucide-react"; // ✨ Added Edit2
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -21,7 +21,7 @@ type Extra = {
     variants?: string[]; 
     inputType?: InputType;
     allowQuantity?: boolean; 
-    allowMultiple?: boolean; // ✨ NEW FIELD: Allow selecting A + B (e.g. Letters)
+    allowMultiple?: boolean; 
 }; 
 type Area = { x: number; y: number; width: number; height: number; };
 
@@ -73,6 +73,7 @@ export default function AddProductPage() {
 
   const [extras, setExtras] = useState<Extra[]>([]);
   const [isAddingExtra, setIsAddingExtra] = useState(false);
+  const [editingExtraIndex, setEditingExtraIndex] = useState<number | null>(null); // ✨ NEW: Track editing
   const [newExtraName, setNewExtraName] = useState("");
   const [newExtraNameEn, setNewExtraNameEn] = useState("");
   const [newExtraPrice, setNewExtraPrice] = useState("");
@@ -100,6 +101,12 @@ export default function AddProductPage() {
   useEffect(() => {
     if (variants.length > 0) {
       const generateMatrix = () => {
+        // ✨ SAFETY CHECK: Ensure stockMatrix is an array
+        if (!Array.isArray(stockMatrix)) {
+            setStockMatrix([]); 
+            return;
+        }
+
         const optionGroups = variants.map(v => ({
           name: v.name,
           values: v.values.split(',').map(val => val.split('(')[0].split('|')[0].trim())
@@ -271,10 +278,10 @@ export default function AddProductPage() {
   // --- LOGIC: VARIANTS ---
   const handleAddVariantItem = () => {
     if (!tempValueName) return;
-    // ✨ Push object instead of string
+    
     const newItem: TempVariantItem = {
         de: tempValueName,
-        en: tempValueNameEn || tempValueName, // Fallback to DE if empty
+        en: tempValueNameEn || tempValueName, 
         stock: tempValueStock
     };
     
@@ -289,11 +296,7 @@ export default function AddProductPage() {
   const handleAddVariant = () => {
     if (!newVariantName || tempList.length === 0) return;
     
-    // ✨ Construct the strings for DB
-    // DE: "Rot | Stock: 5, Blau"
     const valuesDE = tempList.map(item => item.stock ? `${item.de} | Stock: ${item.stock}` : item.de).join(', ');
-    
-    // EN: "Red, Blue" (Stock logic handled via DE key, so EN list is cleaner, but must match index)
     const valuesEN = tempList.map(item => item.en).join(', ');
 
     setVariants([...variants, { 
@@ -320,10 +323,26 @@ export default function AddProductPage() {
     setTempExtraVariant("");
   };
 
+  // ✨ NEW: Prepare Edit Extra
+  const handleEditExtra = (index: number) => {
+    const ex = extras[index];
+    setNewExtraName(ex.name);
+    setNewExtraNameEn(ex.name_en || "");
+    setNewExtraPrice(ex.price.toString());
+    setNewExtraImage(ex.image || "");
+    setNewExtraInputType(ex.inputType || "none");
+    setNewExtraAllowQty(ex.allowQuantity || false);
+    setNewExtraAllowMultiple(ex.allowMultiple || false);
+    setExtraVariantsList(ex.variants || []);
+    
+    setEditingExtraIndex(index);
+    setIsAddingExtra(true); // Open the form
+  };
+
   const handleAddExtra = () => {
     if (!newExtraName || !newExtraPrice) return;
-    // ✨ Save name_en, inputType, allowQuantity, and allowMultiple
-    setExtras([...extras, { 
+    
+    const newExtraObj: Extra = { 
         name: newExtraName,
         name_en: newExtraNameEn || undefined,
         price: parseFloat(newExtraPrice),
@@ -331,9 +350,19 @@ export default function AddProductPage() {
         variants: extraVariantsList.length > 0 ? extraVariantsList : undefined,
         inputType: newExtraInputType, 
         allowQuantity: newExtraAllowQty,
-        allowMultiple: newExtraAllowMultiple // ✨ SAVED
-    }]);
+        allowMultiple: newExtraAllowMultiple 
+    };
+
+    if (editingExtraIndex !== null) {
+        const updatedExtras = [...extras];
+        updatedExtras[editingExtraIndex] = newExtraObj;
+        setExtras(updatedExtras);
+        setEditingExtraIndex(null); 
+    } else {
+        setExtras([...extras, newExtraObj]);
+    }
     
+    // Reset Form
     setNewExtraName("");
     setNewExtraNameEn(""); 
     setNewExtraPrice("");
@@ -341,7 +370,7 @@ export default function AddProductPage() {
     setExtraVariantsList([]); 
     setNewExtraInputType("none"); 
     setNewExtraAllowQty(false); 
-    setNewExtraAllowMultiple(false); // Reset
+    setNewExtraAllowMultiple(false); 
     setIsAddingExtraVariants(false);
     setIsAddingExtra(false);
   };
@@ -370,15 +399,15 @@ export default function AddProductPage() {
         { 
           name, 
           name_en: nameEn, 
-          description,
+          description, 
           description_en: descriptionEn, 
-          price: finalPrice,
-          category: category.trim(),
-          stock: finalStock,
-          status,
-          images,
+          price: finalPrice, 
+          category: category.trim(), 
+          stock: finalStock, 
+          status, 
+          images, 
           video_url: videoUrls, 
-          variants,
+          variants, 
           extras, 
           needs_ribbon: needsRibbon, 
           stock_matrix: stockMatrix, 
@@ -605,7 +634,7 @@ export default function AddProductPage() {
                                     </button>
                                 </td>
 
-                                {/* Stock Quantity Input */}
+                                {/* Stock Quantity Input - ✨ FIXED TEXT COLOR AND LOGIC */}
                                 <td className="px-4 py-2">
                                   {isUnlimited ? (
                                     <span className="text-xl text-gray-300 font-bold">∞</span>
@@ -615,11 +644,16 @@ export default function AddProductPage() {
                                       value={item.stock} 
                                       onChange={(e) => {
                                         const val = parseInt(e.target.value);
-                                        const updated = [...stockMatrix];
-                                        updated[idx].stock = isNaN(val) ? 0 : val;
+                                        const safeVal = isNaN(val) ? 0 : val;
+                                        
+                                        // ✨ Correct way to update state in a map
+                                        const updated = stockMatrix.map((row, i) => 
+                                            i === idx ? { ...row, stock: safeVal } : row
+                                        );
                                         setStockMatrix(updated);
                                       }}
-                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-[#C9A24D]"
+                                      // ✨ Added text-[#1F1F1F] so it is visible against white background
+                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold text-[#1F1F1F] outline-none focus:border-[#C9A24D]"
                                       placeholder="0"
                                     />
                                   )}
@@ -775,24 +809,36 @@ export default function AddProductPage() {
                         <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
                     </div>
                     
-                    <div className="space-y-2 bg-white/50 p-2 rounded-lg border border-black/5">
-                        <div className="grid grid-cols-3 gap-2">
-                           <input type="text" placeholder="Value (DE)" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                           <input type="text" placeholder="Value (EN)" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
-                           <div className="flex gap-2">
-                               <input type="number" placeholder="Stock" value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                               <button type="button" onClick={handleAddVariantItem} className="bg-[#C9A24D] text-white px-3 rounded-lg flex items-center justify-center"><Plus size={16}/></button>
+                    {/* ✨ UPDATED: 2-Row Layout for Better Visibility & Usability */}
+                    <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
+                        <div className="grid grid-cols-2 gap-3">
+                           <div className="space-y-1">
+                               <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
+                               <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                           </div>
+                           <div className="space-y-1">
+                               <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
+                               <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
                            </div>
                         </div>
+                        
+                        <div className="flex items-end gap-3">
+                           <div className="flex-1 space-y-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
+                                <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                           </div>
+                           <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
+                        </div>
+
                         {tempList.length > 0 && (
-                            <div className="flex flex-wrap gap-2 pt-2">
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-black/5 mt-2">
                                 {tempList.map((t, i) => (
                                     <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5">
                                             <div className="flex items-center gap-2 justify-between">
                                                 <span className="text-[10px] font-bold">{t.de}</span>
                                                 <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
                                             </div>
-                                            <span className="text-[9px] text-[#C9A24D]">{t.en}</span>
+                                            <span className="text-[9px] text-[#C9A24D]">{t.en} {t.stock ? `(${t.stock})` : ''}</span>
                                     </div>
                                 ))}
                             </div>
@@ -828,13 +874,10 @@ export default function AddProductPage() {
                                 <span className="text-sm text-[#1F1F1F] font-bold block">
                                     {ex.name} {ex.name_en ? <span className="text-[#C9A24D]">/ {ex.name_en}</span> : ''}
                                 </span>
-                                {/* ✨ VISUAL INDICATOR FOR INPUT TYPE */}
+                                {/* VISUAL INDICATORS */}
                                 {ex.inputType === 'letter' && <div className="text-[10px] bg-[#1F1F1F] text-white px-1.5 rounded flex items-center gap-1"><FileText size={10}/> Letter</div>}
                                 {ex.inputType === 'short_note' && <div className="text-[10px] bg-[#1F1F1F] text-white px-1.5 rounded flex items-center gap-1"><MessageSquare size={10}/> Note</div>}
-                                
-                                {/* ✨ VISUAL INDICATOR FOR QUANTITY */}
                                 {ex.allowQuantity && <div className="text-[10px] bg-[#C9A24D] text-white px-1.5 rounded flex items-center gap-1"><Hash size={10}/> Qty</div>}
-                                {/* ✨ VISUAL INDICATOR FOR MULTIPLE SELECTION */}
                                 {ex.allowMultiple && <div className="text-[10px] bg-blue-600 text-white px-1.5 rounded flex items-center gap-1"><Layers size={10}/> Multi</div>}
                             </div>
                             <span className={`text-xs font-bold ${ex.price < 0 ? "text-red-500" : "text-[#C9A24D]"}`}>
@@ -852,7 +895,15 @@ export default function AddProductPage() {
                             )}
                         </div>
                       </div>
-                      <button type="button" onClick={() => removeExtra(idx)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
+                      <div className="flex gap-2">
+                          {/* ✨ NEW: EDIT BUTTON */}
+                          <button type="button" onClick={() => handleEditExtra(idx)} className="text-gray-400 hover:text-[#C9A24D]">
+                              <Edit2 size={16} />
+                          </button>
+                          <button type="button" onClick={() => removeExtra(idx)} className="text-gray-400 hover:text-red-500">
+                              <Trash2 size={16} />
+                          </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -909,7 +960,7 @@ export default function AddProductPage() {
                             </button>
                         </div>
 
-                        {/* ✨ NEW: MULTIPLE SELECTION TOGGLE */}
+                        {/* MULTIPLE SELECTION TOGGLE */}
                         <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
                             <div className="flex flex-col">
                                 <span className="text-xs font-bold text-[#1F1F1F]">Allow Multiple?</span>
@@ -975,10 +1026,15 @@ export default function AddProductPage() {
                         )}
                     </div>
 
-                    <div className="flex gap-2 pt-1"><button type="button" onClick={handleAddExtra} className="flex-1 bg-[#1F1F1F] text-white text-xs font-bold py-2 rounded-lg hover:bg-[#C9A24D] transition-colors">Add</button><button type="button" onClick={() => setIsAddingExtra(false)} className="flex-1 bg-black/5 text-xs font-bold py-2 rounded-lg">Cancel</button></div>
+                    <div className="flex gap-2 pt-1">
+                        <button type="button" onClick={handleAddExtra} className="flex-1 bg-[#1F1F1F] text-white text-xs font-bold py-2 rounded-lg hover:bg-[#C9A24D] transition-colors">
+                            {editingExtraIndex !== null ? "Update" : "Add"}
+                        </button>
+                        <button type="button" onClick={() => { setIsAddingExtra(false); setEditingExtraIndex(null); }} className="flex-1 bg-black/5 text-xs font-bold py-2 rounded-lg">Cancel</button>
+                    </div>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => setIsAddingExtra(true)} className="w-full py-3 rounded-xl border border-dashed border-white/20 text-[#C9A24D] text-xs font-bold hover:text-[#1F1F1F] hover:border-[#1F1F1F] transition-colors flex items-center justify-center gap-2"><Plus size={14} /> Add Upsell</button>
+                  <button type="button" onClick={() => setIsAddingExtra(true)} className="w-full py-3 rounded-xl border border-dashed border-white/20 text-xs font-bold hover:text-[#1F1F1F] hover:border-[#1F1F1F] transition-colors flex items-center justify-center gap-2"><Plus size={14} /> Add Upsell</button>
                 )}
               </div>
 

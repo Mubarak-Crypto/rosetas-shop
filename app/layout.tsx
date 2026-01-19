@@ -7,7 +7,7 @@ import { WishlistProvider } from "../context/WishlistContext"; // ✨ NEW: Impor
 import CartSidebar from "../components/CartSidebar";
 import Footer from "../components/Footer"; 
 import Script from "next/script"; // ✨ Added for Tidio Integration
-import SocialProof from "../components/SocialProof"; // ✨ NEW: Import Social Proof
+// 🗑️ Removed unused SocialProof import
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -34,9 +34,6 @@ export default function RootLayout({
 
               {/* 2. The Slide-out Cart (Hidden until clicked) */}
               <CartSidebar /> 
-              
-              {/* ✨ NEW: Live Sales Notification (Only shows real orders) */}
-              <SocialProof />
 
               {/* 3. The Footer (Now visible at the bottom) */}
               <Footer /> 

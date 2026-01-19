@@ -9,7 +9,7 @@ import { useLanguage } from "../../context/LanguageContext";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { supabase } from "../../lib/supabase"; 
-import AutoComplete from "react-google-autocomplete"; // ✨ Added for Address Validation
+import AutoComplete from "react-google-autocomplete"; 
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -28,7 +28,7 @@ const shippingBlacklist = [
   "Jamaica", "Puerto Rico", "Costa Rica", "Colombia", "Peru", "Paraguay"
 ];
 
-// 🌏 Rosetta's Global Shipping Data (Updated with latest rates & blacklist)
+// 🌏 Rosetta's Global Shipping Data
 const shippingRates: Record<string, { rate10kg: number; rate20kg: number; express10kg?: number; express20kg?: number }> = {
   "Belgium": { rate10kg: 25, rate20kg: 31 },
   "Bulgaria": { rate10kg: 25, rate20kg: 32 },
@@ -98,7 +98,7 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
   "Germany": { rate10kg: 11.49, rate20kg: 19.49, express10kg: 40, express20kg: 45 }
 };
 
-// ✨ UPDATED PaymentForm: Now accepts Tip & Donation Props
+// Payment Form Component
 function PaymentForm({ 
   amount, 
   formData, 
@@ -144,7 +144,6 @@ function PaymentForm({
       setIsLoading(false);
     } else if (paymentIntent && paymentIntent.status === "succeeded") {
       
-      // ✨ NEW LOGIC: Append Gift Note to Shipping Method String
       let shippingMethodString = isExpress ? "Express" : "Standard";
       if (packagingType === 'gift') {
         shippingMethodString += " + Gift Packaging";
@@ -153,7 +152,6 @@ function PaymentForm({
         }
       }
 
-      // ✨ Save Tip & Donation Data to Supabase
       const { error: dbError } = await supabase.from('orders').insert([{
           customer_name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
@@ -167,10 +165,10 @@ function PaymentForm({
           total: amount,
           status: 'paid',
           payment_id: paymentIntent.id,
-          tip_amount: tipAmount,          // ✨ NEW
-          donation_amount: donationAmount, // ✨ NEW
-          donor_name: donorName,          // ✨ NEW
-          donor_is_public: isPublicDonor  // ✨ NEW
+          tip_amount: tipAmount,
+          donation_amount: donationAmount,
+          donor_name: donorName,
+          donor_is_public: isPublicDonor
       }]);
 
       if (dbError) console.error("Error saving order:", dbError);
@@ -184,7 +182,6 @@ function PaymentForm({
           address: `${formData.address}, ${formData.city}, ${formData.country}`,
           items: cart,
           total: amount,
-          // ✨ HACK: Append Tip/Donation to shipping string so it appears in emails without backend changes
           shippingMethod: `${shippingMethodString}${tipAmount > 0 ? ` + Tip: €${tipAmount.toFixed(2)}` : ""}${donationAmount > 0 ? ` + Donation: €${donationAmount.toFixed(2)}` : ""}`
         }),
       });
@@ -214,30 +211,29 @@ export default function CheckoutPage() {
   const [isExpress, setIsExpress] = useState(false); 
   const [packagingType, setPackagingType] = useState<'standard' | 'gift'>('standard'); 
   const [giftNote, setGiftNote] = useState(""); 
-  const [agreedToPolicy, setAgreedToPolicy] = useState(false); 
+  
+  // Policies & Agreements
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false); // Delivery & Return Policy
   const [agreedToCustoms, setAgreedToCustoms] = useState(false); 
-  const [agreedToWithdrawal, setAgreedToWithdrawal] = useState(false); 
+  const [agreedToWithdrawal, setAgreedToWithdrawal] = useState(false); // Right of Withdrawal
+  const [agreedToCancellation, setAgreedToCancellation] = useState(false); // Cancellation Policy
 
-  // ✨ NEW STATES: Tipping & Donation
+  // Benevolence
   const [tipOption, setTipOption] = useState<string | null>(null);
   const [tipAmount, setTipAmount] = useState(0);
-
   const [showDonation, setShowDonation] = useState(false);
   const [donationAmount, setDonationAmount] = useState(0);
   const [donationOption, setDonationOption] = useState<number | 'custom' | null>(null);
   const [donorName, setDonorName] = useState("");
   const [isPublicDonor, setIsPublicDonor] = useState(false);
-  
-  // ✨ NEW: Settings State to check if Donation is active
   const [isDonationActive, setIsDonationActive] = useState(false);
 
-  // ✨ Fetch Settings on Load
   useEffect(() => {
       const fetchSettings = async () => {
           const { data } = await supabase
               .from('storefront_settings')
               .select('is_donation_active')
-              .eq('id', '00000000-0000-0000-0000-000000000000') // Fixed ID used in admin
+              .eq('id', '00000000-0000-0000-0000-000000000000') 
               .single();
           
           if (data) setIsDonationActive(data.is_donation_active);
@@ -249,29 +245,31 @@ export default function CheckoutPage() {
     email: "", firstName: "", lastName: "", address: "", city: "", zip: "", phone: "", country: "Germany"
   });
 
-  const { shippingCost, needs20kg } = useMemo(() => {
+  const { shippingCost, needs20kg, standardCost, expressCost } = useMemo(() => {
     const countryData = shippingRates[formData.country] || { rate10kg: 0, rate20kg: 0 };
     const weight20kg = cart.some(item => {
       const optionValues = Object.values(item.options || {}).join(" ");
       return optionValues.includes("100") || optionValues.includes("200") || optionValues.includes("150");
     });
 
-    let cost = weight20kg ? countryData.rate20kg : countryData.rate10kg;
-    
-    if (isExpress && formData.country === "Germany") {
-        cost = weight20kg ? (countryData.express20kg || cost) : (countryData.express10kg || cost);
+    // Basic Costs
+    const std = weight20kg ? countryData.rate20kg : countryData.rate10kg;
+    let exp = std; // Default if no express available
+
+    // Germany Logic
+    if (formData.country === "Germany") {
+        exp = weight20kg ? (countryData.express20kg || std) : (countryData.express10kg || std);
     }
 
-    return { shippingCost: cost, needs20kg: weight20kg };
+    // Determine currently selected cost
+    const currentCost = (isExpress && formData.country === "Germany") ? exp : std;
+
+    return { shippingCost: currentCost, needs20kg: weight20kg, standardCost: std, expressCost: exp };
   }, [formData.country, cart, isExpress]);
 
-  // Calculate Packaging Cost
   const packagingCost = packagingType === 'gift' ? 10 : 0;
-
-  // ✨ NEW: Total includes packaging + Tip + Donation
   const finalTotal = cartTotal + shippingCost + packagingCost + tipAmount + donationAmount;
 
-  // ✨ TIP HANDLER
   const handleTipClick = (type: string) => {
     if (tipOption === type && type !== 'custom') {
         setTipOption(null);
@@ -285,7 +283,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // ✨ DONATION HANDLER
   const handleDonationClick = (val: number | 'custom') => {
       if (donationOption === val && val !== 'custom') {
           setDonationOption(null);
@@ -323,14 +320,14 @@ export default function CheckoutPage() {
     const policyValid = agreedToPolicy;
     const customsValid = isNonEU ? agreedToCustoms : true;
     const withdrawalValid = (!isNonEU && hasPersonalization) ? agreedToWithdrawal : true; 
+    const cancellationValid = agreedToCancellation; 
     
-    // ✨ NEW: Gift Note Validation
     const giftNoteValid = packagingType === 'gift' ? giftNote.trim().length > 0 : true;
 
     if (isBlacklisted) return false;
 
-    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid;
-  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote]);
+    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid;
+  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -358,14 +355,13 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (step === 2 && finalTotal > 0) {
-      // Small debounce could be added here if needed, but for now simple update is fine
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: Math.round(finalTotal * 100) }),
       }).then((res) => res.json()).then((data) => setClientSecret(data.clientSecret));
     }
-  }, [step, finalTotal]); // Updates when tip/donation changes total
+  }, [step, finalTotal]);
 
   if (cart.length === 0) return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex flex-col items-center justify-center gap-4">
@@ -395,7 +391,8 @@ export default function CheckoutPage() {
 
           {step === 1 ? (
             <form onSubmit={handleDetailsSubmit} className="space-y-6 animate-in fade-in slide-in-from-left-4">
-              {/* ... STEP 1 FORM CONTENT ... */}
+              
+              {/* CONTACT */}
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold flex items-center gap-2"><ShieldCheck className="text-[#C9A24D]" /> {t('checkout_contact')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -404,6 +401,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* SHIPPING ADDRESS */}
               <div className="space-y-4 pt-6 border-t border-black/10">
                 <h2 className="text-2xl font-bold">{t('checkout_address')}</h2>
                 <div className="relative">
@@ -413,15 +411,47 @@ export default function CheckoutPage() {
                   </select>
                 </div>
                 {isBlacklisted && <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 animate-pulse"><AlertCircle size={20} /><span className="text-sm font-bold">{language === 'EN' ? `We currently do not ship to ${formData.country}.` : `Wir liefern derzeit nicht nach ${formData.country}.`}</span></div>}
+                
+                {/* ✨ UPDATED: Germany Specific Shipping Selection */}
                 {formData.country === "Germany" && (
-                    <div className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${isExpress ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-lg' : 'bg-white/50 border-black/10'}`} onClick={() => setIsExpress(!isExpress)} style={{ backgroundColor: isExpress ? '#1F1F1F' : '' }}>
-                        <div className="flex items-center gap-3"><div className={`p-2 rounded-lg ${isExpress ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-gray-400'}`}><Zap size={18} /></div><div><p className="text-sm font-bold" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>Express Shipping (Next Day)</p><p className={`text-[10px] ${isExpress ? 'text-white/60' : 'text-gray-400'}`} style={{ color: isExpress ? 'rgba(255,255,255,0.6)' : '' }}>Priority handling & fast delivery</p></div></div><p className="font-bold" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>€{needs20kg ? "45.00" : "40.00"}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div 
+                            onClick={() => setIsExpress(false)} 
+                            className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-28 ${!isExpress ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-lg' : 'bg-white/50 border-black/10 hover:border-[#C9A24D]'}`} 
+                            style={{ backgroundColor: !isExpress ? '#1F1F1F' : '' }}
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className={`p-2 rounded-lg ${!isExpress ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-[#1F1F1F]/40'}`}><Truck size={20} /></div>
+                                {!isExpress && <div className="w-3 h-3 rounded-full bg-[#C9A24D] shadow-[0_0_10px_#C9A24D]" />}
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm uppercase tracking-wide" style={{ color: !isExpress ? 'white' : '#1F1F1F' }}>Standard</p>
+                                <p className="font-bold text-sm text-right mt-auto" style={{ color: !isExpress ? 'white' : '#1F1F1F' }}>€{standardCost.toFixed(2)}</p>
+                            </div>
+                        </div>
+
+                        <div 
+                            onClick={() => setIsExpress(true)} 
+                            className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-28 ${isExpress ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-lg' : 'bg-white/50 border-black/10 hover:border-[#C9A24D]'}`} 
+                            style={{ backgroundColor: isExpress ? '#1F1F1F' : '' }}
+                        >
+                            <div className="flex justify-between items-start">
+                                <div className={`p-2 rounded-lg ${isExpress ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-[#1F1F1F]/40'}`}><Zap size={20} /></div>
+                                {isExpress && <div className="w-3 h-3 rounded-full bg-[#C9A24D] shadow-[0_0_10px_#C9A24D]" />}
+                            </div>
+                            <div>
+                                <p className="font-bold text-sm uppercase tracking-wide" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>Express (Next Day)</p>
+                                <p className="font-bold text-sm text-right mt-auto" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>€{expressCost.toFixed(2)}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
+                
                 <div className="grid grid-cols-2 gap-4"><input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
                 <AutoComplete apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} onPlaceSelected={(place) => { const addressComponents = place.address_components; const city = addressComponents.find((c: any) => c.types.includes("locality"))?.long_name || ""; const zip = addressComponents.find((c: any) => c.types.includes("postal_code"))?.long_name || ""; setFormData({ ...formData, address: place.formatted_address, city, zip }); }} options={{ types: ["address"], fields: ["formatted_address", "address_components"] }} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" placeholder={`${t('checkout_street')} * (Start typing your address...)`} />
                 <div className="grid grid-cols-2 gap-4"><input required type="text" name="city" placeholder={`${t('checkout_city')} *`} value={formData.city} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="zip" placeholder={`${t('checkout_zip')} *`} value={formData.zip} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
                 
+                {/* PACKAGING OPTIONS */}
                 <div className="space-y-4 pt-6 border-t border-black/10">
                   <h2 className="text-2xl font-bold">{language === 'EN' ? "Packaging Options" : "Verpackungsoptionen"}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -430,14 +460,49 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
+                {/* LEGAL CHECKBOXES */}
                 {hasPersonalization && !isNonEU && (<div className="space-y-4 mt-6 animate-in slide-in-from-top-2"><div className="p-4 bg-gray-50 border border-black/5 rounded-xl space-y-2"><p className="text-[11px] text-[#1F1F1F]/80 leading-relaxed italic">{language === 'EN' ? "This product is personalized and is made specifically according to your individual specifications. Therefore, there is no right of withdrawal in accordance with EU consumer law." : "Dieses Produkt wird individuell nach Ihren persönlichen Angaben angefertigt. Daher besteht gemäß EU-Verbraucherrecht kein Widerrufsrecht."}</p></div><div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl"><input required type="checkbox" id="withdrawalPolicy" checked={agreedToWithdrawal} onChange={(e) => setAgreedToWithdrawal(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="withdrawalPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I acknowledge that the right of withdrawal does not apply to personalized items." : "Ich nehme zur Kenntnis, dass das Widerrufsrecht für personalisierte Artikel ausgeschlossen ist."} *</label></div></div>)}
                 {isNonEU && (<div className="space-y-4 mt-6 animate-in slide-in-from-top-2"><div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800"><AlertCircle size={20} className="flex-shrink-0" /><div className="text-xs leading-relaxed"><p className="font-bold mb-1">{language === 'EN' ? "Important: Customs & Duties" : "Wichtig: Zoll & Steuern"}</p><p>{language === 'EN' ? "Shipments to countries outside the EU may be subject to import duties and taxes. These costs are the responsibility of the recipient." : "Lieferungen in Länder außerhalb der EU können Einfuhrzöllen und Steuern unterliegen. Diese Kosten sind vom Empfänger zu tragen."}</p></div></div><div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl"><input required type="checkbox" id="customsAgreement" checked={agreedToCustoms} onChange={(e) => setAgreedToCustoms(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="customsAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I understand that any customs duties, taxes, or import fees that may apply are my responsibility and must be paid by me." : "Ich verstehe, dass anfallende Zollgebühren, Steuern oder Einfuhrabgaben in meiner Verantwortung liegen und von mir bezahlt werden müssen."} *</label></div></div>)}
-                <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl mt-4"><input required type="checkbox" id="deliveryPolicy" checked={agreedToPolicy} onChange={(e) => setAgreedToPolicy(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="deliveryPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I agree that if delivery is unsuccessful, my parcel may be delivered to a neighbor or a nearby parcel shop. Returns to the sender are excluded." : "Ich stimme zu, dass mein Paket bei einem erfolglosen Zustellversuch an einen Nachbarn oder einen Paketshop geliefert werden kann. Rücksendungen sind ausgeschlossen."} *</label></div>
+                <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl mt-4"><input required type="checkbox" id="deliveryPolicy" checked={agreedToPolicy} onChange={(e) => setAgreedToPolicy(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="deliveryPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I agree that if delivery is unsuccessful, my parcel may be delivered to a neighbor or a nearby parcel shop. Returns to the sender are excluded. Please note: If an order is returned and needs to be resent, the shipping costs must be paid again by the customer." : "Ich stimme zu, dass mein Paket bei einem erfolglosen Zustellversuch an einen Nachbarn oder einen Paketshop geliefert werden kann. Rücksendungen sind ausgeschlossen. Bitte beachten Sie: Wenn eine Bestellung zurückgesendet wird und erneut versendet werden muss, müssen die Versandkosten vom Kunden erneut bezahlt werden."} *</label></div>
+                
+                {/* ✨ NEW: Mandatory Cancellation Notice */}
+                <div className="space-y-4 mt-6 animate-in slide-in-from-top-2">
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-900">
+                        <AlertCircle size={20} className="flex-shrink-0" />
+                        <div className="text-xs leading-relaxed">
+                            <p className="font-bold mb-1">
+                                {language === 'EN' ? "Important Notice" : "Wichtiger Hinweis"}
+                            </p>
+                            <p>
+                                {language === 'EN' 
+                                ? "As production starts shortly after the order is placed, cancellations are only possible within 3 hours after the order has been received." 
+                                : "Da die Anfertigung zeitnah nach Bestelleingang startet, ist eine Stornierung nur innerhalb von 3 Stunden nach Bestelleingang möglich."}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl">
+                        <input 
+                            required 
+                            type="checkbox" 
+                            id="cancellationAgreement" 
+                            checked={agreedToCancellation} 
+                            onChange={(e) => setAgreedToCancellation(e.target.checked)} 
+                            className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" 
+                        />
+                        <label htmlFor="cancellationAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">
+                            {language === 'EN' 
+                            ? "I have read and agree to the cancellation policy." 
+                            : "Ich habe den Hinweis zur Stornierung gelesen und bin damit einverstanden."} *
+                        </label>
+                    </div>
+                </div>
+
               </div>
               <button type="submit" disabled={!canProceed} className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] py-5 rounded-xl transition-all text-white font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50">{t('checkout_continue')} <ArrowLeft className="rotate-180" size={18} /></button>
             </form>
           ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+              {/* ... Step 2 content remains same ... */}
               <div className="bg-white/40 border border-black/5 p-6 rounded-2xl flex justify-between items-center shadow-sm">
                 <div><p className="text-[#1F1F1F]/50 text-sm font-medium">Shipping {isExpress ? "(Express)" : "(Standard)"} to:</p><p className="font-bold">{formData.address}, {formData.city}, {formData.country}</p></div>
                 <button onClick={() => setStep(1)} className="text-[#C9A24D] text-sm font-bold hover:underline">{t('checkout_change')}</button>
@@ -586,6 +651,7 @@ export default function CheckoutPage() {
         </div>
 
         <div className="bg-white/40 border border-black/5 rounded-3xl p-8 h-fit shadow-sm backdrop-blur-md">
+          {/* ... Cart Summary code ... */}
           <h3 className="font-bold text-xl mb-6">{t('checkout_summary')}</h3>
           <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             {cart.map((item) => (
@@ -628,7 +694,6 @@ export default function CheckoutPage() {
               </div>
             )}
             
-            {/* ✨ NEW: Tip & Donation Line Items - ONLY IF ACTIVE & SELECTED */}
             {isDonationActive && tipAmount > 0 && (
                 <div className="flex justify-between text-[#1F1F1F] font-bold text-sm">
                     <span>Tip (Team Support)</span>

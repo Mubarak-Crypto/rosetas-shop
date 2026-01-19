@@ -7,6 +7,7 @@ import { Droplets, Heart, HandHeart, CheckCircle, ArrowRight, Calendar, MapPin, 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/context/LanguageContext"; // ✨ Added Language Context
 
 // Define the shape of a project from your Database
 type Project = {
@@ -20,6 +21,7 @@ type Project = {
 export default function ImpactReportPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { language } = useLanguage(); // ✨ Get current language
 
   // ✨ Fetch Projects from Supabase
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function ImpactReportPage() {
             className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#E3D7C5]/30 text-[#1F1F1F] rounded-full text-[10px] font-black uppercase tracking-widest border border-[#E3D7C5]"
           >
              <span className="w-1.5 h-1.5 rounded-full bg-[#1F1F1F] animate-pulse" />
-             Transparency Report 2024-2025
+             {language === 'EN' ? "Transparency Report 2024-2025" : "Transparenzbericht 2024-2025"}
           </motion.div>
           
           <motion.h1 
@@ -62,7 +64,7 @@ export default function ImpactReportPage() {
             transition={{ delay: 0.1 }}
             className="text-5xl md:text-7xl font-serif font-extrabold text-[#1F1F1F] tracking-tight"
           >
-            Beauty With A Purpose.
+            {language === 'EN' ? "Beauty With A Purpose." : "Schönheit mit Bedeutung."}
           </motion.h1>
           
           <motion.p 
@@ -71,8 +73,10 @@ export default function ImpactReportPage() {
             transition={{ delay: 0.2 }}
             className="text-lg md:text-xl text-[#1F1F1F]/60 max-w-2xl mx-auto leading-relaxed font-medium"
           >
-            We believe luxury shouldn't just look good—it should do good. 
-            Here is exactly how your orders are changing lives around the world.
+            {language === 'EN' 
+              ? "We believe luxury shouldn't just look good—it should do good. Here is exactly how your orders are changing lives around the world."
+              : "Wir glauben, dass Luxus nicht nur gut aussehen sollte – sondern auch Gutes bewirken muss. Hier sehen Sie genau, wie Ihre Bestellungen Leben auf der ganzen Welt verändern."
+            }
           </motion.p>
         </div>
       </section>
@@ -81,9 +85,22 @@ export default function ImpactReportPage() {
       <section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-                { label: "Wells Constructed", value: "05", icon: Droplets },
-                { label: "Families Supported", value: "150+", icon: HandHeart },
-                { label: "Donated to Charity", value: "10%", icon: Heart, sub: "Of Total Profits" },
+                { 
+                  label: language === 'EN' ? "Wells Constructed" : "Brunnen gebaut", 
+                  value: "05", 
+                  icon: Droplets 
+                },
+                { 
+                  label: language === 'EN' ? "Families Supported" : "Familien unterstützt", 
+                  value: "150+", 
+                  icon: HandHeart 
+                },
+                { 
+                  label: language === 'EN' ? "Donated to Charity" : "Gespendet", 
+                  value: "10%", 
+                  icon: Heart, 
+                  sub: language === 'EN' ? "Of Total Profits" : "Vom Gesamtgewinn" 
+                },
             ].map((stat, idx) => (
                 <motion.div 
                     key={idx}
@@ -134,7 +151,7 @@ export default function ImpactReportPage() {
                                     />
                                     <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full text-xs font-bold text-[#1F1F1F] flex items-center gap-2 shadow-lg">
                                         <CheckCircle size={14} className="text-green-500" />
-                                        Verified Project
+                                        {language === 'EN' ? "Verified Project" : "Verifiziertes Projekt"}
                                     </div>
                                 </motion.div>
 
@@ -147,7 +164,8 @@ export default function ImpactReportPage() {
                                 >
                                     <div>
                                         <div className="flex items-center gap-2 text-[#D4C29A] font-black uppercase tracking-widest text-xs mb-4">
-                                            <MapPin size={14} /> Project #{String(projects.length - index).padStart(3, '0')} • Active
+                                            <MapPin size={14} /> 
+                                            {language === 'EN' ? `Project #${String(projects.length - index).padStart(3, '0')} • Active` : `Projekt #${String(projects.length - index).padStart(3, '0')} • Aktiv`}
                                         </div>
                                         <h2 className="text-4xl font-serif font-bold text-[#1F1F1F] mb-4">{project.title}</h2>
                                         <p className="text-[#1F1F1F]/60 text-lg leading-relaxed whitespace-pre-line">
@@ -161,9 +179,9 @@ export default function ImpactReportPage() {
                                                 <Calendar size={18} />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-[#1F1F1F]">Timeline</h4>
+                                                <h4 className="font-bold text-[#1F1F1F]">{language === 'EN' ? "Timeline" : "Zeitraum"}</h4>
                                                 <p className="text-sm text-[#1F1F1F]/50">
-                                                    {new Date(project.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })}
+                                                    {new Date(project.created_at).toLocaleDateString(language === 'EN' ? 'en-US' : 'de-DE', { year: 'numeric', month: 'long' })}
                                                 </p>
                                             </div>
                                         </div>
@@ -172,9 +190,11 @@ export default function ImpactReportPage() {
                                                 <Heart size={18} />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-[#1F1F1F]">Impact</h4>
+                                                <h4 className="font-bold text-[#1F1F1F]">{language === 'EN' ? "Impact" : "Auswirkung"}</h4>
                                                 <p className="text-sm text-[#1F1F1F]/50">
-                                                    Your purchases made this possible. 10% of profits went directly to this cause.
+                                                    {language === 'EN' 
+                                                      ? "Your purchases made this possible. 10% of profits went directly to this cause."
+                                                      : "Ihre Einkäufe haben das ermöglicht. 10% des Gewinns gingen direkt an diesen Zweck."}
                                                 </p>
                                             </div>
                                         </div>
@@ -189,23 +209,27 @@ export default function ImpactReportPage() {
         </div>
       ) : (
         <div className="text-center py-20 px-6">
-            <p className="text-[#1F1F1F]/40 italic">New projects are being updated...</p>
+            <p className="text-[#1F1F1F]/40 italic">{language === 'EN' ? "New projects are being updated..." : "Neue Projekte werden aktualisiert..."}</p>
         </div>
       )}
 
       {/* UPCOMING PROJECTS / PLEDGE */}
       <section className="px-6 py-24">
         <div className="max-w-4xl mx-auto text-center space-y-8">
-            <h2 className="text-3xl font-bold text-[#1F1F1F]">Our Commitment Continues</h2>
+            <h2 className="text-3xl font-bold text-[#1F1F1F]">
+              {language === 'EN' ? "Our Commitment Continues" : "Unser Engagement geht weiter"}
+            </h2>
             <p className="text-[#1F1F1F]/60 text-lg leading-relaxed">
-                This is just the beginning. For Ramadan 2026, we have pledged to double our efforts. 
-                Every order you place helps us reach our next goal: <span className="text-[#1F1F1F] font-bold">Building a second well and providing 500 food parcels.</span>
+                {language === 'EN' 
+                  ? <>This is just the beginning. For Ramadan 2026, we have pledged to double our efforts. Every order you place helps us reach our next goal: <span className="text-[#1F1F1F] font-bold">Building a second well and providing 500 food parcels.</span></>
+                  : <>Dies ist erst der Anfang. Für Ramadan 2026 haben wir uns verpflichtet, unsere Anstrengungen zu verdoppeln. Jede Bestellung hilft uns, unser nächstes Ziel zu erreichen: <span className="text-[#1F1F1F] font-bold">Der Bau eines zweiten Brunnens und die Bereitstellung von 500 Lebensmittelpaketen.</span></>
+                }
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
                 <Link href="/shop">
                     <button className="px-8 py-4 bg-[#1F1F1F] text-white rounded-full font-bold uppercase tracking-widest text-xs hover:bg-[#D4C29A] hover:text-[#1F1F1F] transition-all flex items-center gap-2 shadow-xl">
-                        Shop & Support <ArrowRight size={14} />
+                        {language === 'EN' ? "Shop & Support" : "Einkaufen & Helfen"} <ArrowRight size={14} />
                     </button>
                 </Link>
             </div>

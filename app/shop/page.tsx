@@ -4,7 +4,7 @@ import Navbar from "../../components/Navbar";
 import ProductCard from "../../components/ProductCard";
 import { useEffect, useState, Suspense, useMemo } from "react"; 
 import { supabase } from "../../lib/supabase";
-import { Loader2, Search, X, ArrowLeft } from "lucide-react"; // ✨ Removed Info icon
+import { Loader2, Search, X, ArrowLeft, Flower } from "lucide-react"; // ✨ Switched back to Flower
 import { useSearchParams } from "next/navigation";
 import Link from "next/link"; 
 import { useLanguage } from "../../context/LanguageContext"; 
@@ -103,7 +103,7 @@ function ShopContent() {
             </Link>
         </div>
 
-        <header className="mb-8 text-center">
+        <header className="mb-12 text-center">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 capitalize text-[#1F1F1F]">
             {categoryFilter 
               ? (language === 'EN' && (categoryFilter === "Floristenbedarf" || categoryFilter === "supplies") ? "Florist Supplies" : categoryFilter) 
@@ -142,6 +142,93 @@ function ShopContent() {
           </div>
         </header>
 
+        {/* ✨ MOVED SECTION: "Let Roses Speak" is now HERE (Top of page) */}
+        {categoryFilter !== "supplies" && categoryFilter !== "Floristenbedarf" && (
+          <section className="mb-20 animate-in slide-in-from-bottom-10 fade-in duration-700">
+            <div className="text-center mb-10">
+              {/* ✨ UPDATED TITLE: Bolder & Larger */}
+              <h2 className="text-3xl font-extrabold text-[#1F1F1F] mb-3 flex items-center justify-center gap-3">
+                {language === 'EN' ? "Let Roses Speak" : "Lass Rosen sprechen"}
+                <div className="relative">
+                    {/* ✨ UPDATED ICON: Dark Silver Rose with Glow */}
+                    <Flower 
+                        className="text-slate-500 fill-slate-300 drop-shadow-[0_0_12px_rgba(200,200,200,0.8)]" 
+                        size={30} 
+                        strokeWidth={1.5}
+                    />
+                </div>
+              </h2>
+              {/* ✨ UPDATED SUBTITLE: Darker & Semibold */}
+              <p className="text-[#1F1F1F]/80 max-w-2xl mx-auto font-semibold text-base">
+                {language === 'EN' 
+                  ? "Colors with meaning. Choose your message." 
+                  : "Farben mit Bedeutung. Wählen Sie Ihre Botschaft."}
+              </p>
+            </div>
+
+            {/* ✨ UPDATED GRID: 4 Cols, Cleaner Layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* ✨ DYNAMIC COLORS MAPPING */}
+              {colors.map((rose, idx) => {
+                const name = language === 'EN' ? rose.name : (rose.name_de || rose.name);
+                const feeling = language === 'EN' ? rose.feeling_en : rose.feeling_de;
+                const quote = language === 'EN' ? rose.quote_en : rose.quote_de;
+                
+                const perfectForString = language === 'EN' ? rose.perfect_for_en : rose.perfect_for_de;
+                const perfectForList = perfectForString ? perfectForString.split(',').map((s: string) => s.trim()) : [];
+
+                return (
+                  <div 
+                    key={rose.id || idx} 
+                    className="bg-white/60 border border-black/5 rounded-xl p-5 flex flex-col gap-3 hover:shadow-lg hover:border-[#D4C29A]/30 transition-all group backdrop-blur-sm cursor-default"
+                  >
+                    <div className="flex items-center gap-3 border-b border-black/5 pb-3">
+                      <div 
+                          className="w-10 h-10 rounded-full border border-black/10 shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-300" 
+                          style={{ backgroundColor: rose.hex_code }}
+                      />
+                      <h3 className="font-bold text-[#1F1F1F] text-base">{name}</h3>
+                    </div>
+                    
+                    <div className="space-y-2.5">
+                      {feeling && (
+                        <div>
+                          <p className="text-[10px] font-bold text-[#C9A24D] uppercase tracking-wider mb-0.5">
+                              {language === 'EN' ? "Feeling" : "Gefühl"}
+                          </p>
+                          <p className="text-sm font-bold text-[#1F1F1F] leading-tight">{feeling}</p>
+                        </div>
+                      )}
+
+                      {perfectForList.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-bold text-[#C9A24D] uppercase tracking-wider mb-0.5">
+                              {language === 'EN' ? "Perfect For" : "Perfekt für"}
+                          </p>
+                          <ul className="text-xs text-[#1F1F1F]/80 space-y-0.5 list-disc list-inside font-medium">
+                              {perfectForList.slice(0, 2).map((item: string, i: number) => (
+                                  <li key={i}>{item}</li>
+                              ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {quote && (
+                        <div className="pt-2 mt-auto">
+                          <p className="text-xs text-[#1F1F1F]/60 italic font-medium">
+                              “{quote}”
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* PRODUCT GRID (Now below the guide) */}
         {isLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="animate-spin text-[#C9A24D]" size={40} />
@@ -185,84 +272,6 @@ function ShopContent() {
               />
             ))}
           </div>
-        )}
-
-        {categoryFilter !== "supplies" && categoryFilter !== "Floristenbedarf" && (
-          <section className="mt-32 pt-16 border-t border-black/5 animate-in slide-in-from-bottom-10 fade-in duration-700">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold text-[#1F1F1F] mb-4 flex items-center justify-center gap-2">
-                {/* ✨ UPDATED TITLE - Added emoji as design element */}
-                {language === 'EN' ? "Let Roses Speak 🌹" : "Lass Rosen sprechen 🌹"}
-              </h2>
-              {/* ✨ UPDATED SUBTITLE */}
-              <p className="text-[#1F1F1F]/60 max-w-2xl mx-auto font-medium">
-                {language === 'EN' 
-                  ? "Colors with meaning. Choose your message." 
-                  : "Farben mit Bedeutung. Wählen Sie Ihre Botschaft."}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* ✨ DYNAMIC COLORS MAPPING */}
-              {colors.map((rose, idx) => {
-                // Helper to get text based on language
-                const name = language === 'EN' ? rose.name : (rose.name_de || rose.name);
-                const feeling = language === 'EN' ? rose.feeling_en : rose.feeling_de;
-                const quote = language === 'EN' ? rose.quote_en : rose.quote_de;
-                
-                // Perfect For is stored as string in DB, split by comma for list
-                const perfectForString = language === 'EN' ? rose.perfect_for_en : rose.perfect_for_de;
-                const perfectForList = perfectForString ? perfectForString.split(',').map((s: string) => s.trim()) : [];
-
-                return (
-                  <div 
-                    key={rose.id || idx} 
-                    className="bg-white/50 border border-black/5 rounded-2xl p-6 flex flex-col gap-4 hover:bg-white hover:shadow-md transition-all group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div 
-                          className="w-12 h-12 rounded-full border border-black/10 shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-300" 
-                          style={{ backgroundColor: rose.hex_code }}
-                      />
-                      <h3 className="font-bold text-[#1F1F1F] text-lg">{name}</h3>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      {feeling && (
-                        <div>
-                          <span className="text-xs font-bold text-[#C9A24D] uppercase tracking-wider block mb-1">
-                              {language === 'EN' ? "Feeling" : "Gefühl"}
-                          </span>
-                          <p className="text-sm font-medium text-[#1F1F1F]">{feeling}</p>
-                        </div>
-                      )}
-
-                      {perfectForList.length > 0 && (
-                        <div>
-                          <span className="text-xs font-bold text-[#C9A24D] uppercase tracking-wider block mb-1">
-                              {language === 'EN' ? "Perfect For" : "Perfekt für"}
-                          </span>
-                          <ul className="text-xs text-[#1F1F1F]/70 space-y-1 list-disc list-inside font-medium">
-                              {perfectForList.map((item: string, i: number) => (
-                                  <li key={i}>{item}</li>
-                              ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {quote && (
-                        <div className="pt-3 border-t border-black/5 mt-auto">
-                          <p className="text-sm text-[#1F1F1F] italic font-medium flex gap-2">
-                              <span>💬</span> “{quote}”
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
         )}
 
       </main>

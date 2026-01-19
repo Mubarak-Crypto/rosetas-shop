@@ -155,8 +155,9 @@ export default function CartSidebar() {
                       key={item.uniqueId} 
                       className="flex gap-4 bg-white/40 p-4 rounded-2xl border border-black/5 shadow-sm"
                     >
+                      {/* ✨ FIX: Changed object-contain to object-cover here */}
                       <div className="w-20 h-20 bg-black rounded-xl overflow-hidden border border-black/5 flex-shrink-0">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                       </div>
 
                       <div className="flex-1 flex flex-col justify-between">
