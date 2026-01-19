@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Search, Filter, Truck } from "lucide-react"; // ✨ Added Truck icon
+import { Loader2, Search, Filter, Truck, ArrowLeft } from "lucide-react"; // ✨ Added ArrowLeft icon
+import Link from "next/link"; // ✨ Added Link
 import Navbar from "../../components/Navbar";
 import ProductCard from "../../components/ProductCard";
+import FloristCommunityModal from "../../components/FloristCommunityModal"; // ✨ NEW IMPORT
 import { supabase } from "../../lib/supabase";
 import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Language Import
 
@@ -56,8 +58,23 @@ export default function SuppliesPage() {
     <main className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] selection:bg-[#C9A24D] selection:text-white">
       <Navbar />
 
+      {/* ✨ NEW: Florist Community Modal (Appears automatically based on logic) */}
+      <FloristCommunityModal />
+
       {/* Header Section */}
       <section className="relative pt-32 pb-12 px-6">
+        
+        {/* ✨ NEW: Back to Home Button */}
+        <div className="max-w-7xl mx-auto mb-6">
+            <Link 
+                href="/"
+                className="inline-flex items-center gap-2 text-[#1F1F1F]/60 hover:text-[#1F1F1F] transition-colors font-bold uppercase tracking-widest text-xs group"
+            >
+                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                {language === 'EN' ? "Back to Home" : "Zurück zur Startseite"}
+            </Link>
+        </div>
+
         <div className="max-w-7xl mx-auto text-center space-y-6">
           <motion.h1 
             initial={{ opacity: 0, y: 20 }}

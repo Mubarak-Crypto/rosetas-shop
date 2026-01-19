@@ -1,16 +1,43 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, AlertCircle, Truck, Check, PenTool } from "lucide-react"; 
+import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, AlertCircle, Truck, Check, PenTool, Clock } from "lucide-react"; 
 import Link from "next/link"; 
+import { useState, useEffect } from "react"; 
 import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext"; 
 
 export default function CartSidebar() {
-  const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal } = useCart();
+  const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal, clearCart, cartExpiry } = useCart();
   const { language, t } = useLanguage(); 
+  
+  const [timeLeft, setTimeLeft] = useState("");
 
-  // ✨ Calculate subtotal specifically for Florist Supplies
+  useEffect(() => {
+    if (!cartExpiry || cart.length === 0) {
+        setTimeLeft("");
+        return;
+    }
+
+    const interval = setInterval(() => {
+        const now = Date.now();
+        const diff = cartExpiry - now;
+
+        if (diff <= 0) {
+            clearInterval(interval);
+            clearCart(); 
+            setIsCartOpen(false);
+            alert(language === 'EN' ? "Your reservation has expired." : "Ihre Reservierung ist abgelaufen.");
+        } else {
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+        }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [cartExpiry, cart.length, clearCart, setIsCartOpen, language]);
+
   const suppliesSubtotal = cart
     .filter(item => item.category === 'supplies')
     .reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -18,7 +45,6 @@ export default function CartSidebar() {
   const MIN_SUPPLIES_VALUE = 80;
   const isSuppliesBelowMinimum = suppliesSubtotal > 0 && suppliesSubtotal < MIN_SUPPLIES_VALUE;
   
-  // ✨ Progress Bar Logic
   const hasSupplies = suppliesSubtotal > 0;
   const missingAmount = Math.max(0, MIN_SUPPLIES_VALUE - suppliesSubtotal);
   const progressPercentage = Math.min(100, (suppliesSubtotal / MIN_SUPPLIES_VALUE) * 100);
@@ -27,7 +53,6 @@ export default function CartSidebar() {
     <AnimatePresence>
       {isCartOpen && (
         <>
-          {/* 1. DARK BACKDROP */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -36,7 +61,6 @@ export default function CartSidebar() {
             className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
           />
 
-          {/* 2. THE SLIDING DRAWER */}
           <motion.div
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -53,7 +77,7 @@ export default function CartSidebar() {
                   {language === 'EN' ? "Your Cart" : "Dein Warenkorb"}
                 </h2>
                 <span className="bg-black/5 text-xs px-2 py-1 rounded-full text-[#1F1F1F]/60 font-mono">
-                  {cart.length} {language === 'EN' ? "items" : "Artikel"}
+                  {cart.length}
                 </span>
               </div>
               <button 
@@ -64,7 +88,18 @@ export default function CartSidebar() {
               </button>
             </div>
 
-            {/* ✨ NEW: FREE SHIPPING / MINIMUM ORDER PROGRESS BAR (Only for Supplies) */}
+            {/* ✨ RESERVATION TIMER BANNER (Soft Beige & Black) */}
+            {cart.length > 0 && timeLeft && (
+                <div className="bg-[#EAE0D5] text-[#1F1F1F] text-xs font-bold text-center py-3 px-4 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 border-b border-[#1F1F1F]/5">
+                    <Clock size={14} className="text-[#1F1F1F]/60" />
+                    <span>
+                        {language === 'EN' ? "Items reserved for:" : "Artikel reserviert für:"} 
+                        <span className="text-[#1F1F1F] ml-1 font-mono text-sm">{timeLeft}</span>
+                    </span>
+                </div>
+            )}
+
+            {/* SUPPLIES PROGRESS BAR */}
             {hasSupplies && (
                 <div className="px-6 py-4 bg-white border-b border-black/5">
                     <div className="flex items-center gap-3 mb-2">
@@ -85,9 +120,7 @@ export default function CartSidebar() {
                             )}
                         </p>
                     </div>
-                    {/* Bar Track */}
                     <div className="h-1.5 w-full bg-black/5 rounded-full overflow-hidden">
-                        {/* Bar Fill */}
                         <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: `${progressPercentage}%` }}
@@ -112,83 +145,87 @@ export default function CartSidebar() {
                   </button>
                 </div>
               ) : (
-                cart.map((item) => (
-                  <motion.div 
-                    layout 
-                    key={item.uniqueId} 
-                    className="flex gap-4 bg-white/40 p-4 rounded-2xl border border-black/5 shadow-sm"
-                  >
-                    <div className="w-20 h-20 bg-black rounded-xl overflow-hidden border border-black/5 flex-shrink-0">
-                      <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
-                    </div>
+                cart.map((item) => {
+                  const isUnlimited = item.maxStock >= 999;
+                  const isMaxedOut = !isUnlimited && item.quantity >= item.maxStock;
 
-                    <div className="flex-1 flex flex-col justify-between">
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-bold text-[#1F1F1F] text-sm">{item.name}</h3>
-                          <button onClick={() => removeFromCart(item.uniqueId)} className="text-[#1F1F1F]/30 hover:text-red-500 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                        
-                        <div className="text-xs text-[#1F1F1F]/60 mt-1 space-x-2 font-medium">
-                          {Object.values(item.options).join(", ")}
-                        </div>
+                  return (
+                    <motion.div 
+                      layout 
+                      key={item.uniqueId} 
+                      className="flex gap-4 bg-white/40 p-4 rounded-2xl border border-black/5 shadow-sm"
+                    >
+                      <div className="w-20 h-20 bg-black rounded-xl overflow-hidden border border-black/5 flex-shrink-0">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+                      </div>
 
-                        {item.extras && item.extras.length > 0 && (
-                          <div className="text-[10px] text-[#C9A24D] mt-1 flex flex-wrap gap-1 font-bold">
-                            {item.extras.map((e: string) => (
-                              <span key={e} className="bg-[#C9A24D]/10 px-1.5 py-0.5 rounded border border-[#C9A24D]/20">+ {e}</span>
-                            ))}
+                      <div className="flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-bold text-[#1F1F1F] text-sm">{item.name}</h3>
+                            <button onClick={() => removeFromCart(item.uniqueId)} className="text-[#1F1F1F]/30 hover:text-red-500 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
                           </div>
-                        )}
+                          
+                          <div className="text-xs text-[#1F1F1F]/60 mt-1 space-x-2 font-medium">
+                            {Object.values(item.options).join(", ")}
+                          </div>
 
-                        {/* ✨ DISPLAY SIMPLIFIED CUSTOM TEXT IN CART */}
-                        {item.customText && (
-                            <div className="mt-2 text-[10px] bg-white/50 p-1.5 rounded-lg border border-black/5 inline-block">
-                                <span className="text-gray-400 font-bold uppercase tracking-widest mr-1">
-                                    <PenTool size={10} className="inline mr-1 mb-0.5"/> 
-                                    {language === 'EN' ? "Text:" : "Text:"}
-                                </span>
-                                <span className="text-[#1F1F1F] font-bold italic">
-                                    "{item.customText}"
-                                </span>
+                          {item.extras && item.extras.length > 0 && (
+                            <div className="text-[10px] text-[#C9A24D] mt-1 flex flex-wrap gap-1 font-bold">
+                              {item.extras.map((e: string) => (
+                                <span key={e} className="bg-[#C9A24D]/10 px-1.5 py-0.5 rounded border border-[#C9A24D]/20">+ {e}</span>
+                              ))}
                             </div>
-                        )}
-                      </div>
+                          )}
 
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="font-mono text-[#1F1F1F] text-sm font-bold">
-                          €{(item.price * item.quantity).toFixed(2)}
-                        </span>
-                        
-                        <div className="flex items-center bg-white/60 rounded-lg border border-black/5">
-                          <button 
-                            onClick={() => updateQuantity(item.uniqueId, -1)}
-                            className="p-1.5 hover:text-[#C9A24D] text-[#1F1F1F]/40 transition-colors"
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <span className="w-6 text-center text-xs font-bold text-[#1F1F1F]">{item.quantity}</span>
-                          <button 
-                            onClick={() => updateQuantity(item.uniqueId, 1)}
-                            className="p-1.5 hover:text-[#C9A24D] text-[#1F1F1F]/40 transition-colors"
-                          >
-                            <Plus size={12} />
-                          </button>
+                          {item.customText && (
+                              <div className="mt-2 text-[10px] bg-white/50 p-1.5 rounded-lg border border-black/5 inline-block">
+                                  <span className="text-gray-400 font-bold uppercase tracking-widest mr-1">
+                                      <PenTool size={10} className="inline mr-1 mb-0.5"/> 
+                                      {language === 'EN' ? "Text:" : "Text:"}
+                                  </span>
+                                  <span className="text-[#1F1F1F] font-bold italic">
+                                      "{item.customText}"
+                                  </span>
+                              </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="font-mono text-[#1F1F1F] text-sm font-bold">
+                            €{(item.price * item.quantity).toFixed(2)}
+                          </span>
+                          
+                          <div className="flex items-center bg-white/60 rounded-lg border border-black/5">
+                            <button 
+                              onClick={() => updateQuantity(item.uniqueId, -1)}
+                              className="p-1.5 hover:text-[#C9A24D] text-[#1F1F1F]/40 transition-colors"
+                            >
+                              <Minus size={12} />
+                            </button>
+                            <span className="w-6 text-center text-xs font-bold text-[#1F1F1F]">{item.quantity}</span>
+                            <button 
+                              onClick={() => updateQuantity(item.uniqueId, 1)}
+                              disabled={isMaxedOut}
+                              className={`p-1.5 transition-colors ${isMaxedOut ? "text-gray-200 cursor-not-allowed" : "hover:text-[#C9A24D] text-[#1F1F1F]/40"}`}
+                            >
+                              <Plus size={12} />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))
+                    </motion.div>
+                  );
+                })
               )}
             </div>
 
-            {/* FOOTER (Checkout) */}
+            {/* FOOTER */}
             {cart.length > 0 && (
               <div className="p-6 border-t border-black/5 bg-[#F6EFE6] space-y-4">
                 
-                {/* ✨ UPDATED: Supplies Minimum Value Warning (Uses dynamic math) */}
                 {isSuppliesBelowMinimum && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex gap-3 items-start animate-pulse">
                     <AlertCircle className="text-red-500 shrink-0" size={18} />
@@ -209,7 +246,6 @@ export default function CartSidebar() {
                   {language === 'EN' ? "Shipping calculated at checkout." : "Versandkosten werden beim Checkout berechnet."}
                 </p>
                 
-                {/* --- FORCED VISIBILITY CHECKOUT BUTTON --- */}
                 <Link 
                   href={isSuppliesBelowMinimum ? "#" : "/checkout"} 
                   onClick={(e) => {
@@ -220,7 +256,6 @@ export default function CartSidebar() {
                 >
                   <button 
                     disabled={isSuppliesBelowMinimum}
-                    /* ✅ VIBRANT UPDATE: Updated to Fresh Green Color #add9af */
                     className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-500 font-bold
                       ${isSuppliesBelowMinimum 
                         ? 'bg-gray-300 border-2 border-transparent cursor-not-allowed' 

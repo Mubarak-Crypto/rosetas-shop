@@ -9,7 +9,8 @@ import { useLanguage } from "../context/LanguageContext";
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
-  const { language, t } = useLanguage(); 
+  // ✨ UPDATED: Added getCategoryName for dynamic translations
+  const { language, t, getCategoryName } = useLanguage(); 
   
   const [categories, setCategories] = useState<string[]>([]);
 
@@ -127,7 +128,8 @@ export default function Footer() {
                 <li key={cat}>
                   {/* ✨ UPDATED: Hover color changed to #D4C29A */}
                   <Link href={`/shop?category=${encodeURIComponent(cat)}`} className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>
-                    {cat}
+                    {/* ✨ UPDATED: Use dynamic translation */}
+                    {getCategoryName(cat)}
                   </Link>
                 </li>
               ))

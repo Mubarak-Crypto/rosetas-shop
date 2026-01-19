@@ -10,13 +10,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: Request) {
   try {
-    const { amount } = await request.json();
+    // ✨ UPDATED: Accept metadata (cart items) from the client
+    const { amount, metadata } = await request.json();
 
     // Create a PaymentIntent with the order amount and currency
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount, // Amount in cents (e.g., 5000 = €50.00)
       currency: "eur",
       automatic_payment_methods: { enabled: true }, // Enables Apple Pay / Google Pay automatically
+      // ✨ Pass metadata to Stripe (helpful for Webhooks later)
+      metadata: metadata || {}, 
     });
 
     return NextResponse.json({ clientSecret: paymentIntent.client_secret });

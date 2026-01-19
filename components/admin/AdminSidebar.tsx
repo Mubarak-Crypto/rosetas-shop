@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart } from "lucide-react"; // ✨ Added Heart icon
+import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users } from "lucide-react"; // ✨ Added Users icon
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
@@ -142,7 +142,21 @@ export default function AdminSidebar() {
             Manage Reviews
           </Link>
 
-          {/* ✨ Charity Projects Link */}
+          {/* ✨ Florist Community Link (NEW) */}
+          <Link 
+            href="/admin/florists" 
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              isActive("/admin/florists") 
+                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Users size={20} />
+            Florist Community
+          </Link>
+
+          {/* Charity Projects Link */}
           <Link 
             href="/admin/charity" 
             onClick={() => setIsOpen(false)}

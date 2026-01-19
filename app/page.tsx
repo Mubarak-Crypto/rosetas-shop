@@ -29,8 +29,8 @@ export default function Home() {
         .select('*')
         .eq('status', 'active') 
         .neq('category', 'supplies') 
-        .order('created_at', { ascending: false }) 
-        .limit(3); 
+        .order('created_at', { ascending: false })
+        .limit(3); // ✨ Updated: Limit to 3 latest products as requested
 
       const settingsRes = await supabase
         .from('storefront_settings')
@@ -93,8 +93,8 @@ export default function Home() {
 
       {/* Hero Section */}
       {/* ✨ FIX APPLIED: Changed 'lg:grid-cols-2' to 'xl:grid-cols-2'. 
-         This forces iPads/Tablets to stack the layout (Text Top / Image Bottom), 
-         ensuring the button is never covered. Side-by-side only happens on large screens (PC/Laptop). */}
+          This forces iPads/Tablets to stack the layout (Text Top / Image Bottom), 
+          ensuring the button is never covered. Side-by-side only happens on large screens (PC/Laptop). */}
       <section className="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24 lg:pt-20 lg:pb-32 grid xl:grid-cols-2 gap-12 items-center">
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
@@ -130,13 +130,13 @@ export default function Home() {
           </p>
 
           <div className="flex flex-wrap gap-4 pt-4">
-            {/* ✨ BUTTON PRESERVED */}
+            {/* ✨ BUTTON UPDATED: Added White Border */}
             <button 
               onClick={scrollToShop}
               className="group relative px-8 py-5 rounded-full transition-all flex items-center gap-3 active:scale-95 z-30" // High Z-index
               style={{
                 boxShadow: '0 0 25px rgba(205, 175, 149, 0.9), 0 0 50px rgba(205, 175, 149, 0.6)', 
-                border: '1px solid #CDAF95',
+                border: '2px solid #FFFFFF', // ✨ UPDATED: White border
                 backgroundColor: '#CDAF95',
                 color: '#1F1F1F'
               }}
@@ -241,7 +241,7 @@ export default function Home() {
             className="px-10 py-4 font-bold rounded-full transition-all flex items-center gap-2 mx-auto active:scale-95"
             style={{
               boxShadow: '0 0 25px rgba(205, 175, 149, 0.9), 0 0 50px rgba(205, 175, 149, 0.6)', 
-              border: '1px solid #CDAF95',
+              border: '2px solid #FFFFFF', // ✨ UPDATED: White border added to secondary button too for consistency
               backgroundColor: '#CDAF95',
               color: '#1F1F1F'
             }}

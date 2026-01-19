@@ -13,7 +13,8 @@ import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const { setIsCartOpen, cartCount } = useCart();
-  const { language, setLanguage, t } = useLanguage(); 
+  // ✨ UPDATED: Added getCategoryName for dynamic translations
+  const { language, setLanguage, t, getCategoryName } = useLanguage(); 
   const { wishlist } = useWishlist(); 
   const pathname = usePathname(); 
   
@@ -113,7 +114,8 @@ export default function Navbar() {
                                           onClick={() => setIsMenuOpen(false)}
                                           className="px-5 py-3 text-xs font-bold text-[#1F1F1F] hover:bg-[#F6EFE6] hover:text-[#C9A24D] rounded-xl transition-all flex items-center justify-between group"
                                       >
-                                          {cat}
+                                          {/* ✨ UPDATED: Use dynamic translation function */}
+                                          {getCategoryName(cat)}
                                       </Link>
                                   ))
                               ) : (

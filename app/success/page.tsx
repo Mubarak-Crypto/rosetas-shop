@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Language Import
 import { motion } from "framer-motion";
+import { supabase } from "../../lib/supabase"; // ✨ Need Supabase for stock updates
 
 export default function SuccessPage() {
   const { clearCart, cart } = useCart(); // ✨ Added cart to reference last items
@@ -13,14 +14,75 @@ export default function SuccessPage() {
   const [purchasedItems, setPurchasedItems] = useState<any[]>([]);
 
   useEffect(() => {
-    // Capture the items before clearing the cart for the review links
+    // Capture items and handle stock deduction
     if (cart.length > 0) {
       setPurchasedItems([...cart]);
+      updateStockDatabase([...cart]); // ✨ Trigger Stock Deduction
+      clearCart();
     }
-    
-    // Clear the cart as soon as the page loads because the payment worked
-    clearCart();
   }, []);
+
+  // ✨ NEW: Logic to deduct stock from Database
+  const updateStockDatabase = async (items: any[]) => {
+    for (const item of items) {
+      try {
+        // 1. Get fresh product data (to check matrix/limits)
+        const { data: product } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', item.productId)
+          .single();
+
+        if (!product) continue;
+
+        // 2. Handle Variants (Stock Matrix)
+        if (product.stock_matrix && product.stock_matrix.length > 0) {
+            const matrix = product.stock_matrix;
+            
+            // ✨ CRITICAL FIX: Use rawOptions (Database Keys) if available, otherwise fallback to options
+            // This ensures we match "Farbe" even if the user bought "Color"
+            const optionsToMatch = item.rawOptions || item.options;
+
+            // Find the specific row that matches the customer's choices
+            const rowIndex = matrix.findIndex((row: any) => {
+                // Check if every option in the cart matches this row
+                return Object.entries(optionsToMatch).every(([key, val]) => row[key] === val);
+            });
+
+            if (rowIndex !== -1) {
+                const currentRow = matrix[rowIndex];
+                
+                // 🚨 CRITICAL CHECK: If stock is -1 (Unlimited), DO NOT DEDUCT
+                if (currentRow.stock === -1) {
+                    console.log(`Skipping stock deduction for unlimited item: ${item.name}`);
+                    continue; 
+                }
+
+                // Otherwise, deduct quantity
+                const newQty = Math.max(0, currentRow.stock - item.quantity);
+                matrix[rowIndex].stock = newQty;
+
+                // Update the matrix in DB
+                await supabase.from('products').update({ stock_matrix: matrix }).eq('id', item.productId);
+            }
+        } 
+        // 3. Handle Simple Products (Main Stock)
+        else {
+            // 🚨 CRITICAL CHECK: If stock is -1 (Unlimited), DO NOT DEDUCT
+            if (product.stock === -1) {
+                console.log(`Skipping stock deduction for unlimited product: ${item.name}`);
+                continue;
+            }
+
+            const newStock = Math.max(0, product.stock - item.quantity);
+            await supabase.from('products').update({ stock: newStock }).eq('id', item.productId);
+        }
+
+      } catch (err) {
+        console.error("Error updating stock:", err);
+      }
+    }
+  };
 
   return (
     /* ✅ FIXED: Background changed to Vanilla Cream and Text to Ink Black */

@@ -4,8 +4,9 @@ import Navbar from "../../components/Navbar";
 import ProductCard from "../../components/ProductCard";
 import { useEffect, useState, Suspense, useMemo } from "react"; 
 import { supabase } from "../../lib/supabase";
-import { Loader2, Search, X, Info } from "lucide-react"; 
+import { Loader2, Search, X, ArrowLeft } from "lucide-react"; // ✨ Removed Info icon
 import { useSearchParams } from "next/navigation";
+import Link from "next/link"; 
 import { useLanguage } from "../../context/LanguageContext"; 
 
 function ShopContent() {
@@ -16,6 +17,8 @@ function ShopContent() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>(null); 
+  // ✨ NEW: State for Dynamic Colors
+  const [colors, setColors] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [searchTerm, setSearchTerm] = useState(urlSearchTerm || ""); 
@@ -27,9 +30,10 @@ function ShopContent() {
   }, [urlSearchTerm]);
 
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchData() {
       setIsLoading(true); 
 
+      // 1. Fetch Global Settings
       const { data: settingsData } = await supabase
         .from('storefront_settings')
         .select('*')
@@ -38,6 +42,7 @@ function ShopContent() {
       
       if (settingsData) setGlobalSettings(settingsData);
 
+      // 2. Fetch Products
       let query = supabase
         .from("products")
         .select("*") 
@@ -49,13 +54,22 @@ function ShopContent() {
         query = query.neq('category', 'supplies').neq('category', 'Floristenbedarf');
       }
 
-      const { data } = await query.order('created_at', { ascending: false });
-        
-      if (data) setProducts(data);
+      const { data: productsData } = await query.order('created_at', { ascending: false });
+      if (productsData) setProducts(productsData);
+
+      // 3. ✨ NEW: Fetch Active Colors for "Let Roses Speak" section
+      const { data: colorsData } = await supabase
+        .from('product_colors')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (colorsData) setColors(colorsData);
+
       setIsLoading(false);
     }
 
-    fetchProducts();
+    fetchData();
   }, [categoryFilter]); 
 
   const filteredProducts = useMemo(() => {
@@ -72,132 +86,23 @@ function ShopContent() {
     });
   }, [products, searchTerm]);
 
-  // ✨ UPDATED: Colors coordinated to match your image exactly
-  const roseMeanings = [
-    {
-      color: language === 'EN' ? "Ash Grey" : "Aschgrau",
-      hex: "#8C9399", // ✨ Updated from image (Medium Grey)
-      feeling: language === 'EN' ? "Neutral, reliable, respectful" : "Neutral, zuverlässig, respektvoll",
-      perfectFor: language === 'EN' 
-        ? ["Business meetings", "Colleagues", "Teachers", "Meetings with new people", "Thank-you gifts"]
-        : ["Business Meetings", "Arbeitskollegen", "Lehrer:innen", "Treffen mit fremden Personen", "Dankeschön-Geschenke"],
-      quote: language === 'EN' ? "Appropriate, without being too personal." : "Passend, ohne zu persönlich zu sein."
-    },
-    {
-      color: language === 'EN' ? "Midnight Blue" : "Mitternachtsblau",
-      hex: "#002366", // ✨ Updated from image (Deep Royal Blue)
-      feeling: language === 'EN' ? "Trust & reliability" : "Vertrauen & Verlässlichkeit",
-      perfectFor: language === 'EN'
-        ? ["Friendship", "Business partners", "Colleagues", "Gifts for men", "Formal occasions"]
-        : ["Freundschaft", "Geschäftspartner", "Kollegen", "Männergeschenke", "formelle Anlässe"],
-      quote: language === 'EN' ? "A safe and confident choice." : "Eine sichere Wahl."
-    },
-    {
-      color: language === 'EN' ? "Ice Sea Blue" : "Eismeerblau",
-      hex: "#4DB9E3", // ✨ Updated from image (Vivid Sky Blue)
-      feeling: language === 'EN' ? "Lightness & positive energy" : "Leichtigkeit & positive Energie",
-      perfectFor: language === 'EN'
-        ? ["Birthdays", "Baby celebrations", "Easter", "Small gestures", "Friendly attentions"]
-        : ["Geburtstage", "Babyfeiern", "Ostern", "kleine Aufmerksamkeiten", "freundliche Gesten"],
-      quote: language === 'EN' ? "A gift that brings joy." : "Ein Geschenk, das Freude macht."
-    },
-    {
-      color: language === 'EN' ? "Lavender Dream" : "LavendelTraum",
-      hex: "#885FA6", // ✨ Updated from image (Rich Purple)
-      feeling: language === 'EN' ? "Uniqueness & appreciation" : "Besonderheit & Wertschätzung",
-      perfectFor: language === 'EN'
-        ? ["Anniversaries", "Special birthdays", "Events", "People who are “different”", "Creative personalities"]
-        : ["Jubiläen", "besondere Geburtstage", "Events", "Menschen, die „anders“ sind", "kreative Persönlichkeiten"],
-      quote: language === 'EN' ? "Not ordinary." : "Nicht alltäglich."
-    },
-    {
-      color: language === 'EN' ? "Pastel Violet" : "Pastellviolett",
-      hex: "#BFA7C7", // ✨ Updated from image (Muted Dusty Lilac)
-      feeling: language === 'EN' ? "Warm & friendly" : "Herzlich & freundlich",
-      perfectFor: language === 'EN'
-        ? ["Friendship", "Colleagues", "Mothers", "Thank-you gifts", "Visits"]
-        : ["Freundschaft", "Kolleg:innen", "Mütter", "Dankeschön", "Besuche"],
-      quote: language === 'EN' ? "From the heart, without being overwhelming." : "Von Herzen, ohne zu aufdringlich zu sein."
-    },
-    {
-      color: language === 'EN' ? "Cream White" : "Sahneweiß",
-      hex: "#F5E1C3", // ✨ Updated from image (Peachy/Warm Cream)
-      feeling: language === 'EN' ? "Warmth & balance" : "Wärme & Ausgeglichenheit",
-      perfectFor: language === 'EN'
-        ? ["Host gifts", "Christmas", "Family", "Calm occasions", "Elegant events"]
-        : ["Gastgebergeschenke", "Weihnachten", "Familie", "ruhige Anlässe", "elegante Events"],
-      quote: language === 'EN' ? "Always the right choice." : "Passt immer."
-    },
-    {
-      color: language === 'EN' ? "Snowflake White" : "Schneeflockenweiß",
-      hex: "#FFFFFF", // ✨ Pure White
-      feeling: language === 'EN' ? "Honesty & new beginnings" : "Ehrlichkeit & Neubeginn",
-      perfectFor: language === 'EN'
-        ? ["Engagements", "Weddings", "Christenings", "Graduation ceremonies", "Formal events"]
-        : ["Verlobung", "Hochzeiten", "Taufen", "Abschlussfeiern", "formelle Events"],
-      quote: language === 'EN' ? "Classic and meaningful." : "Klassisch & bedeutungsvoll."
-    },
-    {
-      color: language === 'EN' ? "Ruby Fire" : "Rubinfeuer",
-      hex: "#8B0000", // ✨ Updated from image (Deepest Red)
-      feeling: language === 'EN' ? "Deep connection" : "Tiefe Verbindung",
-      perfectFor: language === 'EN'
-        ? ["Romantic relationships", "Engagements", "Anniversaries", "Valentine’s Day", "Special gifts"]
-        : ["Beziehung", "Verlobung", "Jahrestage", "Valentinstag", "besondere Geschenke"],
-      quote: language === 'EN' ? "For real emotions." : "Für echte Gefühle."
-    },
-    {
-      color: language === 'EN' ? "Soft Pink" : "Zartrosa",
-      hex: "#F58F84", // ✨ Updated from image (Salmon/Peachy Pink)
-      feeling: language === 'EN' ? "Affection & thoughtfulness" : "Zuneigung & Aufmerksamkeit",
-      perfectFor: language === 'EN'
-        ? ["Birthdays", "Mother’s Day", "Friendship", "Thank-you gifts", "Loving gestures"]
-        : ["Geburtstage", "Muttertag", "Freundschaft", "Dankeschön", "liebe Gesten"],
-      quote: language === 'EN' ? "I was thinking of you." : "Ich habe an dich gedacht."
-    },
-    {
-      color: language === 'EN' ? "Rose Kiss" : "Rosenkuss",
-      hex: "#E76A8D", // ✨ Updated from image (Medium Rosy Pink)
-      feeling: language === 'EN' ? "Closeness & warmth" : "Nähe & Herzlichkeit",
-      perfectFor: language === 'EN'
-        ? ["Small gifts", "Dates", "Friends", "Surprises"]
-        : ["kleine Geschenke", "Dates", "Freund:innen", "Überraschungen"],
-      quote: language === 'EN' ? "A gift with feeling." : "Ein Geschenk mit Gefühl."
-    },
-    {
-      color: language === 'EN' ? "Light Rose" : "Light Rose",
-      hex: "#F9CCCA", // ✨ Updated from image (Pale Blush)
-      feeling: language === 'EN' ? "Appreciation" : "Wertschätzung",
-      perfectFor: language === 'EN'
-        ? ["Colleagues", "Teachers", "Client gifts", "Visits", "Events"]
-        : ["Kolleg:innen", "Lehrer:innen", "Kundengeschenke", "Besuche", "Events"],
-      quote: language === 'EN' ? "Stylish and kind." : "Stilvoll & freundlich."
-    },
-    {
-      color: language === 'EN' ? "Night Rose" : "Nachtrose",
-      hex: "#000000", // ✨ Black
-      feeling: language === 'EN' ? "Strength & impact" : "Stärke & Eindruck",
-      perfectFor: language === 'EN'
-        ? ["Exclusive events", "Business occasions", "Special personalities", "Strong statements"]
-        : ["exklusive Events", "Business-Anlässe", "besondere Menschen", "starke Statements"],
-      quote: language === 'EN' ? "Unforgettable." : "Bleibt im Kopf."
-    },
-    {
-      color: language === 'EN' ? "Forest Magic" : "Waldzauber",
-      hex: "#0B4227", // ✨ Updated from image (Dark Teal/Forest Green)
-      feeling: language === 'EN' ? "Natural & genuine" : "Natürlich & ehrlich",
-      perfectFor: language === 'EN'
-        ? ["Christmas", "Autumn celebrations", "Family", "Conscious gifts", "Nature lovers"]
-        : ["Weihnachten", "Herbstfeste", "Familie", "bewusste Geschenke", "Menschen, die Natur lieben"],
-      quote: language === 'EN' ? "Honest and grounding." : "Natürlich & ehrlich."
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#C9A24D] selection:text-white">
       <Navbar />
       
       <main className="max-w-7xl mx-auto px-6 py-24">
+        
+        {/* ✨ NEW: Back to Home Button */}
+        <div className="mb-8">
+            <Link 
+                href="/"
+                className="inline-flex items-center gap-2 text-[#1F1F1F]/60 hover:text-[#1F1F1F] transition-colors font-bold uppercase tracking-widest text-xs group"
+            >
+                <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                {language === 'EN' ? "Back to Home" : "Zurück zur Startseite"}
+            </Link>
+        </div>
+
         <header className="mb-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 capitalize text-[#1F1F1F]">
             {categoryFilter 
@@ -213,8 +118,8 @@ function ShopContent() {
                       : `Viewing our exclusive ${categoryFilter} selection.`)
                   : `Entdecken Sie unsere exklusive ${categoryFilter}-Auswahl.`)
               : (language === 'EN'
-                  ? "Explore our complete range of hand-crafted luxury bouquets."
-                  : "Entdecken Sie unser komplettes Sortiment an handgefertigten Luxus-Bouquets.")}
+                  ? "Explore our exclusive products for special moments."
+                  : "Entdecken Sie unsere exklusiven Produkte für besondere Momente.")}
           </p>
 
           <div className="relative max-w-md mx-auto">
@@ -286,57 +191,76 @@ function ShopContent() {
           <section className="mt-32 pt-16 border-t border-black/5 animate-in slide-in-from-bottom-10 fade-in duration-700">
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold text-[#1F1F1F] mb-4 flex items-center justify-center gap-2">
-                <Info size={24} className="text-[#D4C29A]" />
-                {language === 'EN' ? "The Language of Roses" : "Die Sprache der Rosen"}
+                {/* ✨ UPDATED TITLE - Added emoji as design element */}
+                {language === 'EN' ? "Let Roses Speak 🌹" : "Lass Rosen sprechen 🌹"}
               </h2>
+              {/* ✨ UPDATED SUBTITLE */}
               <p className="text-[#1F1F1F]/60 max-w-2xl mx-auto font-medium">
                 {language === 'EN' 
-                  ? "Every color holds a meaning. Choose the one that speaks for you." 
-                  : "Jede Farbe hat eine Bedeutung. Wählen Sie die, die für Sie spricht."}
+                  ? "Colors with meaning. Choose your message." 
+                  : "Farben mit Bedeutung. Wählen Sie Ihre Botschaft."}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {roseMeanings.map((rose, idx) => (
-                <div 
-                  key={idx} 
-                  className="bg-white/50 border border-black/5 rounded-2xl p-6 flex flex-col gap-4 hover:bg-white hover:shadow-md transition-all group"
-                >
-                  <div className="flex items-center gap-4">
-                    <div 
-                        className="w-12 h-12 rounded-full border border-black/10 shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-300" 
-                        style={{ backgroundColor: rose.hex }}
-                    />
-                    <h3 className="font-bold text-[#1F1F1F] text-lg">{rose.color}</h3>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                        <span className="text-xs font-bold text-[#C9A24D] uppercase tracking-wider block mb-1">
-                            {language === 'EN' ? "Feeling" : "Gefühl"}
-                        </span>
-                        <p className="text-sm font-medium text-[#1F1F1F]">{rose.feeling}</p>
-                    </div>
+              {/* ✨ DYNAMIC COLORS MAPPING */}
+              {colors.map((rose, idx) => {
+                // Helper to get text based on language
+                const name = language === 'EN' ? rose.name : (rose.name_de || rose.name);
+                const feeling = language === 'EN' ? rose.feeling_en : rose.feeling_de;
+                const quote = language === 'EN' ? rose.quote_en : rose.quote_de;
+                
+                // Perfect For is stored as string in DB, split by comma for list
+                const perfectForString = language === 'EN' ? rose.perfect_for_en : rose.perfect_for_de;
+                const perfectForList = perfectForString ? perfectForString.split(',').map((s: string) => s.trim()) : [];
 
-                    <div>
-                        <span className="text-xs font-bold text-[#C9A24D] uppercase tracking-wider block mb-1">
-                            {language === 'EN' ? "Perfect For" : "Perfekt für"}
-                        </span>
-                        <ul className="text-xs text-[#1F1F1F]/70 space-y-1 list-disc list-inside font-medium">
-                            {rose.perfectFor.map((item, i) => (
-                                <li key={i}>{item}</li>
-                            ))}
-                        </ul>
+                return (
+                  <div 
+                    key={rose.id || idx} 
+                    className="bg-white/50 border border-black/5 rounded-2xl p-6 flex flex-col gap-4 hover:bg-white hover:shadow-md transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div 
+                          className="w-12 h-12 rounded-full border border-black/10 shadow-sm flex-shrink-0 group-hover:scale-110 transition-transform duration-300" 
+                          style={{ backgroundColor: rose.hex_code }}
+                      />
+                      <h3 className="font-bold text-[#1F1F1F] text-lg">{name}</h3>
                     </div>
+                    
+                    <div className="space-y-3">
+                      {feeling && (
+                        <div>
+                          <span className="text-xs font-bold text-[#C9A24D] uppercase tracking-wider block mb-1">
+                              {language === 'EN' ? "Feeling" : "Gefühl"}
+                          </span>
+                          <p className="text-sm font-medium text-[#1F1F1F]">{feeling}</p>
+                        </div>
+                      )}
 
-                    <div className="pt-3 border-t border-black/5 mt-auto">
-                        <p className="text-sm text-[#1F1F1F] italic font-medium flex gap-2">
-                            <span>💬</span> “{rose.quote}”
-                        </p>
+                      {perfectForList.length > 0 && (
+                        <div>
+                          <span className="text-xs font-bold text-[#C9A24D] uppercase tracking-wider block mb-1">
+                              {language === 'EN' ? "Perfect For" : "Perfekt für"}
+                          </span>
+                          <ul className="text-xs text-[#1F1F1F]/70 space-y-1 list-disc list-inside font-medium">
+                              {perfectForList.map((item: string, i: number) => (
+                                  <li key={i}>{item}</li>
+                              ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {quote && (
+                        <div className="pt-3 border-t border-black/5 mt-auto">
+                          <p className="text-sm text-[#1F1F1F] italic font-medium flex gap-2">
+                              <span>💬</span> “{quote}”
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

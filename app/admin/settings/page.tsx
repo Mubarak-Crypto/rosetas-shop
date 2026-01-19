@@ -2,19 +2,46 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabase";
-import { Save, Upload, Eye, EyeOff, MoveVertical, Loader2, Layout, Maximize, Type, LayoutDashboard } from "lucide-react"; // ✨ Added LayoutDashboard icon
-import Link from "next/link"; // ✨ Added Link import
+import { Save, Upload, Eye, EyeOff, MoveVertical, Loader2, Layout, Maximize, Type, LayoutDashboard, Droplets, Palette, Plus, Trash2, X, Check, Heart, Quote, Star } from "lucide-react"; // ✨ Added Heart, Quote, Star
+import Link from "next/link"; 
+import CategoryTranslationManager from "../../../components/admin/CategoryTranslationManager"; 
+
+// Type definition for Color
+type ProductColor = {
+  id?: string;
+  name: string;      // English Name
+  name_de: string;   // ✨ NEW: German Name
+  hex_code: string;
+  meaning_en: string;
+  meaning_de: string;
+  // ✨ NEW FIELDS
+  feeling_en: string;
+  feeling_de: string;
+  perfect_for_en: string;
+  perfect_for_de: string;
+  quote_en: string;
+  quote_de: string;
+  is_active: boolean;
+  sort_order: number;
+};
 
 export default function StorefrontSettings() {
   const [settings, setSettings] = useState<any>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // ✨ NEW: Color Manager State
+  const [colors, setColors] = useState<ProductColor[]>([]);
+  const [isLoadingColors, setIsLoadingColors] = useState(true);
+  const [editingColor, setEditingColor] = useState<ProductColor | null>(null); // If null, list view. If object, edit mode.
+  const [isSavingColor, setIsSavingColor] = useState(false);
+
   // The fixed ID we used in the SQL command
   const SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
 
   useEffect(() => {
     fetchSettings();
+    fetchColors(); // ✨ Fetch colors on load
   }, []);
 
   const fetchSettings = async () => {
@@ -29,6 +56,18 @@ export default function StorefrontSettings() {
     } else if (error) {
       console.error("Error fetching settings:", error);
     }
+  };
+
+  // ✨ NEW: Fetch Colors
+  const fetchColors = async () => {
+    const { data, error } = await supabase
+      .from('product_colors')
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (data) setColors(data);
+    if (error) console.error("Error fetching colors:", error);
+    setIsLoadingColors(false);
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,10 +104,11 @@ export default function StorefrontSettings() {
       .update({
         hero_image_url: settings.hero_image_url,
         hero_vertical_shift: settings.hero_vertical_shift,
-        hero_zoom: settings.hero_zoom || '100%', // ✨ Added Zoom saving
-        hero_title: settings.hero_title,       // ✨ Save Title
-        hero_subtitle: settings.hero_subtitle, // ✨ Save Subtitle
+        hero_zoom: settings.hero_zoom || '100%', 
+        hero_title: settings.hero_title,      
+        hero_subtitle: settings.hero_subtitle, 
         show_hero_image: settings.show_hero_image,
+        is_donation_active: settings.is_donation_active, // ✨ Save Donation Toggle
         updated_at: new Date().toISOString(),
       })
       .eq('id', SETTINGS_ID);
@@ -79,6 +119,69 @@ export default function StorefrontSettings() {
       alert("Storefront updated successfully!");
     }
     setIsSaving(false);
+  };
+
+  // ✨ NEW: Handle Color Save (Create or Update)
+  const handleSaveColor = async () => {
+      if (!editingColor) return;
+      if (!editingColor.name || !editingColor.hex_code) {
+          alert("Name and Color Code are required.");
+          return;
+      }
+      setIsSavingColor(true);
+
+      const colorData = {
+          name: editingColor.name,
+          name_de: editingColor.name_de, // ✨ Save German Name
+          hex_code: editingColor.hex_code,
+          meaning_en: editingColor.meaning_en,
+          meaning_de: editingColor.meaning_de,
+          feeling_en: editingColor.feeling_en, // ✨ NEW
+          feeling_de: editingColor.feeling_de, // ✨ NEW
+          perfect_for_en: editingColor.perfect_for_en, // ✨ NEW
+          perfect_for_de: editingColor.perfect_for_de, // ✨ NEW
+          quote_en: editingColor.quote_en, // ✨ NEW
+          quote_de: editingColor.quote_de, // ✨ NEW
+          is_active: editingColor.is_active
+      };
+
+      if (editingColor.id) {
+          // Update
+          const { error } = await supabase.from('product_colors').update(colorData).eq('id', editingColor.id);
+          if (error) alert("Error updating color: " + error.message);
+      } else {
+          // Insert
+          const { error } = await supabase.from('product_colors').insert([{
+            ...colorData,
+            sort_order: colors.length + 1
+          }]);
+          if (error) alert("Error creating color: " + error.message);
+      }
+
+      setEditingColor(null);
+      fetchColors();
+      setIsSavingColor(false);
+  };
+
+  // ✨ NEW: Toggle Color Active Status
+  const toggleColorStatus = async (color: ProductColor) => {
+      const newStatus = !color.is_active;
+      // Optimistic Update
+      setColors(colors.map(c => c.id === color.id ? { ...c, is_active: newStatus } : c));
+      
+      const { error } = await supabase.from('product_colors').update({ is_active: newStatus }).eq('id', color.id);
+      if (error) {
+          alert("Error updating status");
+          fetchColors(); // Revert on error
+      }
+  };
+
+  // ✨ NEW: Delete Color
+  const handleDeleteColor = async (id: string) => {
+      if (!confirm("Are you sure you want to delete this color? This cannot be undone.")) return;
+      const { error } = await supabase.from('product_colors').delete().eq('id', id);
+      if (error) alert("Error deleting: " + error.message);
+      else fetchColors();
   };
 
   if (!settings) return (
@@ -97,8 +200,8 @@ export default function StorefrontSettings() {
             <div className="flex items-center gap-2 text-[#C9A24D] font-bold text-xs uppercase tracking-widest mb-2">
               <Layout size={14} /> Admin Control
             </div>
-            <h1 className="text-4xl font-bold text-[#1F1F1F]">Hero Section Settings</h1>
-            <p className="text-[#1F1F1F]/50 mt-1 font-medium">Customize Rosetta's homepage visuals without touching code.</p>
+            <h1 className="text-4xl font-bold text-[#1F1F1F]">Hero & Checkout Settings</h1>
+            <p className="text-[#1F1F1F]/50 mt-1 font-medium">Customize visuals, colors, and features.</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -139,6 +242,26 @@ export default function StorefrontSettings() {
                   {settings.show_hero_image ? <><Eye size={16} /> Active</> : <><EyeOff size={16} /> Hidden</>}
                 </button>
               </div>
+            </div>
+
+            {/* ✨ NEW: Checkout Configuration (Donations) */}
+            <div className="bg-white p-6 rounded-[2rem] border border-black/5 shadow-sm space-y-4">
+               <div className="flex items-center gap-2 mb-2 text-[#C9A24D]">
+                   <Droplets size={20} />
+                   <h3 className="font-bold text-lg text-[#1F1F1F]">Checkout Features</h3>
+               </div>
+               <div className="flex items-center justify-between p-4 bg-[#F6EFE6] rounded-xl border border-[#C9A24D]/20">
+                   <div>
+                       <p className="font-bold text-sm text-[#1F1F1F]">Water Well & Tips</p>
+                       <p className="text-[10px] text-[#1F1F1F]/50">Enable donation/tip section at checkout.</p>
+                   </div>
+                   <button 
+                       onClick={() => setSettings({...settings, is_donation_active: !settings.is_donation_active})}
+                       className={`w-12 h-6 rounded-full transition-all flex items-center p-1 ${settings.is_donation_active ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}
+                   >
+                       <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                   </button>
+               </div>
             </div>
 
             {/* ✨ NEW: Hero Text Inputs */}
@@ -217,42 +340,166 @@ export default function StorefrontSettings() {
             </div>
           </div>
 
-          {/* RIGHT: Live Preview */}
-          <div className="lg:col-span-7 space-y-4">
-            <h2 className="font-bold text-sm uppercase tracking-widest text-[#1F1F1F]/40 ml-2">Real-time Preview</h2>
-            <div className="relative aspect-[4/5] md:aspect-video lg:aspect-[4/5] w-full rounded-[3rem] bg-white border-8 border-white shadow-2xl overflow-hidden flex items-center justify-center">
-              
-              {settings.show_hero_image ? (
-                <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
-                    <img 
-                    src={settings.hero_image_url} 
-                    className="absolute w-full h-full object-cover transition-all duration-300"
-                    style={{ 
-                        // ✨ FIXED: Shift logic uses translateY for better control with zoom
-                        transform: `
-                          scale(${parseInt(settings.hero_zoom || '100') / 100}) 
-                          translateY(${(parseInt(settings.hero_vertical_shift || '50') - 50) * 0.5}%)
-                        `
-                    }}
-                    />
-                </div>
-              ) : (
-                <div className="absolute inset-0 bg-[#F6EFE6] flex items-center justify-center text-[#1F1F1F]/10 font-serif italic text-4xl italic">Rosetas</div>
-              )}
+          {/* RIGHT: Live Preview & Color Manager */}
+          <div className="lg:col-span-7 space-y-10">
+            
+            {/* HERO PREVIEW */}
+            <div className="space-y-4">
+                <h2 className="font-bold text-sm uppercase tracking-widest text-[#1F1F1F]/40 ml-2">Real-time Preview</h2>
+                <div className="relative aspect-[4/5] md:aspect-video lg:aspect-[4/5] w-full rounded-[3rem] bg-white border-8 border-white shadow-2xl overflow-hidden flex items-center justify-center">
+                
+                {settings.show_hero_image ? (
+                    <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
+                        <img 
+                        src={settings.hero_image_url} 
+                        className="absolute w-full h-full object-cover transition-all duration-300"
+                        style={{ 
+                            // ✨ FIXED: Shift logic uses translateY for better control with zoom
+                            transform: `
+                            scale(${parseInt(settings.hero_zoom || '100') / 100}) 
+                            translateY(${(parseInt(settings.hero_vertical_shift || '50') - 50) * 0.5}%)
+                            `
+                        }}
+                        />
+                    </div>
+                ) : (
+                    <div className="absolute inset-0 bg-[#F6EFE6] flex items-center justify-center text-[#1F1F1F]/10 font-serif italic text-4xl italic">Rosetas</div>
+                )}
 
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
-              
-              {/* ✨ Updated Preview to use editable text */}
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-4/5 z-20">
-                <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-black/5 text-center">
-                  <p className="font-bold text-[#1F1F1F] text-lg leading-tight">{settings.hero_title || 'Glitter Rose Edition'}</p>
-                  <p className="text-[10px] text-[#1F1F1F]/40 uppercase font-black tracking-widest mt-1">{settings.hero_subtitle || 'Premium Velvet Finish'}</p>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                
+                {/* ✨ Updated Preview to use editable text */}
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-4/5 z-20">
+                    <div className="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-black/5 text-center">
+                    <p className="font-bold text-[#1F1F1F] text-lg leading-tight">{settings.hero_title || 'Glitter Rose Edition'}</p>
+                    <p className="text-[10px] text-[#1F1F1F]/40 uppercase font-black tracking-widest mt-1">{settings.hero_subtitle || 'Premium Velvet Finish'}</p>
+                    </div>
                 </div>
-              </div>
+                </div>
             </div>
+
+            {/* ✨ NEW: DYNAMIC COLOR MANAGER */}
+            <div className="space-y-6 pt-8 border-t border-black/5">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold text-[#1F1F1F] flex items-center gap-2"><Palette className="text-[#C9A24D]" /> Product Color Manager</h2>
+                        <p className="text-sm text-[#1F1F1F]/50">Manage seasonal colors, meanings, and visibility.</p>
+                    </div>
+                    {!editingColor && (
+                        <button 
+                            onClick={() => setEditingColor({ 
+                                name: '', name_de: '', hex_code: '#000000', 
+                                meaning_en: '', meaning_de: '', 
+                                feeling_en: '', feeling_de: '', 
+                                perfect_for_en: '', perfect_for_de: '', 
+                                quote_en: '', quote_de: '', 
+                                is_active: true, sort_order: colors.length 
+                            })}
+                            className="bg-[#1F1F1F] text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-[#C9A24D] transition-colors"
+                        >
+                            <Plus size={16} /> Add Color
+                        </button>
+                    )}
+                </div>
+
+                {editingColor ? (
+                    <div className="bg-white p-6 rounded-[2rem] border border-black/5 shadow-sm space-y-6 animate-in fade-in slide-in-from-top-4">
+                        <div className="flex justify-between items-center border-b border-black/5 pb-4 mb-4">
+                            <h3 className="font-bold text-lg">{editingColor.id ? "Edit Color" : "New Color"}</h3>
+                            <button onClick={() => setEditingColor(null)} className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"><X size={20}/></button>
+                        </div>
+                        
+                        {/* BASIC INFO */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-bold uppercase text-[#1F1F1F]/40 mb-1 block">Hex Code</label>
+                                <div className="flex items-center gap-2">
+                                    <input type="color" value={editingColor.hex_code} onChange={e => setEditingColor({...editingColor, hex_code: e.target.value})} className="w-12 h-12 rounded-xl cursor-pointer border-none bg-transparent" />
+                                    <input type="text" value={editingColor.hex_code} onChange={e => setEditingColor({...editingColor, hex_code: e.target.value})} className="w-full bg-[#F6EFE6] rounded-xl px-4 py-3 font-mono text-sm outline-none" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase text-[#1F1F1F]/40 mb-1 block">Color Name</label>
+                                <input type="text" value={editingColor.name} onChange={e => setEditingColor({...editingColor, name: e.target.value})} placeholder="English (e.g. Red)" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-[#C9A24D] mb-2" />
+                                <input type="text" value={editingColor.name_de} onChange={e => setEditingColor({...editingColor, name_de: e.target.value})} placeholder="German (z.B. Rot)" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm font-bold outline-none focus:ring-2 focus:ring-[#C9A24D]" />
+                            </div>
+                        </div>
+
+                        {/* MEANING (Previous) */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase text-[#1F1F1F]/40 flex items-center gap-2"><Palette size={12}/> Meaning</label>
+                            <input type="text" value={editingColor.meaning_en} onChange={e => setEditingColor({...editingColor, meaning_en: e.target.value})} placeholder="English (e.g. Passion & Love)" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C9A24D] mb-2" />
+                            <input type="text" value={editingColor.meaning_de} onChange={e => setEditingColor({...editingColor, meaning_de: e.target.value})} placeholder="German (z.B. Leidenschaft & Liebe)" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C9A24D]" />
+                        </div>
+
+                        {/* ✨ NEW FIELDS */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase text-[#1F1F1F]/40 flex items-center gap-2"><Heart size={12}/> Feeling</label>
+                            <input type="text" value={editingColor.feeling_en} onChange={e => setEditingColor({...editingColor, feeling_en: e.target.value})} placeholder="English (e.g. Warm & Cozy)" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C9A24D] mb-2" />
+                            <input type="text" value={editingColor.feeling_de} onChange={e => setEditingColor({...editingColor, feeling_de: e.target.value})} placeholder="German (z.B. Warm & Gemütlich)" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C9A24D]" />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase text-[#1F1F1F]/40 flex items-center gap-2"><Star size={12}/> Perfect For</label>
+                            <input type="text" value={editingColor.perfect_for_en} onChange={e => setEditingColor({...editingColor, perfect_for_en: e.target.value})} placeholder="English (e.g. Anniversaries)" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C9A24D] mb-2" />
+                            <input type="text" value={editingColor.perfect_for_de} onChange={e => setEditingColor({...editingColor, perfect_for_de: e.target.value})} placeholder="German (z.B. Jahrestage)" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C9A24D]" />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase text-[#1F1F1F]/40 flex items-center gap-2"><Quote size={12}/> Quote</label>
+                            <input type="text" value={editingColor.quote_en} onChange={e => setEditingColor({...editingColor, quote_en: e.target.value})} placeholder="English Quote" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C9A24D] mb-2" />
+                            <input type="text" value={editingColor.quote_de} onChange={e => setEditingColor({...editingColor, quote_de: e.target.value})} placeholder="German Quote" className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C9A24D]" />
+                        </div>
+
+                        <div className="flex justify-end pt-4 gap-2">
+                            <button onClick={() => setEditingColor(null)} className="px-6 py-3 rounded-xl font-bold text-[#1F1F1F]/60 hover:text-[#1F1F1F]">Cancel</button>
+                            <button onClick={handleSaveColor} disabled={isSavingColor} className="bg-[#C9A24D] text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-[#b08d45] disabled:opacity-50">
+                                {isSavingColor ? <Loader2 className="animate-spin"/> : <><Save size={18}/> Save Color</>}
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {isLoadingColors ? (
+                            <div className="col-span-2 flex justify-center py-10"><Loader2 className="animate-spin text-[#C9A24D]" /></div>
+                        ) : colors.map((color) => (
+                            <div key={color.id} className={`p-4 rounded-2xl border transition-all flex items-center gap-4 ${color.is_active ? 'bg-white border-black/5' : 'bg-gray-50 border-black/5 opacity-60'}`}>
+                                <div className="w-12 h-12 rounded-full shadow-inner border border-black/5 flex-shrink-0" style={{ backgroundColor: color.hex_code }} />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="font-bold text-[#1F1F1F] truncate">{color.name}</h4>
+                                        <div className={`w-2 h-2 rounded-full ${color.is_active ? 'bg-green-500' : 'bg-red-400'}`} />
+                                    </div>
+                                    <p className="text-xs text-[#1F1F1F]/50 truncate">{color.meaning_en}</p>
+                                </div>
+                                <div className="flex gap-1">
+                                    <button onClick={() => toggleColorStatus(color)} className={`p-2 rounded-lg transition-colors ${color.is_active ? 'hover:bg-red-50 text-green-600 hover:text-red-500' : 'hover:bg-green-50 text-gray-400 hover:text-green-600'}`}>
+                                        {color.is_active ? <Eye size={16}/> : <EyeOff size={16}/>}
+                                    </button>
+                                    <button onClick={() => setEditingColor(color)} className="p-2 hover:bg-[#F6EFE6] text-[#1F1F1F]/60 hover:text-[#1F1F1F] rounded-lg transition-colors">
+                                        {/* Edit icon using SVG for simplicity */}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                    </button>
+                                    <button onClick={() => handleDeleteColor(color.id!)} className="p-2 hover:bg-red-50 text-red-400 rounded-lg transition-colors">
+                                        <Trash2 size={16}/>
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
           </div>
 
         </div>
+
+        {/* ✨ NEW SECTION: Localization & Categories */}
+        <div className="border-t border-black/5 pt-8">
+            <h2 className="text-2xl font-bold text-[#1F1F1F] mb-6">Localization & Categories</h2>
+            <CategoryTranslationManager />
+        </div>
+
       </div>
     </div>
   );

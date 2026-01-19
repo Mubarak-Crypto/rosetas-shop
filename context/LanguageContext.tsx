@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase'; // ✨ Import Supabase
 
 type Language = 'DE' | 'EN';
 
@@ -8,6 +9,7 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   t: (key: string) => string;
+  getCategoryName: (key: string) => string; // ✨ NEW FUNCTION
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -209,12 +211,28 @@ const translations: Record<Language, Record<string, string>> = {
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
   const [language, setLanguage] = useState<Language>('DE');
+  
+  // ✨ Store translations in state
+  const [categoryDict, setCategoryDict] = useState<Record<string, { en: string, de: string }>>({});
 
   useEffect(() => {
     const savedLang = localStorage.getItem('language') as Language;
     if (savedLang) {
       setLanguage(savedLang);
     }
+    
+    // ✨ Fetch translations once on load
+    const fetchTranslations = async () => {
+        const { data } = await supabase.from('category_translations').select('*');
+        if (data) {
+            const dict: Record<string, { en: string, de: string }> = {};
+            data.forEach((item: any) => {
+                dict[item.category_key] = { en: item.name_en, de: item.name_de };
+            });
+            setCategoryDict(dict);
+        }
+    };
+    fetchTranslations();
   }, []);
 
   const handleSetLanguage = (lang: Language) => {
@@ -227,8 +245,15 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
     return translations[language][key] || key;
   };
 
+  // ✨ Helper to get the translated category name
+  const getCategoryName = (key: string) => {
+      const entry = categoryDict[key];
+      if (!entry) return key; // Fallback to original if not found
+      return language === 'EN' ? entry.en : entry.de;
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t, getCategoryName }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -238,4 +263,4 @@ export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) throw new Error("useLanguage must be used within LanguageProvider");
   return context;
-};  
+};

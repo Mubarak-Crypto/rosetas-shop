@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { ArrowLeft, Lock, ShieldCheck, Mail, Phone, Globe, Zap, AlertCircle, Truck, Gift, Package } from "lucide-react"; // ✨ Added Gift & Package icons
+// ✨ Added 'Check' to the imports below to fix the ReferenceError
+import { ArrowLeft, Lock, ShieldCheck, Mail, Phone, Globe, Zap, AlertCircle, Truck, Gift, Package, Coffee, Droplets, Heart, Check } from "lucide-react"; 
 import Link from "next/link";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext"; 
@@ -64,18 +65,6 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
   "Iceland": { rate10kg: 39, rate20kg: 54 },
   "Liechtenstein": { rate10kg: 39, rate20kg: 54 },
   "United States": { rate10kg: 80, rate20kg: 150 },
-  // "Canada": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
-  // "Mexico": { rate10kg: 79, rate20kg: 146 }, // Removed (Blacklisted)
-  // "Argentina": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
-  // "Brazil": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
-  // "Bahamas": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
-  // "Barbados": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
-  // "Jamaica": { rate10kg: 79, rate20kg: 147 }, // Removed (Blacklisted)
-  // "Puerto Rico": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
-  // "Costa Rica": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
-  // "Colombia": { rate10kg: 79, rate20kg: 145 }, // Removed (Blacklisted)
-  // "Peru": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
-  // "Paraguay": { rate10kg: 79, rate20kg: 150 }, // Removed (Blacklisted)
   "Chile": { rate10kg: 79, rate20kg: 150 },
   "Egypt": { rate10kg: 65, rate20kg: 78 },
   "Algeria": { rate10kg: 65, rate20kg: 78 },
@@ -109,8 +98,30 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
   "Germany": { rate10kg: 11.49, rate20kg: 19.49, express10kg: 40, express20kg: 45 }
 };
 
-// ✨ UPDATED PaymentForm: Now accepts packagingType AND giftNote
-function PaymentForm({ amount, formData, cart, isExpress, packagingType, giftNote }: { amount: number, formData: any, cart: any[], isExpress: boolean, packagingType: 'standard' | 'gift', giftNote: string }) {
+// ✨ UPDATED PaymentForm: Now accepts Tip & Donation Props
+function PaymentForm({ 
+  amount, 
+  formData, 
+  cart, 
+  isExpress, 
+  packagingType, 
+  giftNote,
+  tipAmount, 
+  donationAmount, 
+  donorName, 
+  isPublicDonor 
+}: { 
+  amount: number, 
+  formData: any, 
+  cart: any[], 
+  isExpress: boolean, 
+  packagingType: 'standard' | 'gift', 
+  giftNote: string,
+  tipAmount: number,
+  donationAmount: number,
+  donorName: string,
+  isPublicDonor: boolean
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const { t } = useLanguage(); 
@@ -134,7 +145,6 @@ function PaymentForm({ amount, formData, cart, isExpress, packagingType, giftNot
     } else if (paymentIntent && paymentIntent.status === "succeeded") {
       
       // ✨ NEW LOGIC: Append Gift Note to Shipping Method String
-      // e.g. "Express + Gift Packaging (Note: Happy Birthday!)"
       let shippingMethodString = isExpress ? "Express" : "Standard";
       if (packagingType === 'gift') {
         shippingMethodString += " + Gift Packaging";
@@ -143,6 +153,7 @@ function PaymentForm({ amount, formData, cart, isExpress, packagingType, giftNot
         }
       }
 
+      // ✨ Save Tip & Donation Data to Supabase
       const { error: dbError } = await supabase.from('orders').insert([{
           customer_name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
@@ -155,7 +166,11 @@ function PaymentForm({ amount, formData, cart, isExpress, packagingType, giftNot
           items: cart, 
           total: amount,
           status: 'paid',
-          payment_id: paymentIntent.id
+          payment_id: paymentIntent.id,
+          tip_amount: tipAmount,          // ✨ NEW
+          donation_amount: donationAmount, // ✨ NEW
+          donor_name: donorName,          // ✨ NEW
+          donor_is_public: isPublicDonor  // ✨ NEW
       }]);
 
       if (dbError) console.error("Error saving order:", dbError);
@@ -169,7 +184,8 @@ function PaymentForm({ amount, formData, cart, isExpress, packagingType, giftNot
           address: `${formData.address}, ${formData.city}, ${formData.country}`,
           items: cart,
           total: amount,
-          shippingMethod: shippingMethodString
+          // ✨ HACK: Append Tip/Donation to shipping string so it appears in emails without backend changes
+          shippingMethod: `${shippingMethodString}${tipAmount > 0 ? ` + Tip: €${tipAmount.toFixed(2)}` : ""}${donationAmount > 0 ? ` + Donation: €${donationAmount.toFixed(2)}` : ""}`
         }),
       });
 
@@ -197,10 +213,37 @@ export default function CheckoutPage() {
   const [clientSecret, setClientSecret] = useState("");
   const [isExpress, setIsExpress] = useState(false); 
   const [packagingType, setPackagingType] = useState<'standard' | 'gift'>('standard'); 
-  const [giftNote, setGiftNote] = useState(""); // ✨ NEW: Gift Note State
+  const [giftNote, setGiftNote] = useState(""); 
   const [agreedToPolicy, setAgreedToPolicy] = useState(false); 
   const [agreedToCustoms, setAgreedToCustoms] = useState(false); 
   const [agreedToWithdrawal, setAgreedToWithdrawal] = useState(false); 
+
+  // ✨ NEW STATES: Tipping & Donation
+  const [tipOption, setTipOption] = useState<string | null>(null);
+  const [tipAmount, setTipAmount] = useState(0);
+
+  const [showDonation, setShowDonation] = useState(false);
+  const [donationAmount, setDonationAmount] = useState(0);
+  const [donationOption, setDonationOption] = useState<number | 'custom' | null>(null);
+  const [donorName, setDonorName] = useState("");
+  const [isPublicDonor, setIsPublicDonor] = useState(false);
+  
+  // ✨ NEW: Settings State to check if Donation is active
+  const [isDonationActive, setIsDonationActive] = useState(false);
+
+  // ✨ Fetch Settings on Load
+  useEffect(() => {
+      const fetchSettings = async () => {
+          const { data } = await supabase
+              .from('storefront_settings')
+              .select('is_donation_active')
+              .eq('id', '00000000-0000-0000-0000-000000000000') // Fixed ID used in admin
+              .single();
+          
+          if (data) setIsDonationActive(data.is_donation_active);
+      };
+      fetchSettings();
+  }, []);
 
   const [formData, setFormData] = useState({
     email: "", firstName: "", lastName: "", address: "", city: "", zip: "", phone: "", country: "Germany"
@@ -215,7 +258,6 @@ export default function CheckoutPage() {
 
     let cost = weight20kg ? countryData.rate20kg : countryData.rate10kg;
     
-    // Applying Express Surcharge for Germany
     if (isExpress && formData.country === "Germany") {
         cost = weight20kg ? (countryData.express20kg || cost) : (countryData.express10kg || cost);
     }
@@ -226,8 +268,34 @@ export default function CheckoutPage() {
   // Calculate Packaging Cost
   const packagingCost = packagingType === 'gift' ? 10 : 0;
 
-  // Total includes packaging
-  const finalTotal = cartTotal + shippingCost + packagingCost;
+  // ✨ NEW: Total includes packaging + Tip + Donation
+  const finalTotal = cartTotal + shippingCost + packagingCost + tipAmount + donationAmount;
+
+  // ✨ TIP HANDLER
+  const handleTipClick = (type: string) => {
+    if (tipOption === type && type !== 'custom') {
+        setTipOption(null);
+        setTipAmount(0);
+    } else {
+        setTipOption(type);
+        if (type === '3%') setTipAmount(Math.round((cartTotal * 0.03) * 100) / 100);
+        else if (type === '5%') setTipAmount(Math.round((cartTotal * 0.05) * 100) / 100);
+        else if (type === '5eur') setTipAmount(5);
+        else if (type === 'custom') setTipAmount(0); 
+    }
+  };
+
+  // ✨ DONATION HANDLER
+  const handleDonationClick = (val: number | 'custom') => {
+      if (donationOption === val && val !== 'custom') {
+          setDonationOption(null);
+          setDonationAmount(0);
+      } else {
+          setDonationOption(val);
+          if (typeof val === 'number') setDonationAmount(val);
+          else setDonationAmount(0);
+      }
+  };
 
   const isNonEU = useMemo(() => !euCountries.includes(formData.country), [formData.country]);
 
@@ -248,7 +316,6 @@ export default function CheckoutPage() {
     );
   }, [cart]);
 
-  // ✨ CHECK IF COUNTRY IS BLACKLISTED
   const isBlacklisted = shippingBlacklist.includes(formData.country);
 
   const canProceed = useMemo(() => {
@@ -257,11 +324,13 @@ export default function CheckoutPage() {
     const customsValid = isNonEU ? agreedToCustoms : true;
     const withdrawalValid = (!isNonEU && hasPersonalization) ? agreedToWithdrawal : true; 
     
-    // ✨ BLOCK IF BLACKLISTED
+    // ✨ NEW: Gift Note Validation
+    const giftNoteValid = packagingType === 'gift' ? giftNote.trim().length > 0 : true;
+
     if (isBlacklisted) return false;
 
-    return hasAddress && policyValid && customsValid && withdrawalValid;
-  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted]);
+    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid;
+  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -275,6 +344,12 @@ export default function CheckoutPage() {
           alert(`We are sorry, but we currently do not ship to ${formData.country}.`);
           return;
       }
+      
+      if (packagingType === 'gift' && giftNote.trim().length === 0) {
+          alert(language === 'EN' ? "Please enter a message or occasion for your gift packaging." : "Bitte geben Sie eine Nachricht oder einen Anlass für Ihre Geschenkverpackung ein.");
+          return;
+      }
+
       alert(language === 'EN' ? "Please complete all fields and agree to the required policies." : "Bitte füllen Sie alle Felder aus und stimmen Sie den erforderlichen Bedingungen zu.");
       return;
     }
@@ -283,13 +358,14 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (step === 2 && finalTotal > 0) {
+      // Small debounce could be added here if needed, but for now simple update is fine
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount: Math.round(finalTotal * 100) }),
       }).then((res) => res.json()).then((data) => setClientSecret(data.clientSecret));
     }
-  }, [step, finalTotal]);
+  }, [step, finalTotal]); // Updates when tip/donation changes total
 
   if (cart.length === 0) return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex flex-col items-center justify-center gap-4">
@@ -319,6 +395,7 @@ export default function CheckoutPage() {
 
           {step === 1 ? (
             <form onSubmit={handleDetailsSubmit} className="space-y-6 animate-in fade-in slide-in-from-left-4">
+              {/* ... STEP 1 FORM CONTENT ... */}
               <div className="space-y-4">
                 <h2 className="text-2xl font-bold flex items-center gap-2"><ShieldCheck className="text-[#C9A24D]" /> {t('checkout_contact')}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -335,216 +412,29 @@ export default function CheckoutPage() {
                     {Object.keys(shippingRates).concat(shippingBlacklist).sort().map(country => <option key={country} value={country}>{country}</option>)}
                   </select>
                 </div>
-
-                {/* ✨ NEW: Blacklist Error Message */}
-                {isBlacklisted && (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 animate-pulse">
-                        <AlertCircle size={20} />
-                        <span className="text-sm font-bold">
-                            {language === 'EN' 
-                                ? `We currently do not ship to ${formData.country}.` 
-                                : `Wir liefern derzeit nicht nach ${formData.country}.`}
-                        </span>
-                    </div>
-                )}
-
-                {/* 🚀 Express Toggle for Germany */}
+                {isBlacklisted && <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 animate-pulse"><AlertCircle size={20} /><span className="text-sm font-bold">{language === 'EN' ? `We currently do not ship to ${formData.country}.` : `Wir liefern derzeit nicht nach ${formData.country}.`}</span></div>}
                 {formData.country === "Germany" && (
-                    <div 
-                      className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${isExpress ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-lg' : 'bg-white/50 border-black/10'}`} 
-                      onClick={() => setIsExpress(!isExpress)}
-                      style={{ backgroundColor: isExpress ? '#1F1F1F' : '' }} /* ✅ FORCE INLINE STYLE */
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-lg ${isExpress ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-gray-400'}`}><Zap size={18} /></div>
-                            <div>
-                              <p className="text-sm font-bold" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>Express Shipping (Next Day)</p>
-                              <p className={`text-[10px] ${isExpress ? 'text-white/60' : 'text-gray-400'}`} style={{ color: isExpress ? 'rgba(255,255,255,0.6)' : '' }}>Priority handling & fast delivery</p>
-                            </div>
-                        </div>
-                        <p className="font-bold" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>€{needs20kg ? "45.00" : "40.00"}</p>
+                    <div className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${isExpress ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-lg' : 'bg-white/50 border-black/10'}`} onClick={() => setIsExpress(!isExpress)} style={{ backgroundColor: isExpress ? '#1F1F1F' : '' }}>
+                        <div className="flex items-center gap-3"><div className={`p-2 rounded-lg ${isExpress ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-gray-400'}`}><Zap size={18} /></div><div><p className="text-sm font-bold" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>Express Shipping (Next Day)</p><p className={`text-[10px] ${isExpress ? 'text-white/60' : 'text-gray-400'}`} style={{ color: isExpress ? 'rgba(255,255,255,0.6)' : '' }}>Priority handling & fast delivery</p></div></div><p className="font-bold" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>€{needs20kg ? "45.00" : "40.00"}</p>
                     </div>
                 )}
-
-                <div className="grid grid-cols-2 gap-4">
-                  <input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
-                  <input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
-                </div>
-
-                {/* 📍 ADDRESS AUTOCOMPLETE FIELD */}
-                <AutoComplete
-                    apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} 
-                    onPlaceSelected={(place) => {
-                      const addressComponents = place.address_components;
-                      const city = addressComponents.find((c: any) => c.types.includes("locality"))?.long_name || "";
-                      const zip = addressComponents.find((c: any) => c.types.includes("postal_code"))?.long_name || "";
-                      setFormData({ ...formData, address: place.formatted_address, city, zip });
-                    }}
-                    options={{ types: ["address"], fields: ["formatted_address", "address_components"] }}
-                    className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]"
-                    placeholder={`${t('checkout_street')} * (Start typing your address...)`}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <input required type="text" name="city" placeholder={`${t('checkout_city')} *`} value={formData.city} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
-                  <input required type="text" name="zip" placeholder={`${t('checkout_zip')} *`} value={formData.zip} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
-                </div>
-
-                {/* ✨ NEW: PACKAGING OPTIONS SELECTION */}
+                <div className="grid grid-cols-2 gap-4"><input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
+                <AutoComplete apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} onPlaceSelected={(place) => { const addressComponents = place.address_components; const city = addressComponents.find((c: any) => c.types.includes("locality"))?.long_name || ""; const zip = addressComponents.find((c: any) => c.types.includes("postal_code"))?.long_name || ""; setFormData({ ...formData, address: place.formatted_address, city, zip }); }} options={{ types: ["address"], fields: ["formatted_address", "address_components"] }} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" placeholder={`${t('checkout_street')} * (Start typing your address...)`} />
+                <div className="grid grid-cols-2 gap-4"><input required type="text" name="city" placeholder={`${t('checkout_city')} *`} value={formData.city} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="zip" placeholder={`${t('checkout_zip')} *`} value={formData.zip} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
+                
                 <div className="space-y-4 pt-6 border-t border-black/10">
                   <h2 className="text-2xl font-bold">{language === 'EN' ? "Packaging Options" : "Verpackungsoptionen"}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Standard Option */}
-                    <div 
-                      onClick={() => setPackagingType('standard')}
-                      className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-32 ${packagingType === 'standard' ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-md' : 'bg-white/50 border-black/10 hover:border-[#C9A24D]'}`}
-                      style={{ backgroundColor: packagingType === 'standard' ? '#1F1F1F' : '' }}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className={`p-2 rounded-lg ${packagingType === 'standard' ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-[#1F1F1F]/40'}`}>
-                          <Package size={20} />
-                        </div>
-                        {packagingType === 'standard' && <div className="w-3 h-3 rounded-full bg-[#C9A24D] shadow-[0_0_10px_#C9A24D]" />}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm uppercase tracking-wide" style={{ color: packagingType === 'standard' ? 'white' : '#1F1F1F' }}>
-                          {language === 'EN' ? "Standard" : "Standard"}
-                        </p>
-                        <p className={`text-xs ${packagingType === 'standard' ? 'text-white/60' : 'text-[#1F1F1F]/40'}`} style={{ color: packagingType === 'standard' ? 'rgba(255,255,255,0.6)' : '' }}>
-                          {language === 'EN' ? "Secure & Safe" : "Sicher & Geschützt"}
-                        </p>
-                      </div>
-                      <p className="font-bold text-sm text-right mt-auto" style={{ color: packagingType === 'standard' ? 'white' : '#1F1F1F' }}>{language === 'EN' ? "Free" : "Kostenlos"}</p>
-                    </div>
-
-                    {/* Gift Option */}
-                    <div 
-                      onClick={() => setPackagingType('gift')}
-                      className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${packagingType === 'gift' ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-md' : 'bg-white/50 border-black/10 hover:border-[#C9A24D]'}`}
-                      style={{ 
-                        backgroundColor: packagingType === 'gift' ? '#1F1F1F' : '',
-                        height: packagingType === 'gift' ? 'auto' : '8rem' /* Expand height when gift selected to fit input */
-                      }}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className={`p-2 rounded-lg ${packagingType === 'gift' ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-[#1F1F1F]/40'}`}>
-                          <Gift size={20} />
-                        </div>
-                        {packagingType === 'gift' && <div className="w-3 h-3 rounded-full bg-[#C9A24D] shadow-[0_0_10px_#C9A24D]" />}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm uppercase tracking-wide" style={{ color: packagingType === 'gift' ? 'white' : '#1F1F1F' }}>
-                          {language === 'EN' ? "Gift Packaging" : "Geschenkverpackung"}
-                        </p>
-                        <p className={`text-xs ${packagingType === 'gift' ? 'text-white/60' : 'text-[#1F1F1F]/40'}`} style={{ color: packagingType === 'gift' ? 'rgba(255,255,255,0.6)' : '' }}>
-                          {language === 'EN' ? "Themed & Decorative" : "Thematisch & Dekorativ"}
-                        </p>
-                      </div>
-                      
-                      {/* ✨ NEW: Optional Note Input - Only appears when Gift is selected */}
-                      {packagingType === 'gift' && (
-                        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
-                          <textarea
-                            placeholder={language === 'EN' ? "Occasion (e.g. Birthday) or short note..." : "Anlass (z.B. Geburtstag) oder kurze Notiz..."}
-                            value={giftNote}
-                            onChange={(e) => setGiftNote(e.target.value)}
-                            className="w-full bg-white/10 border border-white/20 rounded-lg p-2 text-xs text-white placeholder:text-white/40 outline-none focus:border-[#C9A24D] resize-none"
-                            rows={2}
-                          />
-                        </div>
-                      )}
-
-                      <p className="font-bold text-sm text-right mt-3 text-[#C9A24D]">+ €10.00</p>
-                    </div>
+                    <div onClick={() => setPackagingType('standard')} className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-32 ${packagingType === 'standard' ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-md' : 'bg-white/50 border-black/10 hover:border-[#C9A24D]'}`} style={{ backgroundColor: packagingType === 'standard' ? '#1F1F1F' : '' }}><div className="flex justify-between items-start"><div className={`p-2 rounded-lg ${packagingType === 'standard' ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-[#1F1F1F]/40'}`}><Package size={20} /></div>{packagingType === 'standard' && <div className="w-3 h-3 rounded-full bg-[#C9A24D] shadow-[0_0_10px_#C9A24D]" />}</div><div><p className="font-bold text-sm uppercase tracking-wide" style={{ color: packagingType === 'standard' ? 'white' : '#1F1F1F' }}>{language === 'EN' ? "Standard" : "Standard"}</p><p className={`text-xs ${packagingType === 'standard' ? 'text-white/60' : 'text-[#1F1F1F]/40'}`} style={{ color: packagingType === 'standard' ? 'rgba(255,255,255,0.6)' : '' }}>{language === 'EN' ? "Secure & Safe" : "Sicher & Geschützt"}</p></div><p className="font-bold text-sm text-right mt-auto" style={{ color: packagingType === 'standard' ? 'white' : '#1F1F1F' }}>{language === 'EN' ? "Free" : "Kostenlos"}</p></div>
+                    <div onClick={() => setPackagingType('gift')} className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${packagingType === 'gift' ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-md' : 'bg-white/50 border-black/10 hover:border-[#C9A24D]'}`} style={{ backgroundColor: packagingType === 'gift' ? '#1F1F1F' : '', height: packagingType === 'gift' ? 'auto' : '8rem' }}><div className="flex justify-between items-start"><div className={`p-2 rounded-lg ${packagingType === 'gift' ? 'bg-[#C9A24D]/20 text-[#C9A24D]' : 'bg-black/5 text-[#1F1F1F]/40'}`}><Gift size={20} /></div>{packagingType === 'gift' && <div className="w-3 h-3 rounded-full bg-[#C9A24D] shadow-[0_0_10px_#C9A24D]" />}</div><div><p className="font-bold text-sm uppercase tracking-wide" style={{ color: packagingType === 'gift' ? 'white' : '#1F1F1F' }}>{language === 'EN' ? "Gift Packaging" : "Geschenkverpackung"}</p><p className={`text-xs ${packagingType === 'gift' ? 'text-white/60' : 'text-[#1F1F1F]/40'}`} style={{ color: packagingType === 'gift' ? 'rgba(255,255,255,0.6)' : '' }}>{language === 'EN' ? "Themed & Decorative" : "Thematisch & Dekorativ"}</p></div>{packagingType === 'gift' && (<div className="mt-3" onClick={(e) => e.stopPropagation()}><textarea placeholder={language === 'EN' ? "Occasion (e.g. Birthday) or short note... *" : "Anlass (z.B. Geburtstag) oder kurze Notiz... *"} value={giftNote} onChange={(e) => setGiftNote(e.target.value)} className="w-full bg-white/10 border border-white/20 rounded-lg p-2 text-xs text-white placeholder:text-white/40 outline-none focus:border-[#C9A24D] resize-none" rows={2} />{!giftNote.trim() && (<p className="text-red-400 text-[10px] mt-1 font-bold animate-pulse">{language === 'EN' ? "* Required for gift options" : "* Erforderlich für Geschenkoptionen"}</p>)}</div>)}<p className="font-bold text-sm text-right mt-3 text-[#C9A24D]">+ €10.00</p></div>
                   </div>
                 </div>
 
-                {/* ⚖️ EU RIGHT OF WITHDRAWAL NOTICE (Conditional) */}
-                {hasPersonalization && !isNonEU && (
-                  <div className="space-y-4 mt-6 animate-in slide-in-from-top-2">
-                    <div className="p-4 bg-gray-50 border border-black/5 rounded-xl space-y-2">
-                      <p className="text-[11px] text-[#1F1F1F]/80 leading-relaxed italic">
-                        {language === 'EN' 
-                          ? "This product is personalized and is made specifically according to your individual specifications. Therefore, there is no right of withdrawal in accordance with EU consumer law."
-                          : "Dieses Produkt ist personalisiert und wird speziell nach Ihren individuellen Angaben hergestellt. Daher besteht gemäß EU-Verbraucherrecht kein Widerrufsrecht."
-                        }
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl">
-                      <input 
-                        required
-                        type="checkbox" 
-                        id="withdrawalPolicy"
-                        checked={agreedToWithdrawal}
-                        onChange={(e) => setAgreedToWithdrawal(e.target.checked)}
-                        className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer"
-                      />
-                      <label htmlFor="withdrawalPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">
-                        {language === 'EN' 
-                          ? "I acknowledge that for my personalized items, the right of withdrawal is excluded."
-                          : "Ich nehme zur Kenntnis, dass für meine personalisierten Artikel das Widerrufsrecht ausgeschlossen ist."
-                        } *
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                {/* 🛃 CUSTOMS NOTICE (Only for Non-EU) */}
-                {isNonEU && (
-                  <div className="space-y-4 mt-6 animate-in slide-in-from-top-2">
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800">
-                      <AlertCircle size={20} className="flex-shrink-0" />
-                      <div className="text-xs leading-relaxed">
-                        <p className="font-bold mb-1">
-                          {language === 'EN' ? "Important: Customs & Duties" : "Wichtig: Zoll & Steuern"}
-                        </p>
-                        <p>
-                          {language === 'EN' 
-                            ? "Shipments to countries outside the EU may be subject to import duties and taxes. These costs are the responsibility of the recipient."
-                            : "Lieferungen in Länder außerhalb der EU können Einfuhrzöllen und Steuern unterliegen. Diese Kosten sind vom Empfänger zu tragen."
-                          }
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl">
-                      <input 
-                        required
-                        type="checkbox" 
-                        id="customsAgreement"
-                        checked={agreedToCustoms}
-                        onChange={(e) => setAgreedToCustoms(e.target.checked)}
-                        className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer"
-                      />
-                      <label htmlFor="customsAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">
-                        {language === 'EN' 
-                          ? "I understand that any customs duties, taxes, or import fees that may apply are my responsibility and must be paid by me."
-                          : "Ich verstehe, dass anfallende Zollgebühren, Steuern oder Einfuhrabgaben in meiner Verantwortung liegen und von mir bezahlt werden müssen."
-                        } *
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                {/* 📦 MANDATORY DELIVERY POLICY CHECKBOX */}
-                <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl mt-4">
-                  <input required type="checkbox" id="deliveryPolicy" checked={agreedToPolicy} onChange={(e) => setAgreedToPolicy(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" />
-                  <label htmlFor="deliveryPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">
-                    {language === 'EN' 
-                      ? "I agree that if delivery fails, my parcel may be delivered to a neighbor or nearby parcel shop. Returns to the sender are excluded."
-                      : "Ich stimme zu, dass mein Paket bei einem erfolglosen Zustellversuch an einen Nachbarn oder Paketshop geliefert werden kann. Rücksendungen sind ausgeschlossen."
-                    } *
-                  </label>
-                </div>
-
+                {hasPersonalization && !isNonEU && (<div className="space-y-4 mt-6 animate-in slide-in-from-top-2"><div className="p-4 bg-gray-50 border border-black/5 rounded-xl space-y-2"><p className="text-[11px] text-[#1F1F1F]/80 leading-relaxed italic">{language === 'EN' ? "This product is personalized and is made specifically according to your individual specifications. Therefore, there is no right of withdrawal in accordance with EU consumer law." : "Dieses Produkt wird individuell nach Ihren persönlichen Angaben angefertigt. Daher besteht gemäß EU-Verbraucherrecht kein Widerrufsrecht."}</p></div><div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl"><input required type="checkbox" id="withdrawalPolicy" checked={agreedToWithdrawal} onChange={(e) => setAgreedToWithdrawal(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="withdrawalPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I acknowledge that the right of withdrawal does not apply to personalized items." : "Ich nehme zur Kenntnis, dass das Widerrufsrecht für personalisierte Artikel ausgeschlossen ist."} *</label></div></div>)}
+                {isNonEU && (<div className="space-y-4 mt-6 animate-in slide-in-from-top-2"><div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800"><AlertCircle size={20} className="flex-shrink-0" /><div className="text-xs leading-relaxed"><p className="font-bold mb-1">{language === 'EN' ? "Important: Customs & Duties" : "Wichtig: Zoll & Steuern"}</p><p>{language === 'EN' ? "Shipments to countries outside the EU may be subject to import duties and taxes. These costs are the responsibility of the recipient." : "Lieferungen in Länder außerhalb der EU können Einfuhrzöllen und Steuern unterliegen. Diese Kosten sind vom Empfänger zu tragen."}</p></div></div><div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl"><input required type="checkbox" id="customsAgreement" checked={agreedToCustoms} onChange={(e) => setAgreedToCustoms(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="customsAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I understand that any customs duties, taxes, or import fees that may apply are my responsibility and must be paid by me." : "Ich verstehe, dass anfallende Zollgebühren, Steuern oder Einfuhrabgaben in meiner Verantwortung liegen und von mir bezahlt werden müssen."} *</label></div></div>)}
+                <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl mt-4"><input required type="checkbox" id="deliveryPolicy" checked={agreedToPolicy} onChange={(e) => setAgreedToPolicy(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="deliveryPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I agree that if delivery is unsuccessful, my parcel may be delivered to a neighbor or a nearby parcel shop. Returns to the sender are excluded." : "Ich stimme zu, dass mein Paket bei einem erfolglosen Zustellversuch an einen Nachbarn oder einen Paketshop geliefert werden kann. Rücksendungen sind ausgeschlossen."} *</label></div>
               </div>
-              <button 
-                type="submit" 
-                disabled={!canProceed} 
-                className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] py-5 rounded-xl transition-all text-white font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
-              >
-                {t('checkout_continue')} <ArrowLeft className="rotate-180" size={18} />
-              </button>
+              <button type="submit" disabled={!canProceed} className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] py-5 rounded-xl transition-all text-white font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50">{t('checkout_continue')} <ArrowLeft className="rotate-180" size={18} /></button>
             </form>
           ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
@@ -552,11 +442,142 @@ export default function CheckoutPage() {
                 <div><p className="text-[#1F1F1F]/50 text-sm font-medium">Shipping {isExpress ? "(Express)" : "(Standard)"} to:</p><p className="font-bold">{formData.address}, {formData.city}, {formData.country}</p></div>
                 <button onClick={() => setStep(1)} className="text-[#C9A24D] text-sm font-bold hover:underline">{t('checkout_change')}</button>
               </div>
+              
+              {/* ✨ NEW: BENEVOLENCE SECTION (Tip + Donation) - CONDITIONAL RENDERING */}
+              {isDonationActive && (
+                  <div className="space-y-6 animate-in fade-in slide-in-from-right-2">
+                     {/* Tip Section */}
+                     <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
+                         <div className="flex items-center gap-2 mb-4">
+                             <div className="p-1.5 bg-[#C9A24D]/10 rounded-lg text-[#C9A24D]"><Coffee size={18}/></div>
+                             <h3 className="font-bold text-sm">{language === 'EN' ? "Support the Team (Optional)" : "Team unterstützen (Optional)"}</h3>
+                         </div>
+                         <div className="flex gap-2">
+                             {['3%', '5%', '5eur', 'custom'].map(opt => (
+                                 <button
+                                     key={opt}
+                                     onClick={() => handleTipClick(opt)}
+                                     className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                                         tipOption === opt 
+                                         ? "bg-[#1F1F1F] text-white border-[#1F1F1F]" 
+                                         : "bg-white border-black/10 hover:border-[#1F1F1F] text-[#1F1F1F]/60"
+                                     }`}
+                                 >
+                                     {opt === '3%' ? '3%' : opt === '5%' ? '5%' : opt === '5eur' ? '€5' : 'Custom'}
+                                 </button>
+                             ))}
+                         </div>
+                         {tipOption === 'custom' && (
+                             <div className="mt-3 animate-in fade-in slide-in-from-top-1">
+                                 <input 
+                                     type="number" 
+                                     placeholder="€" 
+                                     className="w-full border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-[#C9A24D]"
+                                     onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
+                                 />
+                             </div>
+                         )}
+                     </div>
+
+                     {/* Donation Section */}
+                     <div className={`transition-all duration-300 border rounded-2xl p-6 shadow-sm ${showDonation ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-black/5'}`}>
+                         <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowDonation(!showDonation)}>
+                             <div className="flex items-center gap-2">
+                                 <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Droplets size={18}/></div>
+                                 <div>
+                                     <h3 className="font-bold text-sm text-[#1F1F1F]">{language === 'EN' ? "Water Well Project" : "Brunnenbau-Projekt"}</h3>
+                                     <p className="text-[10px] text-[#1F1F1F]/50 font-medium">Build a well, change lives.</p>
+                                 </div>
+                             </div>
+                             <div className={`w-5 h-5 rounded-full border border-black/10 flex items-center justify-center transition-all ${showDonation ? 'bg-blue-600 border-blue-600' : 'bg-white'}`}>
+                                 {showDonation && <Check size={12} className="text-white" />}
+                             </div>
+                         </div>
+
+                         {showDonation && (
+                             <div className="mt-4 pt-4 border-t border-black/5 space-y-4 animate-in fade-in">
+                                 <p className="text-xs text-[#1F1F1F]/70 leading-relaxed italic">
+                                     {language === 'EN' 
+                                     ? "Your donation goes directly to building water wells. We print donor names on a banner at the site." 
+                                     : "Ihre Spende fließt direkt in den Bau von Wasserbrunnen. Wir drucken die Namen der Spender auf ein Banner vor Ort."}
+                                 </p>
+                                 
+                                 <div className="flex gap-2">
+                                     {[10, 20, 50, 'custom'].map(val => (
+                                         <button
+                                             key={val}
+                                             onClick={() => handleDonationClick(val as number | 'custom')}
+                                             className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                                                 donationOption === val 
+                                                 ? "bg-blue-600 text-white border-blue-600" 
+                                                 : "bg-white border-black/10 hover:border-blue-600 text-[#1F1F1F]/60"
+                                             }`}
+                                         >
+                                             {val === 'custom' ? 'Custom' : `€${val}`}
+                                         </button>
+                                     ))}
+                                 </div>
+
+                                 {donationOption === 'custom' && (
+                                     <input 
+                                         type="number" 
+                                         placeholder="€ Amount" 
+                                         className="w-full border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-blue-600"
+                                         onChange={(e) => setDonationAmount(parseFloat(e.target.value) || 0)}
+                                     />
+                                 )}
+
+                                 <div className="bg-white p-3 rounded-xl border border-black/5 space-y-2">
+                                     <label className="text-[10px] font-bold uppercase tracking-wide text-[#1F1F1F]/40 block">
+                                         {language === 'EN' ? "Name for Banner (Optional)" : "Name für Banner (Optional)"}
+                                     </label>
+                                     <input 
+                                         type="text" 
+                                         placeholder={language === 'EN' ? "e.g. The Smith Family" : "z.B. Familie Müller"}
+                                         value={donorName}
+                                         onChange={(e) => setDonorName(e.target.value)}
+                                         className="w-full bg-[#F6EFE6]/50 border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-[#C9A24D]"
+                                     />
+                                     
+                                     {donorName.trim().length > 0 && (
+                                         <div className="flex items-start gap-2 pt-1">
+                                             <input 
+                                                 type="checkbox" 
+                                                 id="publicConsent" 
+                                                 checked={isPublicDonor} 
+                                                 onChange={(e) => setIsPublicDonor(e.target.checked)} 
+                                                 className="mt-0.5 accent-blue-600 cursor-pointer" 
+                                             />
+                                             <label htmlFor="publicConsent" className="text-[10px] text-[#1F1F1F]/60 leading-tight cursor-pointer">
+                                                 {language === 'EN' 
+                                                 ? "I agree that my name may be displayed publicly for donor recognition." 
+                                                 : "Ich stimme zu, dass mein Name zur Spenderanerkennung öffentlich angezeigt werden darf."}
+                                             </label>
+                                         </div>
+                                     )}
+                                 </div>
+                             </div>
+                         )}
+                     </div>
+                  </div>
+              )}
+
               <h2 className="text-2xl font-bold pt-4">{t('checkout_method')}</h2>
               {clientSecret ? (
                 <div className="bg-white p-6 rounded-2xl shadow-lg">
                   <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#1F1F1F' } } }}>
-                    <PaymentForm amount={finalTotal} formData={formData} cart={cart} isExpress={isExpress} packagingType={packagingType} giftNote={giftNote} />
+                    <PaymentForm 
+                        amount={finalTotal} 
+                        formData={formData} 
+                        cart={cart} 
+                        isExpress={isExpress} 
+                        packagingType={packagingType} 
+                        giftNote={giftNote}
+                        tipAmount={tipAmount}
+                        donationAmount={donationAmount}
+                        donorName={donorName}
+                        isPublicDonor={isPublicDonor}
+                    />
                   </Elements>
                 </div>
               ) : <div className="p-8 text-center text-[#1F1F1F]/40 font-medium">{t('checkout_loading_payment')}</div>}
@@ -576,7 +597,6 @@ export default function CheckoutPage() {
             ))}
           </div>
           
-          {/* ✨ NEW: Supply Order Shipping Notice */}
           {isSupplyOrder && (
             <div className="mb-6 bg-[#F6EFE6] border border-[#D4C29A] p-4 rounded-xl flex items-start gap-3">
               <div className="bg-[#D4C29A]/20 p-2 rounded-full text-[#D4C29A]">
@@ -601,13 +621,27 @@ export default function CheckoutPage() {
               <span>Shipping ({formData.country} - {isExpress ? "Express" : "Standard"})</span>
               <span>€{shippingCost.toFixed(2)}</span>
             </div>
-            {/* ✨ NEW: Packaging Cost Line Item */}
             {packagingType === 'gift' && (
               <div className="flex justify-between text-[#C9A24D] font-bold text-sm">
                 <span>Gift Packaging</span>
                 <span>+€10.00</span>
               </div>
             )}
+            
+            {/* ✨ NEW: Tip & Donation Line Items - ONLY IF ACTIVE & SELECTED */}
+            {isDonationActive && tipAmount > 0 && (
+                <div className="flex justify-between text-[#1F1F1F] font-bold text-sm">
+                    <span>Tip (Team Support)</span>
+                    <span>+€{tipAmount.toFixed(2)}</span>
+                </div>
+            )}
+            {isDonationActive && donationAmount > 0 && (
+                <div className="flex justify-between text-blue-600 font-bold text-sm">
+                    <span>Water Well Donation</span>
+                    <span>+€{donationAmount.toFixed(2)}</span>
+                </div>
+            )}
+
             <div className="flex justify-between text-xl font-bold text-[#1F1F1F] pt-4 border-t border-black/10"><span>{t('checkout_total')}</span><span className="text-[#C9A24D]">€{finalTotal.toFixed(2)}</span></div>
           </div>
         </div>

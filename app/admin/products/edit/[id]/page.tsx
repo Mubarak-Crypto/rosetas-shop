@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash } from "lucide-react"; 
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers } from "lucide-react"; // ✨ Added Layers
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -13,7 +13,7 @@ import { supabase } from "../../../../../lib/supabase";
 type Variant = { name: string; name_en?: string; values: string; values_en?: string; };
 // ✨ UPDATED: Added inputType to Extra
 type InputType = "none" | "short_note" | "letter";
-// ✨ UPDATED: Added allowQuantity to Extra
+// ✨ UPDATED: Added allowQuantity and allowMultiple to Extra
 type Extra = { 
     name: string; 
     name_en?: string; 
@@ -21,7 +21,8 @@ type Extra = {
     image?: string; 
     variants?: string[]; 
     inputType?: InputType; 
-    allowQuantity?: boolean; // ✨ NEW FIELD
+    allowQuantity?: boolean; 
+    allowMultiple?: boolean; // ✨ NEW FIELD
 }; 
 type Area = { x: number; y: number; width: number; height: number; };
 type UploadType = "product" | "extra"; 
@@ -86,6 +87,8 @@ export default function EditProductPage() {
   const [newExtraInputType, setNewExtraInputType] = useState<InputType>("none");
   // ✨ NEW: State for Quantity Toggle
   const [newExtraAllowQty, setNewExtraAllowQty] = useState(false);
+  // ✨ NEW: State for Multiple Selection Toggle
+  const [newExtraAllowMultiple, setNewExtraAllowMultiple] = useState(false);
 
   // Extra Variants State
   const [isAddingExtraVariants, setIsAddingExtraVariants] = useState(false);
@@ -144,7 +147,7 @@ export default function EditProductPage() {
 
   // AUTO-GENERATE MATRIX LOGIC
   useEffect(() => {
-    if (variants.length > 1) {
+    if (variants.length > 0) {
       const generateMatrix = () => {
         const optionGroups = variants.map(v => ({
           name: v.name,
@@ -159,12 +162,15 @@ export default function EditProductPage() {
           const existing = stockMatrix.find(m => 
             Object.keys(combo).every(key => m[key] === combo[key])
           );
-          return existing || { ...combo, stock: 0 };
+          // Default to -1 (Unlimited) if new variant added, or keep existing
+          return existing || { ...combo, stock: -1 };
         });
 
         setStockMatrix(newMatrix);
       };
       generateMatrix();
+    } else {
+        setStockMatrix([]);
     }
   }, [variants]);
 
@@ -176,15 +182,17 @@ export default function EditProductPage() {
 
     try {
       const fileName = `video-${Date.now()}.${file.name.split('.').pop()}`;
+      const filePath = `${fileName}`;
+
       const { error: uploadError } = await supabase.storage
         .from('products')
-        .upload(fileName, file);
+        .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('products')
-        .getPublicUrl(fileName);
+        .getPublicUrl(filePath);
 
       setVideoUrls(prev => [...prev, publicUrl]);
     } catch (e: any) {
@@ -366,7 +374,8 @@ export default function EditProductPage() {
         image: newExtraImage,
         variants: extraVariantsList.length > 0 ? extraVariantsList : undefined,
         inputType: newExtraInputType, // ✨ SAVED
-        allowQuantity: newExtraAllowQty // ✨ SAVED: Quantity Selection
+        allowQuantity: newExtraAllowQty, // ✨ SAVED: Quantity Selection
+        allowMultiple: newExtraAllowMultiple // ✨ SAVED: Multi Select
     }]);
     
     setNewExtraName("");
@@ -376,6 +385,7 @@ export default function EditProductPage() {
     setExtraVariantsList([]);
     setNewExtraInputType("none"); 
     setNewExtraAllowQty(false); // Reset
+    setNewExtraAllowMultiple(false); // Reset
     setIsAddingExtraVariants(false);
     setIsAddingExtra(false);
   };
@@ -623,28 +633,59 @@ export default function EditProductPage() {
                       <thead className="text-[10px] font-black uppercase text-gray-400 bg-gray-50">
                         <tr>
                           {variants.map(v => <th key={v.name} className="px-4 py-3">{v.name}</th>)}
-                          <th className="px-4 py-3">Stock</th>
+                          <th className="px-4 py-3">Stock Limit?</th>
+                          <th className="px-4 py-3">Quantity</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-black/5">
-                        {stockMatrix.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                            {variants.map(v => <td key={v.name} className="px-4 py-3 text-xs font-bold">{item[v.name]}</td>)}
-                            <td className="px-4 py-2">
-                              <input 
-                                type="number" 
-                                value={item.stock} 
-                                onChange={(e) => {
-                                  const updated = [...stockMatrix];
-                                  updated[idx].stock = parseInt(e.target.value) || 0;
-                                  setStockMatrix(updated);
-                                }}
-                                className="w-24 bg-gray-50 border border-black/5 rounded-lg px-2 py-1 text-xs font-bold outline-none focus:border-[#C9A24D]"
-                                placeholder="0"
-                              />
-                            </td>
-                          </tr>
-                        ))}
+                        {stockMatrix.map((item, idx) => {
+                            const isUnlimited = item.stock === -1;
+                            
+                            return (
+                              <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                {variants.map(v => <td key={v.name} className="px-4 py-3 text-xs font-bold">{item[v.name]}</td>)}
+                                
+                                {/* Toggle for Unlimited */}
+                                <td className="px-4 py-2">
+                                    <button 
+                                        type="button"
+                                        onClick={() => {
+                                            const updated = [...stockMatrix];
+                                            // Toggle between -1 (Unlimited) and 0 (Tracked)
+                                            updated[idx].stock = isUnlimited ? 0 : -1;
+                                            setStockMatrix(updated);
+                                        }}
+                                        className={`flex items-center gap-2 text-xs font-bold px-2 py-1 rounded-lg transition-colors ${
+                                            isUnlimited ? "text-green-600 bg-green-50" : "text-[#C9A24D] bg-[#F6EFE6]"
+                                        }`}
+                                    >
+                                        {isUnlimited ? <ToggleLeft size={16}/> : <ToggleRight size={16}/>}
+                                        {isUnlimited ? "Unlimited" : "Tracked"}
+                                    </button>
+                                </td>
+
+                                {/* Stock Quantity Input */}
+                                <td className="px-4 py-2">
+                                  {isUnlimited ? (
+                                    <span className="text-xl text-gray-300 font-bold">∞</span>
+                                  ) : (
+                                    <input 
+                                      type="number" 
+                                      value={item.stock} 
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        const updated = [...stockMatrix];
+                                        updated[idx].stock = isNaN(val) ? 0 : val;
+                                        setStockMatrix(updated);
+                                      }}
+                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-[#C9A24D]"
+                                      placeholder="0"
+                                    />
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -806,11 +847,11 @@ export default function EditProductPage() {
                             <div className="flex flex-wrap gap-2 pt-2">
                                 {tempList.map((t, i) => (
                                     <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5">
-                                        <div className="flex items-center gap-2 justify-between">
-                                            <span className="text-[10px] font-bold">{t.de}</span>
-                                            <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
-                                        </div>
-                                        <span className="text-[9px] text-[#C9A24D]">{t.en}</span>
+                                            <div className="flex items-center gap-2 justify-between">
+                                                <span className="text-[10px] font-bold">{t.de}</span>
+                                                <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
+                                            </div>
+                                            <span className="text-[9px] text-[#C9A24D]">{t.en}</span>
                                     </div>
                                 ))}
                             </div>
@@ -852,6 +893,8 @@ export default function EditProductPage() {
                                 
                                 {/* ✨ VISUAL INDICATOR FOR QUANTITY */}
                                 {ex.allowQuantity && <div className="text-[10px] bg-[#C9A24D] text-white px-1.5 rounded flex items-center gap-1"><Hash size={10}/> Qty</div>}
+                                {/* ✨ VISUAL INDICATOR FOR MULTIPLE SELECTION */}
+                                {ex.allowMultiple && <div className="text-[10px] bg-blue-600 text-white px-1.5 rounded flex items-center gap-1"><Layers size={10}/> Multi</div>}
                             </div>
                             <span className={`text-xs font-bold ${ex.price < 0 ? "text-red-500" : "text-[#C9A24D]"}`}>
                                 {ex.price < 0 ? `-€${Math.abs(ex.price)}` : `+€${ex.price}`}
@@ -909,16 +952,36 @@ export default function EditProductPage() {
                         </div>
                     </div>
 
-                    {/* ✨ NEW: QUANTITY TOGGLE */}
-                    <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
-                        <span className="text-xs font-bold text-[#1F1F1F]">Enable Quantity Selection?</span>
-                        <button 
-                            type="button"
-                            onClick={() => setNewExtraAllowQty(!newExtraAllowQty)}
-                            className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${newExtraAllowQty ? 'bg-[#C9A24D] justify-end' : 'bg-gray-200 justify-start'}`}
-                        >
-                            <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
-                        </button>
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* QUANTITY TOGGLE */}
+                        <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-[#1F1F1F]">Enable Quantity?</span>
+                                <span className="text-[9px] text-gray-400">Cust. can select qty</span>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => setNewExtraAllowQty(!newExtraAllowQty)}
+                                className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${newExtraAllowQty ? 'bg-[#C9A24D] justify-end' : 'bg-gray-200 justify-start'}`}
+                            >
+                                <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                            </button>
+                        </div>
+
+                        {/* ✨ NEW: MULTIPLE SELECTION TOGGLE */}
+                        <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
+                            <div className="flex flex-col">
+                                <span className="text-xs font-bold text-[#1F1F1F]">Allow Multiple?</span>
+                                <span className="text-[9px] text-gray-400">Cust. can select A+B</span>
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => setNewExtraAllowMultiple(!newExtraAllowMultiple)}
+                                className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${newExtraAllowMultiple ? 'bg-[#1F1F1F] justify-end' : 'bg-gray-200 justify-start'}`}
+                            >
+                                <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-3">
