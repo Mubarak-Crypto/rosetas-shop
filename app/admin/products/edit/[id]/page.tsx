@@ -149,6 +149,12 @@ export default function EditProductPage() {
   useEffect(() => {
     if (variants.length > 0) {
       const generateMatrix = () => {
+        // ✨ SAFETY CHECK: Ensure stockMatrix is an array before using .find()
+        if (!Array.isArray(stockMatrix)) {
+            setStockMatrix([]); // Reset if corrupted
+            return;
+        }
+
         const optionGroups = variants.map(v => ({
           name: v.name,
           values: v.values.split(',').map(val => val.split('(')[0].split('|')[0].trim())
@@ -172,7 +178,7 @@ export default function EditProductPage() {
     } else {
         setStockMatrix([]);
     }
-  }, [variants]);
+  }, [variants]); // Run whenever variants change (and initially after load)
 
   // HANDLE MULTIPLE VIDEO UPLOADS
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

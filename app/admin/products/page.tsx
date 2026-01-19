@@ -99,7 +99,6 @@ export default function AdminProducts() {
         {/* Products Table */}
         <div className="bg-white border border-black/5 rounded-2xl overflow-hidden min-h-[300px] shadow-sm">
           
-          {/* */}
           {isLoading ? (
             <div className="flex items-center justify-center h-64 text-[#C9A24D]">
               <Loader2 className="animate-spin" size={48} />
@@ -114,10 +113,10 @@ export default function AdminProducts() {
                 <tr>
                   <th className="px-6 py-4">Product</th>
                   <th className="px-6 py-4">Bilingual</th>
-                  <th className="px-6 py-4">Ribbon</th> {/* ✨ NEW: Ribbon Mandatory Column */}
+                  <th className="px-6 py-4">Ribbon {/* ✨ NEW: Ribbon Mandatory Column */}</th> 
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
-                  <th className="px-6 py-4">Total Stock</th> {/* Updated label */}
+                  <th className="px-6 py-4">Total Stock {/* Updated label */}</th> 
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -150,8 +149,8 @@ export default function AdminProducts() {
                       </div>
                     </td>
 
-                    {/* ✨ NEW: Ribbon Status Indicator */}
                     <td className="px-6 py-4">
+                      {/* ✨ NEW: Ribbon Status Indicator */}
                       <div className="flex items-center gap-2">
                         {product.needs_ribbon ? (
                           <span className="flex items-center gap-1 text-[10px] font-black uppercase text-[#C9A24D] bg-[#C9A24D]/10 px-2 py-1 rounded">
@@ -166,8 +165,8 @@ export default function AdminProducts() {
                     <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">{product.category}</td>
                     <td className="px-6 py-4 text-sm font-mono font-bold text-[#C9A24D]">€{product.price}</td>
                     
-                    {/* ✨ UPDATED: Logic to show combined stock from all variants */}
                     <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">
+                      {/* ✨ UPDATED: Logic to show combined stock from all variants */}
                       {calculateTotalStock(product)} units
                     </td>
 
