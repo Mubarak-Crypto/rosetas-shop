@@ -279,26 +279,50 @@ export default function CheckoutPage() {
     email: "", firstName: "", lastName: "", address: "", city: "", zip: "", phone: "", country: "Germany"
   });
 
-  const { shippingCost, needs20kg, standardCost, expressCost } = useMemo(() => {
+  // ✨ UPDATED: Shipping Calculation Logic
+  const { shippingCost, needs20kg, standardCost, expressCost, boxCount } = useMemo(() => {
     const countryData = shippingRates[formData.country] || { rate10kg: 0, rate20kg: 0 };
+    
+    // Check if heavy items exist
     const weight20kg = cart.some(item => {
       const optionValues = Object.values(item.options || {}).join(" ");
       return optionValues.includes("100") || optionValues.includes("200") || optionValues.includes("150");
     });
 
-    // Basic Costs
-    const std = weight20kg ? countryData.rate20kg : countryData.rate10kg;
-    let exp = std; // Default if no express available
+    // Count Shippable "Big Boxes" (Items NOT in supplies/Floristenbedarf)
+    const shippableItemsCount = cart.reduce((count, item) => {
+        if (item.category !== 'supplies' && item.category !== 'Floristenbedarf') {
+            return count + item.quantity;
+        }
+        return count;
+    }, 0);
 
-    // Germany Logic
+    // If only supplies are bought, charge for at least 1 box
+    const finalBoxCount = Math.max(1, shippableItemsCount);
+
+    // Base Costs (Single Box)
+    const baseStd = weight20kg ? countryData.rate20kg : countryData.rate10kg;
+    
+    // Express Logic (Germany Only)
+    let baseExp = baseStd;
     if (formData.country === "Germany") {
-        exp = weight20kg ? (countryData.express20kg || std) : (countryData.express10kg || std);
+        baseExp = weight20kg ? (countryData.express20kg || baseStd) : (countryData.express10kg || baseStd);
     }
 
-    // Determine currently selected cost
-    const currentCost = (isExpress && formData.country === "Germany") ? exp : std;
+    // Multiply by number of boxes
+    const totalStd = baseStd * finalBoxCount;
+    const totalExp = baseExp * finalBoxCount;
 
-    return { shippingCost: currentCost, needs20kg: weight20kg, standardCost: std, expressCost: exp };
+    // Determine currently selected cost
+    const currentCost = (isExpress && formData.country === "Germany") ? totalExp : totalStd;
+
+    return { 
+        shippingCost: currentCost, 
+        needs20kg: weight20kg, 
+        standardCost: totalStd, 
+        expressCost: totalExp,
+        boxCount: finalBoxCount 
+    };
   }, [formData.country, cart, isExpress]);
 
   const packagingCost = packagingType === 'gift' ? 10 : 0;
@@ -843,7 +867,11 @@ export default function CheckoutPage() {
             <div className="flex justify-between text-[#1F1F1F]/60 font-medium"><span>Subtotal</span><span>€{cartTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-[#1F1F1F]/60 font-medium">
               <span>Shipping ({formData.country} - {isExpress ? "Express" : "Standard"})</span>
-              <span>€{shippingCost.toFixed(2)}</span>
+              {/* ✨ UPDATED: Show multiplier if > 1 box */}
+              <span>
+                  {boxCount > 1 ? `(${boxCount}x) ` : ""}
+                  €{shippingCost.toFixed(2)}
+              </span>
             </div>
             {packagingType === 'gift' && (
               <div className="flex justify-between text-[#C9A24D] font-bold text-sm">

@@ -38,16 +38,16 @@ export default function CartSidebar() {
     return () => clearInterval(interval);
   }, [cartExpiry, cart.length, clearCart, setIsCartOpen, language]);
 
+  // ✨ Logic for Supplies Minimum Order (€80) - Kept this!
   const suppliesSubtotal = cart
-    .filter(item => item.category === 'supplies')
+    .filter(item => item.category === 'supplies' || item.category === 'Floristenbedarf')
     .reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const MIN_SUPPLIES_VALUE = 80;
   const isSuppliesBelowMinimum = suppliesSubtotal > 0 && suppliesSubtotal < MIN_SUPPLIES_VALUE;
   
-  const hasSupplies = suppliesSubtotal > 0;
+  // Only calculate missing amount for the error message
   const missingAmount = Math.max(0, MIN_SUPPLIES_VALUE - suppliesSubtotal);
-  const progressPercentage = Math.min(100, (suppliesSubtotal / MIN_SUPPLIES_VALUE) * 100);
 
   return (
     <AnimatePresence>
@@ -99,37 +99,7 @@ export default function CartSidebar() {
                 </div>
             )}
 
-            {/* SUPPLIES PROGRESS BAR */}
-            {hasSupplies && (
-                <div className="px-6 py-4 bg-white border-b border-black/5">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className={`p-1.5 rounded-full ${!isSuppliesBelowMinimum ? "bg-green-100 text-green-600" : "bg-[#D4C29A]/20 text-[#D4C29A]"}`}>
-                            {!isSuppliesBelowMinimum ? <Check size={14} strokeWidth={3} /> : <Truck size={14} />}
-                        </div>
-                        <p className="text-xs font-bold text-[#1F1F1F]">
-                            {!isSuppliesBelowMinimum ? (
-                                <span className="text-green-600">
-                                    {language === 'EN' ? "Free Shipping Unlocked!" : "Kostenloser Versand freigeschaltet!"}
-                                </span>
-                            ) : (
-                                <>
-                                    {language === 'EN' ? "Only " : "Nur noch "}
-                                    <span className="text-[#C9A24D]">€{missingAmount.toFixed(2)}</span>
-                                    {language === 'EN' ? " more for Free Shipping" : " bis zum kostenlosen Versand"}
-                                </>
-                            )}
-                        </p>
-                    </div>
-                    <div className="h-1.5 w-full bg-black/5 rounded-full overflow-hidden">
-                        <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progressPercentage}%` }}
-                            transition={{ duration: 0.5, ease: "easeOut" }}
-                            className={`h-full rounded-full ${!isSuppliesBelowMinimum ? "bg-green-500" : "bg-[#D4C29A]"}`}
-                        />
-                    </div>
-                </div>
-            )}
+            {/* 🗑️ REMOVED: Free Shipping Progress Bar (Green Bar) is gone as requested */}
 
             {/* CART ITEMS LIST */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -182,7 +152,8 @@ export default function CartSidebar() {
                           )}
 
                           {item.customText && (
-                              <div className="mt-2 text-[10px] bg-white/50 p-1.5 rounded-lg border border-black/5 inline-block">
+                              /* ✨ FIX: Added break-all and w-full to handle long text properly */
+                              <div className="mt-2 text-[10px] bg-white/50 p-1.5 rounded-lg border border-black/5 w-full break-all">
                                   <span className="text-gray-400 font-bold uppercase tracking-widest mr-1">
                                       <PenTool size={10} className="inline mr-1 mb-0.5"/> 
                                       {language === 'EN' ? "Text:" : "Text:"}
@@ -227,6 +198,7 @@ export default function CartSidebar() {
             {cart.length > 0 && (
               <div className="p-6 border-t border-black/5 bg-[#F6EFE6] space-y-4">
                 
+                {/* ✨ RESTORED: Alert for Minimum Order €80 (Blocks Checkout) */}
                 {isSuppliesBelowMinimum && (
                   <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex gap-3 items-start animate-pulse">
                     <AlertCircle className="text-red-500 shrink-0" size={18} />
@@ -247,6 +219,7 @@ export default function CartSidebar() {
                   {language === 'EN' ? "Shipping calculated at checkout." : "Versandkosten werden beim Checkout berechnet."}
                 </p>
                 
+                {/* ✨ RESTORED: Checkout Button logic (Disabled if below €80) */}
                 <Link 
                   href={isSuppliesBelowMinimum ? "#" : "/checkout"} 
                   onClick={(e) => {

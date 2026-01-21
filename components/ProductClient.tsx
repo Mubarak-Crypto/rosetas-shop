@@ -76,20 +76,25 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const handleOptionSelect = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
     
-    const isColorVariant = optionName.toLowerCase() === 'color' || optionName.toLowerCase() === 'farbe' || optionName.toLowerCase() === 'colour';
+    // ✨ FIX START: Check for Color OR Supply Category
+    const isColorVariant = optionName.toLowerCase().includes('color') || optionName.toLowerCase().includes('farbe') || optionName.toLowerCase().includes('colour');
+    const isSupplyProduct = product.category === 'supplies' || product.category === 'Floristenbedarf';
 
-    if (isColorVariant && product?.images && product.images.length > 0) {
+    // Allow image switching if it's a color variant OR if it's a supply product (Ribbons, etc.)
+    if ((isColorVariant || isSupplyProduct) && product?.images && product.images.length > 0) {
       setShowVideo(false); 
       const variant = product.variants.find((v: any) => v.name === optionName);
       
       if (variant && variant.values) {
         const valuesArray = variant.values.toString().split(',').map((s: string) => s.trim());
         const clickedIndex = valuesArray.indexOf(value);
+        // Only switch if an image exists at that index
         if (product.images[clickedIndex]) {
           setActiveImage(product.images[clickedIndex]);
         }
       }
     }
+    // ✨ FIX END
   };
 
   const toggleExtra = (extraName: string) => {
@@ -696,11 +701,11 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             >
                                 {extra.image && (
                                     <div 
-                                        className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
-                                        onClick={(e) => {
-                                            e.stopPropagation(); 
-                                            setZoomImage(extra.image);
-                                        }}
+                                            className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); 
+                                                setZoomImage(extra.image);
+                                            }}
                                     >
                                             <Image src={extra.image} alt={extra.name} width={64} height={64} className="w-full h-full object-cover" />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
