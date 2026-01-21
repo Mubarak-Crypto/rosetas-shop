@@ -9,6 +9,7 @@ import Navbar from "../components/Navbar";
 import CharityImpact from "../components/CharityImpact"; 
 import { supabase } from "../lib/supabase"; 
 import Link from "next/link";
+import Image from "next/image"; // ✨ PERFORMANCE: Imported Next.js Image
 import { useLanguage } from "../context/LanguageContext"; 
 
 export default function Home() {
@@ -30,7 +31,7 @@ export default function Home() {
         .eq('status', 'active') 
         .neq('category', 'supplies') 
         .order('created_at', { ascending: false })
-        .limit(3); // ✨ Updated: Limit to 3 latest products as requested
+        .limit(3); 
 
       const settingsRes = await supabase
         .from('storefront_settings')
@@ -92,15 +93,12 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section */}
-      {/* ✨ FIX APPLIED: Changed 'lg:grid-cols-2' to 'xl:grid-cols-2'. 
-          This forces iPads/Tablets to stack the layout (Text Top / Image Bottom), 
-          ensuring the button is never covered. Side-by-side only happens on large screens (PC/Laptop). */}
       <section className="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24 lg:pt-20 lg:pb-32 grid xl:grid-cols-2 gap-12 items-center">
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
-          className="space-y-8 relative z-20" // Added z-20 to ensure it sits on top
+          className="space-y-8 relative z-20"
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#D4C29A]/30 bg-[#D4C29A]/10 text-[#D4C29A] text-xs font-bold tracking-widest uppercase shadow-sm">
@@ -108,12 +106,9 @@ export default function Home() {
             {language === 'EN' ? "The Premium Collection" : "Die Premium-Kollektion"}
           </div>
 
-          {/* ✨ STRUCTURE PRESERVED: 2 Lines, Whitespace-nowrap kept */}
           <h1 className="text-5xl md:text-7xl xl:text-8xl font-bold leading-tight text-[#1F1F1F] tracking-tight font-playfair">
-            {/* Line 1 */}
             <span className="block whitespace-nowrap">Not just Flowers</span>
             
-            {/* Line 2 */}
             <span className="flex items-center gap-4 mt-2 whitespace-nowrap">
               <span className="opacity-40 text-4xl md:text-6xl font-light font-sans">—</span>
               <span 
@@ -130,13 +125,12 @@ export default function Home() {
           </p>
 
           <div className="flex flex-wrap gap-4 pt-4">
-            {/* ✨ BUTTON UPDATED: Added White Border */}
             <button 
               onClick={scrollToShop}
-              className="group relative px-8 py-5 rounded-full transition-all flex items-center gap-3 active:scale-95 z-30" // High Z-index
+              className="group relative px-8 py-5 rounded-full transition-all flex items-center gap-3 active:scale-95 z-30" 
               style={{
                 boxShadow: '0 0 25px rgba(205, 175, 149, 0.9), 0 0 50px rgba(205, 175, 149, 0.6)', 
-                border: '2px solid #FFFFFF', // ✨ UPDATED: White border
+                border: '2px solid #FFFFFF', 
                 backgroundColor: '#CDAF95',
                 color: '#1F1F1F'
               }}
@@ -159,14 +153,20 @@ export default function Home() {
           <div className="relative w-full max-w-md aspect-[4/5] rounded-[3rem] bg-white border border-black/5 flex items-center justify-center overflow-hidden shadow-2xl">
             {settings?.show_hero_image && settings?.hero_image_url ? (
               <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
-                <img 
-                  src={settings.hero_image_url} 
-                  alt="Hero Bouquet" 
-                  className="absolute w-full h-full object-cover transition-transform duration-700" 
-                  style={{ 
-                    transform: `scale(${parseInt(settings.hero_zoom || '100') / 100}) translateY(${(parseInt(settings.hero_vertical_shift || '50') - 50) * 0.5}%)`
-                  }}
-                />
+                {/* ✨ PERFORMANCE: Replaced <img> with Next.js Image */}
+                <div className="relative w-full h-full">
+                    <Image 
+                      src={settings.hero_image_url} 
+                      alt="Hero Bouquet" 
+                      fill
+                      priority
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover transition-transform duration-700" 
+                      style={{ 
+                        transform: `scale(${parseInt(settings.hero_zoom || '100') / 100}) translateY(${(parseInt(settings.hero_vertical_shift || '50') - 50) * 0.5}%)`
+                      }}
+                    />
+                </div>
               </div>
             ) : (
               <div className="absolute inset-0 bg-[#F6EFE6] flex items-center justify-center italic text-black/10 font-serif text-2xl">Rosetas</div>
@@ -241,7 +241,7 @@ export default function Home() {
             className="px-10 py-4 font-bold rounded-full transition-all flex items-center gap-2 mx-auto active:scale-95"
             style={{
               boxShadow: '0 0 25px rgba(205, 175, 149, 0.9), 0 0 50px rgba(205, 175, 149, 0.6)', 
-              border: '2px solid #FFFFFF', // ✨ UPDATED: White border added to secondary button too for consistency
+              border: '2px solid #FFFFFF', 
               backgroundColor: '#CDAF95',
               color: '#1F1F1F'
             }}

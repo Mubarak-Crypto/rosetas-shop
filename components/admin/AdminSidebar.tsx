@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users } from "lucide-react"; // ✨ Added Users icon
+import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users, Percent } from "lucide-react"; // ✨ Added Percent icon
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
@@ -56,7 +56,7 @@ export default function AdminSidebar() {
         </div>
 
         {/* NAVIGATION */}
-        <nav className="flex-1 p-4 space-y-2">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           
           {/* Dashboard Link */}
           <Link 
@@ -100,7 +100,7 @@ export default function AdminSidebar() {
             Products
           </Link>
 
-          {/* Sales Manager Link */}
+          {/* Sales Manager Link (Global Sale) */}
           <Link 
             href="/admin/sales" 
             onClick={() => setIsOpen(false)}
@@ -111,7 +111,21 @@ export default function AdminSidebar() {
             }`}
           >
             <Tag size={20} />
-            Sales & Discounts
+            Global Sale
+          </Link>
+
+          {/* ✨ NEW: Promo Codes Link */}
+          <Link 
+            href="/admin/discounts" 
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              isActive("/admin/discounts") 
+                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Percent size={20} />
+            Promo Codes
           </Link>
 
           {/* Storefront Link */}
@@ -142,7 +156,7 @@ export default function AdminSidebar() {
             Manage Reviews
           </Link>
 
-          {/* ✨ Florist Community Link (NEW) */}
+          {/* Florist Community Link */}
           <Link 
             href="/admin/florists" 
             onClick={() => setIsOpen(false)}

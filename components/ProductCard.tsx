@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Plus, ShoppingBag, Video, Tag, Sparkles, Heart } from "lucide-react"; 
 import Link from "next/link";
+import Image from "next/image"; // ✨ PERFORMANCE FIX: Import Next.js Image
 import { useLanguage } from "../context/LanguageContext";
 import { useCart } from "../context/CartContext"; 
 import { useWishlist } from "../context/WishlistContext"; 
@@ -153,11 +154,16 @@ export default function ProductCard({
               className={`w-full h-full object-cover transition-all duration-700 ease-out ${isOutOfStock ? "grayscale opacity-50" : "opacity-90 group-hover:scale-110 group-hover:opacity-100"}`}
             />
           ) : (
-            <img 
-              src={image} 
-              alt={title} 
-              className={`w-full h-full object-cover transition-all duration-700 ease-out ${isOutOfStock ? "grayscale opacity-50" : "opacity-90 group-hover:scale-110 group-hover:opacity-100"}`}
-            />
+            // ✨ PERFORMANCE FIX: Replaced <img> with Next.js <Image />
+            <div className={`relative w-full h-full transition-all duration-700 ease-out ${isOutOfStock ? "grayscale opacity-50" : "opacity-90 group-hover:scale-110 group-hover:opacity-100"}`}>
+                <Image 
+                  src={image} 
+                  alt={title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
+            </div>
           )}
           
           {hasVideo && (

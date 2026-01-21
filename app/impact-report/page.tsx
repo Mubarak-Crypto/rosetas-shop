@@ -1,46 +1,85 @@
 "use client";
 
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+// Footer import removed to prevent duplication
 import { motion } from "framer-motion";
 import { Droplets, Heart, HandHeart, CheckCircle, ArrowRight, Calendar, MapPin, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { useLanguage } from "@/context/LanguageContext"; // ✨ Added Language Context
+import { useLanguage } from "@/context/LanguageContext"; 
 
 // Define the shape of a project from your Database
 type Project = {
   id: string;
   title: string;
+  title_de?: string; // ✨ Added German Title
   description: string;
+  description_de?: string; // ✨ Added German Desc
   image_url: string;
   created_at: string;
 };
 
+// Define the Page Content (Hero, Stats, Pledge)
+type PageContent = {
+  hero_title: string; hero_title_de: string;
+  hero_subtitle: string; hero_subtitle_de: string;
+  stat_1_value: string; stat_1_label: string; stat_1_label_de: string;
+  stat_2_value: string; stat_2_label: string; stat_2_label_de: string;
+  stat_3_value: string; stat_3_label: string; stat_3_label_de: string;
+  pledge_title: string; pledge_title_de: string;
+  pledge_text: string; pledge_text_de: string;
+};
+
 export default function ImpactReportPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [content, setContent] = useState<PageContent | null>(null); // ✨ Store Page Settings
   const [isLoading, setIsLoading] = useState(true);
-  const { language } = useLanguage(); // ✨ Get current language
+  const { language } = useLanguage(); 
 
-  // ✨ Fetch Projects from Supabase
+  // ✨ Fetch Data from Supabase
   useEffect(() => {
-    async function fetchProjects() {
+    async function fetchData() {
       try {
-        const { data, error } = await supabase
+        // 1. Fetch Global Content (Hero, Stats, Pledge)
+        const { data: contentData } = await supabase
+            .from('charity_content')
+            .select('*')
+            .eq('id', '00000000-0000-0000-0000-000000000000') // ✨ Force it to get the row you are editing
+            .single();
+        
+        if (contentData) setContent(contentData);
+
+        // 2. Fetch Projects List
+        const { data: projectData } = await supabase
           .from('charity_projects')
           .select('*')
-          .order('created_at', { ascending: false }); // Newest first
+          .order('created_at', { ascending: false });
 
-        if (data) setProjects(data);
+        if (projectData) setProjects(projectData);
+
       } catch (e) {
-        console.error("Error fetching projects:", e);
+        console.error("Error fetching data:", e);
       } finally {
         setIsLoading(false);
       }
     }
-    fetchProjects();
+    fetchData();
   }, []);
+
+  // ✨ Helper to pick the right text based on language
+  const getText = (en: string | undefined, de: string | undefined, fallback: string) => {
+      if (language === 'EN') return en || fallback;
+      return de || en || fallback;
+  };
+
+  if (isLoading) {
+      return (
+        <main className="min-h-screen bg-[#F6EFE6] flex items-center justify-center">
+            <Loader2 className="animate-spin text-[#C9A24D]" size={40} />
+        </main>
+      );
+  }
 
   return (
     <main className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#E3D7C5] selection:text-[#1F1F1F]">
@@ -64,42 +103,47 @@ export default function ImpactReportPage() {
             transition={{ delay: 0.1 }}
             className="text-5xl md:text-7xl font-serif font-extrabold text-[#1F1F1F] tracking-tight"
           >
-            {language === 'EN' ? "Beauty With A Purpose." : "Schönheit mit Bedeutung."}
+            {/* ✨ Dynamic Hero Title */}
+            {getText(content?.hero_title, content?.hero_title_de, "Beauty With A Purpose.")}
           </motion.h1>
           
           <motion.p 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-lg md:text-xl text-[#1F1F1F]/60 max-w-2xl mx-auto leading-relaxed font-medium"
+            className="text-lg md:text-xl text-[#1F1F1F]/60 max-w-2xl mx-auto leading-relaxed font-medium whitespace-pre-line"
           >
-            {language === 'EN' 
-              ? "We believe luxury shouldn't just look good—it should do good. Here is exactly how your orders are changing lives around the world."
-              : "Wir glauben, dass Luxus nicht nur gut aussehen sollte – sondern auch Gutes bewirken muss. Hier sehen Sie genau, wie Ihre Bestellungen Leben auf der ganzen Welt verändern."
-            }
+            {/* ✨ Dynamic Hero Subtitle */}
+            {getText(
+                content?.hero_subtitle, 
+                content?.hero_subtitle_de, 
+                "We believe luxury shouldn't just look good—it should do good."
+            )}
           </motion.p>
         </div>
       </section>
 
-      {/* STATS GRID */}
+      {/* STATS GRID (Dynamic) */}
       <section className="px-6 pb-20">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
                 { 
-                  label: language === 'EN' ? "Wells Constructed" : "Brunnen gebaut", 
-                  value: "05", 
+                  // Stat 1 (Droplets)
+                  value: content?.stat_1_value || "05", 
+                  label: getText(content?.stat_1_label, content?.stat_1_label_de, "Wells Constructed"), 
                   icon: Droplets 
                 },
                 { 
-                  label: language === 'EN' ? "Families Supported" : "Familien unterstützt", 
-                  value: "150+", 
+                  // Stat 2 (HandHeart)
+                  value: content?.stat_2_value || "150+", 
+                  label: getText(content?.stat_2_label, content?.stat_2_label_de, "Families Supported"), 
                   icon: HandHeart 
                 },
                 { 
-                  label: language === 'EN' ? "Donated to Charity" : "Gespendet", 
-                  value: "10%", 
+                  // Stat 3 (Heart)
+                  value: content?.stat_3_value || "10%", 
+                  label: getText(content?.stat_3_label, content?.stat_3_label_de, "Donated to Charity"), 
                   icon: Heart, 
-                  sub: language === 'EN' ? "Of Total Profits" : "Vom Gesamtgewinn" 
                 },
             ].map((stat, idx) => (
                 <motion.div 
@@ -115,18 +159,13 @@ export default function ImpactReportPage() {
                     </div>
                     <div className="text-4xl font-serif font-bold text-[#1F1F1F] mb-2">{stat.value}</div>
                     <div className="text-xs font-black uppercase tracking-widest text-[#1F1F1F]/40">{stat.label}</div>
-                    {stat.sub && <div className="text-[10px] font-bold text-[#D4C29A] mt-1">{stat.sub}</div>}
                 </motion.div>
             ))}
         </div>
       </section>
 
       {/* DYNAMIC PROJECTS LIST */}
-      {isLoading ? (
-        <div className="py-20 flex justify-center">
-            <Loader2 className="animate-spin text-[#C9A24D]" size={40} />
-        </div>
-      ) : projects.length > 0 ? (
+      {projects.length > 0 ? (
         <div className="space-y-0"> {/* Container for stack of projects */}
             {projects.map((project, index) => {
                 // Zig-zag logic: If index is odd (1, 3, 5...), image goes to right.
@@ -167,9 +206,13 @@ export default function ImpactReportPage() {
                                             <MapPin size={14} /> 
                                             {language === 'EN' ? `Project #${String(projects.length - index).padStart(3, '0')} • Active` : `Projekt #${String(projects.length - index).padStart(3, '0')} • Aktiv`}
                                         </div>
-                                        <h2 className="text-4xl font-serif font-bold text-[#1F1F1F] mb-4">{project.title}</h2>
+                                        {/* ✨ Dynamic Project Title */}
+                                        <h2 className="text-4xl font-serif font-bold text-[#1F1F1F] mb-4">
+                                            {getText(project.title, project.title_de, project.title)}
+                                        </h2>
+                                        {/* ✨ Dynamic Project Description */}
                                         <p className="text-[#1F1F1F]/60 text-lg leading-relaxed whitespace-pre-line">
-                                            {project.description}
+                                            {getText(project.description, project.description_de, project.description)}
                                         </p>
                                     </div>
 
@@ -213,17 +256,18 @@ export default function ImpactReportPage() {
         </div>
       )}
 
-      {/* UPCOMING PROJECTS / PLEDGE */}
+      {/* UPCOMING PROJECTS / PLEDGE (Dynamic) */}
       <section className="px-6 py-24">
         <div className="max-w-4xl mx-auto text-center space-y-8">
             <h2 className="text-3xl font-bold text-[#1F1F1F]">
-              {language === 'EN' ? "Our Commitment Continues" : "Unser Engagement geht weiter"}
+              {getText(content?.pledge_title, content?.pledge_title_de, "Our Commitment Continues")}
             </h2>
-            <p className="text-[#1F1F1F]/60 text-lg leading-relaxed">
-                {language === 'EN' 
-                  ? <>This is just the beginning. For Ramadan 2026, we have pledged to double our efforts. Every order you place helps us reach our next goal: <span className="text-[#1F1F1F] font-bold">Building a second well and providing 500 food parcels.</span></>
-                  : <>Dies ist erst der Anfang. Für Ramadan 2026 haben wir uns verpflichtet, unsere Anstrengungen zu verdoppeln. Jede Bestellung hilft uns, unser nächstes Ziel zu erreichen: <span className="text-[#1F1F1F] font-bold">Der Bau eines zweiten Brunnens und die Bereitstellung von 500 Lebensmittelpaketen.</span></>
-                }
+            <p className="text-[#1F1F1F]/60 text-lg leading-relaxed whitespace-pre-line">
+                {getText(
+                    content?.pledge_text, 
+                    content?.pledge_text_de, 
+                    "This is just the beginning. Every order you place helps us reach our next goal."
+                )}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
@@ -236,7 +280,7 @@ export default function ImpactReportPage() {
         </div>
       </section>
 
-      <Footer />
+      {/* Footer Removed here because it is already in layout.tsx */}
     </main>
   );
 }

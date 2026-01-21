@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-// ✨ Added 'Check' to the imports below to fix the ReferenceError
-import { ArrowLeft, Lock, ShieldCheck, Mail, Phone, Globe, Zap, AlertCircle, Truck, Gift, Package, Coffee, Droplets, Heart, Check } from "lucide-react"; 
+// ✨ Added 'Plane' to imports for Vacation Mode
+import { ArrowLeft, Lock, ShieldCheck, Mail, Phone, Globe, Zap, AlertCircle, Truck, Gift, Package, Coffee, Droplets, Heart, Check, Tag, Loader2, Plane } from "lucide-react"; 
 import Link from "next/link";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext"; 
@@ -109,7 +109,9 @@ function PaymentForm({
   tipAmount, 
   donationAmount, 
   donorName, 
-  isPublicDonor 
+  isPublicDonor,
+  discountCode, 
+  discountAmount 
 }: { 
   amount: number, 
   formData: any, 
@@ -120,7 +122,9 @@ function PaymentForm({
   tipAmount: number,
   donationAmount: number,
   donorName: string,
-  isPublicDonor: boolean
+  isPublicDonor: boolean,
+  discountCode: string | null,
+  discountAmount: number
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -152,6 +156,7 @@ function PaymentForm({
         }
       }
 
+      // ✨ UPDATED: Include Discount Info in Database
       const { error: dbError } = await supabase.from('orders').insert([{
           customer_name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
@@ -168,10 +173,20 @@ function PaymentForm({
           tip_amount: tipAmount,
           donation_amount: donationAmount,
           donor_name: donorName,
-          donor_is_public: isPublicDonor
+          donor_is_public: isPublicDonor,
+          discount_code: discountCode, 
+          discount_amount: discountAmount 
       }]);
 
       if (dbError) console.error("Error saving order:", dbError);
+
+      // ✨ Update Discount Usage Count
+      if (discountCode) {
+          const { data: codeData } = await supabase.from('discount_codes').select('id, current_uses').eq('code', discountCode).single();
+          if (codeData) {
+              await supabase.from('discount_codes').update({ current_uses: (codeData.current_uses || 0) + 1 }).eq('id', codeData.id);
+          }
+      }
 
       await fetch("/api/send-order-email", {
         method: "POST",
@@ -182,7 +197,7 @@ function PaymentForm({
           address: `${formData.address}, ${formData.city}, ${formData.country}`,
           items: cart,
           total: amount,
-          shippingMethod: `${shippingMethodString}${tipAmount > 0 ? ` + Tip: €${tipAmount.toFixed(2)}` : ""}${donationAmount > 0 ? ` + Donation: €${donationAmount.toFixed(2)}` : ""}`
+          shippingMethod: `${shippingMethodString}${tipAmount > 0 ? ` + Tip: €${tipAmount.toFixed(2)}` : ""}${donationAmount > 0 ? ` + Donation: €${donationAmount.toFixed(2)}` : ""}${discountCode ? ` + Code: ${discountCode}` : ""}`
         }),
       });
 
@@ -213,10 +228,14 @@ export default function CheckoutPage() {
   const [giftNote, setGiftNote] = useState(""); 
   
   // Policies & Agreements
-  const [agreedToPolicy, setAgreedToPolicy] = useState(false); // Delivery & Return Policy
+  const [agreedToPolicy, setAgreedToPolicy] = useState(false); 
   const [agreedToCustoms, setAgreedToCustoms] = useState(false); 
-  const [agreedToWithdrawal, setAgreedToWithdrawal] = useState(false); // Right of Withdrawal
-  const [agreedToCancellation, setAgreedToCancellation] = useState(false); // Cancellation Policy
+  const [agreedToWithdrawal, setAgreedToWithdrawal] = useState(false); 
+  const [agreedToCancellation, setAgreedToCancellation] = useState(false); 
+
+  // ✨ NEW: Vacation Mode State
+  const [vacationSettings, setVacationSettings] = useState({ isActive: false, endDate: '', message: '' });
+  const [agreedToVacation, setAgreedToVacation] = useState(false);
 
   // Benevolence
   const [tipOption, setTipOption] = useState<string | null>(null);
@@ -228,15 +247,30 @@ export default function CheckoutPage() {
   const [isPublicDonor, setIsPublicDonor] = useState(false);
   const [isDonationActive, setIsDonationActive] = useState(false);
 
+  // Promo Code State
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [promoError, setPromoError] = useState("");
+  const [isCheckingCode, setIsCheckingCode] = useState(false);
+
   useEffect(() => {
       const fetchSettings = async () => {
           const { data } = await supabase
               .from('storefront_settings')
-              .select('is_donation_active')
+              .select('*') // ✨ Fetch all fields including vacation
               .eq('id', '00000000-0000-0000-0000-000000000000') 
               .single();
           
-          if (data) setIsDonationActive(data.is_donation_active);
+          if (data) {
+              setIsDonationActive(data.is_donation_active);
+              // ✨ NEW: Set Vacation Data
+              setVacationSettings({
+                  isActive: data.is_vacation_mode_active,
+                  endDate: data.vacation_end_date,
+                  message: data.vacation_message
+              });
+          }
       };
       fetchSettings();
   }, []);
@@ -268,7 +302,80 @@ export default function CheckoutPage() {
   }, [formData.country, cart, isExpress]);
 
   const packagingCost = packagingType === 'gift' ? 10 : 0;
-  const finalTotal = cartTotal + shippingCost + packagingCost + tipAmount + donationAmount;
+  
+  // Total Calculation
+  const finalTotal = Math.max(0, cartTotal + shippingCost + packagingCost + tipAmount + donationAmount - discountAmount);
+
+  // Handle Code Apply
+  const handleApplyCode = async () => {
+      if (!promoCodeInput.trim()) return;
+      setIsCheckingCode(true);
+      setPromoError("");
+
+      const code = promoCodeInput.toUpperCase().trim();
+
+      try {
+          const { data, error } = await supabase
+              .from('discount_codes')
+              .select('*')
+              .eq('code', code)
+              .single();
+
+          if (error || !data) {
+              setPromoError("Invalid Code");
+              setIsCheckingCode(false);
+              return;
+          }
+
+          if (!data.is_active) {
+              setPromoError("This code is no longer active.");
+              setIsCheckingCode(false);
+              return;
+          }
+
+          if (data.expires_at && new Date(data.expires_at) < new Date()) {
+              setPromoError("This code has expired.");
+              setIsCheckingCode(false);
+              return;
+          }
+
+          if (data.max_uses !== null && data.current_uses >= data.max_uses) {
+              setPromoError("This code has reached its usage limit.");
+              setIsCheckingCode(false);
+              return;
+          }
+
+          if (data.min_order_value > 0 && cartTotal < data.min_order_value) {
+              setPromoError(`Minimum order value of €${data.min_order_value} required.`);
+              setIsCheckingCode(false);
+              return;
+          }
+
+          // Calculate Discount
+          let discount = 0;
+          if (data.discount_type === 'percentage') {
+              discount = (cartTotal * data.value) / 100;
+          } else {
+              discount = data.value;
+          }
+
+          discount = Math.min(discount, cartTotal);
+
+          setDiscountAmount(discount);
+          setAppliedCode(code);
+          setPromoCodeInput(""); 
+      } catch (err) {
+          setPromoError("Error checking code.");
+      } finally {
+          setIsCheckingCode(false);
+      }
+  };
+
+  const removeCode = () => {
+      setAppliedCode(null);
+      setDiscountAmount(0);
+      setPromoError("");
+  };
 
   const handleTipClick = (type: string) => {
     if (tipOption === type && type !== 'custom') {
@@ -303,7 +410,8 @@ export default function CheckoutPage() {
         String(val).toLowerCase().includes('letter') || 
         String(val).toLowerCase().includes('message') ||
         String(val).toLowerCase().includes('note')
-      ))
+      )) ||
+      (item.extras && Array.isArray(item.extras) && item.extras.length > 0)
     );
   }, [cart]);
 
@@ -315,6 +423,7 @@ export default function CheckoutPage() {
 
   const isBlacklisted = shippingBlacklist.includes(formData.country);
 
+  // ✨ UPDATED: Added 'vacationValid' check
   const canProceed = useMemo(() => {
     const hasAddress = formData.email && formData.phone && formData.address && formData.city && formData.zip;
     const policyValid = agreedToPolicy;
@@ -322,12 +431,15 @@ export default function CheckoutPage() {
     const withdrawalValid = (!isNonEU && hasPersonalization) ? agreedToWithdrawal : true; 
     const cancellationValid = agreedToCancellation; 
     
+    // ✨ Vacation Check: If active, must be agreed. If not active, it's always valid.
+    const vacationValid = !vacationSettings.isActive || agreedToVacation;
+
     const giftNoteValid = packagingType === 'gift' ? giftNote.trim().length > 0 : true;
 
     if (isBlacklisted) return false;
 
-    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid;
-  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation]);
+    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid && vacationValid;
+  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation, vacationSettings.isActive, agreedToVacation]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -347,6 +459,12 @@ export default function CheckoutPage() {
           return;
       }
 
+      // ✨ NEW ALERT for Vacation Mode
+      if (vacationSettings.isActive && !agreedToVacation) {
+          alert(language === 'EN' ? "Please agree to the shipping delay notice." : "Bitte stimmen Sie dem Hinweis zur Lieferverzögerung zu.");
+          return;
+      }
+
       alert(language === 'EN' ? "Please complete all fields and agree to the required policies." : "Bitte füllen Sie alle Felder aus und stimmen Sie den erforderlichen Bedingungen zu.");
       return;
     }
@@ -358,10 +476,13 @@ export default function CheckoutPage() {
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: Math.round(finalTotal * 100) }),
+        body: JSON.stringify({ 
+            amount: Math.round(finalTotal * 100),
+            discountCode: appliedCode 
+        }),
       }).then((res) => res.json()).then((data) => setClientSecret(data.clientSecret));
     }
-  }, [step, finalTotal]);
+  }, [step, finalTotal, appliedCode]);
 
   if (cart.length === 0) return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex flex-col items-center justify-center gap-4">
@@ -412,7 +533,7 @@ export default function CheckoutPage() {
                 </div>
                 {isBlacklisted && <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-700 animate-pulse"><AlertCircle size={20} /><span className="text-sm font-bold">{language === 'EN' ? `We currently do not ship to ${formData.country}.` : `Wir liefern derzeit nicht nach ${formData.country}.`}</span></div>}
                 
-                {/* ✨ UPDATED: Germany Specific Shipping Selection */}
+                {/* Germany Specific Shipping Selection */}
                 {formData.country === "Germany" && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div 
@@ -465,7 +586,7 @@ export default function CheckoutPage() {
                 {isNonEU && (<div className="space-y-4 mt-6 animate-in slide-in-from-top-2"><div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800"><AlertCircle size={20} className="flex-shrink-0" /><div className="text-xs leading-relaxed"><p className="font-bold mb-1">{language === 'EN' ? "Important: Customs & Duties" : "Wichtig: Zoll & Steuern"}</p><p>{language === 'EN' ? "Shipments to countries outside the EU may be subject to import duties and taxes. These costs are the responsibility of the recipient." : "Lieferungen in Länder außerhalb der EU können Einfuhrzöllen und Steuern unterliegen. Diese Kosten sind vom Empfänger zu tragen."}</p></div></div><div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl"><input required type="checkbox" id="customsAgreement" checked={agreedToCustoms} onChange={(e) => setAgreedToCustoms(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="customsAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I understand that any customs duties, taxes, or import fees that may apply are my responsibility and must be paid by me." : "Ich verstehe, dass anfallende Zollgebühren, Steuern oder Einfuhrabgaben in meiner Verantwortung liegen und von mir bezahlt werden müssen."} *</label></div></div>)}
                 <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl mt-4"><input required type="checkbox" id="deliveryPolicy" checked={agreedToPolicy} onChange={(e) => setAgreedToPolicy(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="deliveryPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I agree that if delivery is unsuccessful, my parcel may be delivered to a neighbor or a nearby parcel shop. Returns to the sender are excluded. Please note: If an order is returned and needs to be resent, the shipping costs must be paid again by the customer." : "Ich stimme zu, dass mein Paket bei einem erfolglosen Zustellversuch an einen Nachbarn oder einen Paketshop geliefert werden kann. Rücksendungen sind ausgeschlossen. Bitte beachten Sie: Wenn eine Bestellung zurückgesendet wird und erneut versendet werden muss, müssen die Versandkosten vom Kunden erneut bezahlt werden."} *</label></div>
                 
-                {/* ✨ NEW: Mandatory Cancellation Notice */}
+                {/* Mandatory Cancellation Notice */}
                 <div className="space-y-4 mt-6 animate-in slide-in-from-top-2">
                     <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-900">
                         <AlertCircle size={20} className="flex-shrink-0" />
@@ -497,6 +618,43 @@ export default function CheckoutPage() {
                     </div>
                 </div>
 
+                {/* ✨ NEW: VACATION MODE NOTICE (Dynamic) */}
+                {vacationSettings.isActive && (
+                    <div className="space-y-4 mt-6 animate-in slide-in-from-top-2">
+                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex gap-3 text-blue-900">
+                            <Plane size={20} className="flex-shrink-0" />
+                            <div className="text-xs leading-relaxed">
+                                <p className="font-bold mb-1">
+                                    {language === 'EN' ? "Vacation Notice" : "Urlaubsbenachrichtigung"}
+                                </p>
+                                <p>{vacationSettings.message}</p>
+                                {vacationSettings.endDate && (
+                                    <p className="mt-1 font-bold">
+                                        {language === 'EN' 
+                                        ? `Orders will be processed starting from: ${new Date(vacationSettings.endDate).toLocaleDateString()}` 
+                                        : `Bestellungen werden ab dem ${new Date(vacationSettings.endDate).toLocaleDateString()} bearbeitet.`}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl">
+                            <input 
+                                required 
+                                type="checkbox" 
+                                id="vacationAgreement" 
+                                checked={agreedToVacation} 
+                                onChange={(e) => setAgreedToVacation(e.target.checked)} 
+                                className="mt-1 w-4 h-4 accent-blue-600 cursor-pointer" 
+                            />
+                            <label htmlFor="vacationAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">
+                                {language === 'EN' 
+                                ? "I understand that my order will be delayed due to the vacation period." 
+                                : "Ich verstehe, dass sich meine Bestellung aufgrund der Urlaubszeit verzögert."} *
+                            </label>
+                        </div>
+                    </div>
+                )}
+
               </div>
               <button type="submit" disabled={!canProceed} className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] py-5 rounded-xl transition-all text-white font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50">{t('checkout_continue')} <ArrowLeft className="rotate-180" size={18} /></button>
             </form>
@@ -508,16 +666,15 @@ export default function CheckoutPage() {
                 <button onClick={() => setStep(1)} className="text-[#C9A24D] text-sm font-bold hover:underline">{t('checkout_change')}</button>
               </div>
               
-              {/* ✨ NEW: BENEVOLENCE SECTION (Tip + Donation) - CONDITIONAL RENDERING */}
+              {/* ... Benevolence Section (Preserved) ... */}
               {isDonationActive && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-2">
-                     {/* Tip Section */}
-                     <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                         <div className="flex items-center gap-2 mb-4">
+                      <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
+                          <div className="flex items-center gap-2 mb-4">
                              <div className="p-1.5 bg-[#C9A24D]/10 rounded-lg text-[#C9A24D]"><Coffee size={18}/></div>
                              <h3 className="font-bold text-sm">{language === 'EN' ? "Support the Team (Optional)" : "Team unterstützen (Optional)"}</h3>
-                         </div>
-                         <div className="flex gap-2">
+                          </div>
+                          <div className="flex gap-2">
                              {['3%', '5%', '5eur', 'custom'].map(opt => (
                                  <button
                                      key={opt}
@@ -531,8 +688,8 @@ export default function CheckoutPage() {
                                      {opt === '3%' ? '3%' : opt === '5%' ? '5%' : opt === '5eur' ? '€5' : 'Custom'}
                                  </button>
                              ))}
-                         </div>
-                         {tipOption === 'custom' && (
+                          </div>
+                          {tipOption === 'custom' && (
                              <div className="mt-3 animate-in fade-in slide-in-from-top-1">
                                  <input 
                                      type="number" 
@@ -541,12 +698,11 @@ export default function CheckoutPage() {
                                      onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
                                  />
                              </div>
-                         )}
-                     </div>
+                          )}
+                      </div>
 
-                     {/* Donation Section */}
-                     <div className={`transition-all duration-300 border rounded-2xl p-6 shadow-sm ${showDonation ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-black/5'}`}>
-                         <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowDonation(!showDonation)}>
+                      <div className={`transition-all duration-300 border rounded-2xl p-6 shadow-sm ${showDonation ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-black/5'}`}>
+                          <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowDonation(!showDonation)}>
                              <div className="flex items-center gap-2">
                                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Droplets size={18}/></div>
                                  <div>
@@ -557,9 +713,9 @@ export default function CheckoutPage() {
                              <div className={`w-5 h-5 rounded-full border border-black/10 flex items-center justify-center transition-all ${showDonation ? 'bg-blue-600 border-blue-600' : 'bg-white'}`}>
                                  {showDonation && <Check size={12} className="text-white" />}
                              </div>
-                         </div>
+                          </div>
 
-                         {showDonation && (
+                          {showDonation && (
                              <div className="mt-4 pt-4 border-t border-black/5 space-y-4 animate-in fade-in">
                                  <p className="text-xs text-[#1F1F1F]/70 leading-relaxed italic">
                                      {language === 'EN' 
@@ -622,8 +778,8 @@ export default function CheckoutPage() {
                                      )}
                                  </div>
                              </div>
-                         )}
-                     </div>
+                          )}
+                      </div>
                   </div>
               )}
 
@@ -642,6 +798,8 @@ export default function CheckoutPage() {
                         donationAmount={donationAmount}
                         donorName={donorName}
                         isPublicDonor={isPublicDonor}
+                        discountCode={appliedCode}
+                        discountAmount={discountAmount}
                     />
                   </Elements>
                 </div>
@@ -707,8 +865,50 @@ export default function CheckoutPage() {
                 </div>
             )}
 
+            {/* Promo Code Display */}
+            {discountAmount > 0 && (
+                <div className="flex justify-between text-green-600 font-bold text-sm animate-in slide-in-from-right-2">
+                    <span className="flex items-center gap-1"><Tag size={12}/> Discount ({appliedCode})</span>
+                    <span>-€{discountAmount.toFixed(2)}</span>
+                </div>
+            )}
+
             <div className="flex justify-between text-xl font-bold text-[#1F1F1F] pt-4 border-t border-black/10"><span>{t('checkout_total')}</span><span className="text-[#C9A24D]">€{finalTotal.toFixed(2)}</span></div>
           </div>
+
+          {/* Promo Code Input Field */}
+          <div className="mt-6 pt-4 border-t border-black/5">
+              {!appliedCode ? (
+                  <div className="space-y-2">
+                      <div className="flex gap-2">
+                          <input 
+                              type="text" 
+                              placeholder={language === 'EN' ? "Enter Promo Code" : "Gutscheincode eingeben"} 
+                              className="flex-1 bg-white border border-black/10 rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-wide focus:border-[#C9A24D] outline-none"
+                              value={promoCodeInput}
+                              onChange={(e) => setPromoCodeInput(e.target.value)}
+                          />
+                          <button 
+                              onClick={handleApplyCode}
+                              disabled={!promoCodeInput.trim() || isCheckingCode}
+                              className="bg-[#1F1F1F] text-white px-4 rounded-xl font-bold text-sm hover:bg-[#C9A24D] disabled:opacity-50 transition-colors"
+                          >
+                              {isCheckingCode ? <Loader2 className="animate-spin" size={16} /> : "Apply"}
+                          </button>
+                      </div>
+                      {promoError && <p className="text-red-500 text-xs font-bold animate-pulse">{promoError}</p>}
+                  </div>
+              ) : (
+                  <div className="bg-green-50 border border-green-200 p-3 rounded-xl flex justify-between items-center animate-in fade-in">
+                      <div className="flex items-center gap-2 text-green-700">
+                          <Tag size={16} />
+                          <span className="text-xs font-bold uppercase tracking-wide">{appliedCode} Applied</span>
+                      </div>
+                      <button onClick={removeCode} className="text-red-400 hover:text-red-600 font-bold text-xs">Remove</button>
+                  </div>
+              )}
+          </div>
+
         </div>
       </main>
     </div>

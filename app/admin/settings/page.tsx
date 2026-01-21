@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabase";
-import { Save, Upload, Eye, EyeOff, MoveVertical, Loader2, Layout, Maximize, Type, LayoutDashboard, Droplets, Palette, Plus, Trash2, X, Check, Heart, Quote, Star } from "lucide-react"; // ✨ Added Heart, Quote, Star
+import { Save, Upload, Eye, EyeOff, MoveVertical, Loader2, Layout, Maximize, Type, LayoutDashboard, Droplets, Palette, Plus, Trash2, X, Check, Heart, Quote, Star, Plane } from "lucide-react"; // ✨ Added Plane
 import Link from "next/link"; 
 import CategoryTranslationManager from "../../../components/admin/CategoryTranslationManager"; 
 
@@ -108,7 +108,12 @@ export default function StorefrontSettings() {
         hero_title: settings.hero_title,      
         hero_subtitle: settings.hero_subtitle, 
         show_hero_image: settings.show_hero_image,
-        is_donation_active: settings.is_donation_active, // ✨ Save Donation Toggle
+        is_donation_active: settings.is_donation_active,
+        // ✨ NEW: Save Vacation Mode Settings
+        is_vacation_mode_active: settings.is_vacation_mode_active,
+        vacation_start_date: settings.vacation_start_date,
+        vacation_end_date: settings.vacation_end_date,
+        vacation_message: settings.vacation_message,
         updated_at: new Date().toISOString(),
       })
       .eq('id', SETTINGS_ID);
@@ -262,6 +267,62 @@ export default function StorefrontSettings() {
                        <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
                    </button>
                </div>
+            </div>
+
+            {/* ✨ NEW: VACATION MODE SECTION */}
+            <div className="bg-white p-6 rounded-[2rem] border border-black/5 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 mb-2 text-[#C9A24D]">
+                    <Plane size={20} />
+                    <h3 className="font-bold text-lg text-[#1F1F1F]">Vacation Mode</h3>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-[#F6EFE6] rounded-xl border border-[#C9A24D]/20">
+                    <div>
+                        <p className="font-bold text-sm text-[#1F1F1F]">Activate Vacation Mode</p>
+                        <p className="text-[10px] text-[#1F1F1F]/50">Pauses immediate shipping.</p>
+                    </div>
+                    <button 
+                        onClick={() => setSettings({...settings, is_vacation_mode_active: !settings.is_vacation_mode_active})}
+                        className={`w-12 h-6 rounded-full transition-all flex items-center p-1 ${settings.is_vacation_mode_active ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}
+                    >
+                        <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </button>
+                </div>
+
+                {settings.is_vacation_mode_active && (
+                    <div className="space-y-4 animate-in fade-in slide-in-from-top-2 pt-2">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-[#1F1F1F]/40 uppercase">Start Date</label>
+                                <input 
+                                    type="date" 
+                                    value={settings.vacation_start_date || ''}
+                                    onChange={(e) => setSettings({...settings, vacation_start_date: e.target.value})}
+                                    className="w-full bg-[#F6EFE6] border border-black/5 rounded-xl px-3 py-2 text-sm font-bold text-[#1F1F1F] focus:outline-none focus:border-[#C9A24D]"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-[#1F1F1F]/40 uppercase">Resumes On (Important)</label>
+                                <input 
+                                    type="date" 
+                                    value={settings.vacation_end_date || ''}
+                                    onChange={(e) => setSettings({...settings, vacation_end_date: e.target.value})}
+                                    className="w-full bg-[#F6EFE6] border border-black/5 rounded-xl px-3 py-2 text-sm font-bold text-[#1F1F1F] focus:outline-none focus:border-[#C9A24D]"
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-[#1F1F1F]/40 uppercase">Custom Message</label>
+                            <textarea 
+                                rows={3}
+                                value={settings.vacation_message || ''}
+                                onChange={(e) => setSettings({...settings, vacation_message: e.target.value})}
+                                placeholder="We are currently on vacation..."
+                                className="w-full bg-[#F6EFE6] border border-black/5 rounded-xl px-3 py-2 text-sm font-medium text-[#1F1F1F] focus:outline-none focus:border-[#C9A24D] resize-none"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* ✨ NEW: Hero Text Inputs */}

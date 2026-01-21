@@ -7,6 +7,7 @@ import { WishlistProvider } from "../context/WishlistContext"; // ✨ NEW: Impor
 import CartSidebar from "../components/CartSidebar";
 import Footer from "../components/Footer"; 
 import Script from "next/script"; // ✨ Added for Tidio Integration
+import VacationBanner from "../components/VacationBanner"; // ✨ NEW: Import Vacation Banner
 // 🗑️ Removed unused SocialProof import
 
 const inter = Inter({ subsets: ["latin"] });
@@ -29,6 +30,10 @@ export default function RootLayout({
           <CartProvider>
             {/* ✨ NEW: Wrapped with WishlistProvider for Saved Items */}
             <WishlistProvider>
+              
+              {/* ✨ NEW: Vacation Banner (Shows only if active) */}
+              <VacationBanner />
+
               {/* 1. The Main Content of the page */}
               {children}
 

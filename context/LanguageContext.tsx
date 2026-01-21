@@ -210,15 +210,19 @@ const translations: Record<Language, Record<string, string>> = {
 };
 
 export const LanguageProvider = ({ children }: { children: React.ReactNode }) => {
+  // 1. Initialize strictly with 'DE' to match server-side rendering
   const [language, setLanguage] = useState<Language>('DE');
   
   // ✨ Store translations in state
   const [categoryDict, setCategoryDict] = useState<Record<string, { en: string, de: string }>>({});
 
   useEffect(() => {
-    const savedLang = localStorage.getItem('language') as Language;
-    if (savedLang) {
-      setLanguage(savedLang);
+    // 2. Only on client-side mount, check for saved language
+    if (typeof window !== 'undefined') {
+        const savedLang = localStorage.getItem('language') as Language;
+        if (savedLang && (savedLang === 'EN' || savedLang === 'DE')) {
+            setLanguage(savedLang);
+        }
     }
     
     // ✨ Fetch translations once on load
@@ -238,7 +242,9 @@ export const LanguageProvider = ({ children }: { children: React.ReactNode }) =>
   const handleSetLanguage = (lang: Language) => {
     console.log("🔄 Language switched to:", lang);
     setLanguage(lang);
-    localStorage.setItem('language', lang);
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('language', lang);
+    }
   };
 
   const t = (key: string) => {

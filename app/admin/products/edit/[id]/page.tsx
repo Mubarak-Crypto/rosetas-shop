@@ -59,9 +59,9 @@ export default function EditProductPage() {
   // Variants
   const [variants, setVariants] = useState<Variant[]>([]);
   const [isAddingVariant, setIsAddingVariant] = useState(false);
+  const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null); // ✨ NEW: Track editing index
   const [newVariantName, setNewVariantName] = useState("");
   const [newVariantNameEn, setNewVariantNameEn] = useState("");
-  const [newVariantValues, setNewVariantValues] = useState("");
   
   // Helper states for building values
   const [tempValueName, setTempValueName] = useState("");
@@ -329,18 +329,63 @@ export default function EditProductPage() {
     setTempValueStock("");
   };
 
+  // ✨ NEW: Prepare Edit Variant
+  const handleEditVariant = (index: number) => {
+    const variant = variants[index];
+    setNewVariantName(variant.name);
+    setNewVariantNameEn(variant.name_en || "");
+
+    // Parse the values string back into TempList format
+    // Format: "Red | Stock: 5, Blue, Green"
+    // Format EN: "Red, Blue, Green"
+    const valuesDe = variant.values.split(',').map(s => s.trim());
+    const valuesEn = variant.values_en ? variant.values_en.split(',').map(s => s.trim()) : [];
+
+    const parsedTempList: TempVariantItem[] = valuesDe.map((valStr, i) => {
+        let deName = valStr;
+        let stock = "";
+
+        if (valStr.includes('| Stock:')) {
+            const parts = valStr.split('| Stock:');
+            deName = parts[0].trim();
+            stock = parts[1].trim();
+        }
+
+        return {
+            de: deName,
+            en: valuesEn[i] || deName,
+            stock: stock
+        };
+    });
+
+    setTempList(parsedTempList);
+    setEditingVariantIndex(index);
+    setIsAddingVariant(true);
+  };
+
   const handleAddVariant = () => {
     if (!newVariantName || tempList.length === 0) return;
     
     const valuesDE = tempList.map(item => item.stock ? `${item.de} | Stock: ${item.stock}` : item.de).join(', ');
     const valuesEN = tempList.map(item => item.en).join(', ');
 
-    setVariants([...variants, { 
+    const newVariantObj = { 
         name: newVariantName, 
         name_en: newVariantNameEn || undefined,
         values: valuesDE,
         values_en: valuesEN
-    }]);
+    };
+
+    if (editingVariantIndex !== null) {
+        // ✨ UPDATE EXISTING VARIANT
+        const updatedVariants = [...variants];
+        updatedVariants[editingVariantIndex] = newVariantObj;
+        setVariants(updatedVariants);
+        setEditingVariantIndex(null);
+    } else {
+        // ADD NEW VARIANT
+        setVariants([...variants, newVariantObj]);
+    }
 
     setNewVariantName("");
     setNewVariantNameEn("");
@@ -642,6 +687,101 @@ export default function EditProductPage() {
                 </div>
               </div>
 
+              {/* OPTIONS (VARIANTS) */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-bold text-lg mb-2">Options</h3>
+                <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
+                
+                <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
+                  <Info size={16} className="text-[#C9A24D] mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold">Pricing Grid Guide:</p>
+                    <p className="text-[9px] font-medium leading-relaxed">
+                      Use format: <span className="bg-white px-1 font-bold italic rounded">50 Roses (€100)</span> to update shop price.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 mb-4">
+                  {variants.map((v, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-black/5">
+                      <div className="max-w-[70%]">
+                        <span className="text-xs font-bold text-gray-400 block uppercase">
+                            {v.name} {v.name_en ? <span className="text-[#C9A24D]">/ {v.name_en}</span> : ''}
+                        </span>
+                        <div className="flex flex-col gap-1 mt-1">
+                            <span className="text-[10px] font-bold text-gray-400">DE: <span className="text-[#1F1F1F] font-medium">{v.values}</span></span>
+                            {v.values_en && <span className="text-[10px] font-bold text-[#C9A24D]/70">EN: <span className="text-[#1F1F1F] font-medium">{v.values_en}</span></span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => handleEditVariant(idx)} className="text-gray-400 hover:text-[#C9A24D]">
+                              <Edit2 size={16} />
+                          </button>
+                          <button type="button" onClick={() => removeVariant(idx)} className="text-gray-400 hover:text-red-500">
+                              <Trash2 size={16} />
+                          </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {isAddingVariant ? (
+                  <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                        <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
+                        <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                    </div>
+                    
+                    <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
+                        <div className="grid grid-cols-2 gap-3">
+                           <div className="space-y-1">
+                               <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
+                               <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                           </div>
+                           <div className="space-y-1">
+                               <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
+                               <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                           </div>
+                        </div>
+                        
+                        <div className="flex items-end gap-3">
+                           <div className="flex-1 space-y-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
+                                <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                           </div>
+                           <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
+                        </div>
+
+                        {tempList.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-black/5 mt-2">
+                                {tempList.map((t, i) => (
+                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5">
+                                            <div className="flex items-center gap-2 justify-between">
+                                                <span className="text-[10px] font-bold">{t.de}</span>
+                                                <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
+                                            </div>
+                                            <span className="text-[9px] text-[#C9A24D]">{t.en} {t.stock ? `(${t.stock})` : ''}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button type="button" onClick={handleAddVariant} className="flex-1 bg-[#1F1F1F] text-xs font-bold py-2 rounded-lg text-white">
+                          {editingVariantIndex !== null ? "Update Option" : "Save Option"}
+                      </button>
+                      <button type="button" onClick={() => { setIsAddingVariant(false); setTempList([]); setEditingVariantIndex(null); }} className="flex-1 bg-black/5 text-xs font-bold py-2 rounded-lg">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setIsAddingVariant(true)} className="w-full py-3 rounded-xl border border-dashed border-black/20 text-xs font-bold text-gray-400 hover:text-[#1F1F1F] hover:border-[#1F1F1F] transition-colors flex items-center justify-center gap-2">
+                    <Plus size={14} /> Add Option
+                  </button>
+                )}
+              </div>
+
               {variants.length > 1 && (
                 <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-6">
                   <div className="flex items-center gap-2">
@@ -715,196 +855,6 @@ export default function EditProductPage() {
                   </div>
                 </div>
               )}
-
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-4">Pricing & Promotion</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
-                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
-                    <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
-                      <Tag size={10} /> Promotion (Optional)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={promoLabel} 
-                      onChange={(e) => setPromoLabel(e.target.value)} 
-                      placeholder="e.g. 2 for 50" 
-                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30" 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN */}
-            <div className="space-y-6">
-              {/* IMAGES */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <h3 className="font-bold text-lg mb-4">Images</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  {images.map((img, idx) => (
-                    <div key={idx} className="relative space-y-2 group">
-                      <div className="relative aspect-[4/5] rounded-lg overflow-hidden border border-black/5">
-                        <img src={img} alt={`Product ${idx}`} className="w-full h-full object-cover" />
-                        
-                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm p-2 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" onClick={() => moveImage(idx, 'left')} disabled={idx === 0} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowLeftIcon size={14}/></button>
-                          <button type="button" onClick={() => removeImage(idx)} className="p-1 text-white hover:text-red-500"><Trash2 size={14} /></button>
-                          <button type="button" onClick={() => moveImage(idx, 'right')} disabled={idx === images.length - 1} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowRight size={14}/></button>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 rounded px-2 py-1 border border-black/5 text-center">
-                        <span className="text-[9px] font-bold text-gray-400 uppercase block leading-tight">Pos {idx + 1}</span>
-                        <span className="text-[10px] font-bold text-[#C9A24D] uppercase truncate block">
-                          {colorLabels[idx] || "Extra"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <label className={`aspect-[4/5] rounded-lg border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isUploading ? (
-                      <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <Upload size={24} />
-                        <span className="text-[10px] font-bold uppercase">Add Photo</span>
-                      </div>
-                    )}
-                    <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'product')} disabled={isUploading} />
-                  </label>
-                </div>
-                <p className="text-xs text-gray-400 italic">
-                  {isUploading ? "Uploading..." : "Tip: Images are automatically cropped to 4:5 Portrait mode."}
-                </p>
-              </div>
-
-              {/* PRODUCT VIDEOS */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <h3 className="font-bold text-lg mb-4">Product Videos</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {videoUrls.map((url, idx) => (
-                    <div key={idx} className="relative rounded-xl overflow-hidden border border-black/5 aspect-video bg-black group">
-                      <video src={url} className="w-full h-full object-cover" muted loop autoPlay />
-                      <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[9px] font-bold text-white uppercase tracking-widest">Video {idx + 1}</div>
-                      <button 
-                        type="button" 
-                        onClick={() => removeVideo(idx)} 
-                        className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  <label className={`w-full aspect-video rounded-xl border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isUploadingVideo ? (
-                      <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <Video size={24} />
-                        <span className="text-[10px] font-bold uppercase">Add Video (MP4)</span>
-                      </div>
-                    )}
-                    <input type="file" className="hidden" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
-                  </label>
-                </div>
-              </div>
-
-              {/* OPTIONS (VARIANTS) */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <h3 className="font-bold text-lg mb-2">Options</h3>
-                <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
-                
-                <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
-                  <Info size={16} className="text-[#C9A24D] mt-0.5 shrink-0" />
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold">Pricing Grid Guide:</p>
-                    <p className="text-[9px] font-medium leading-relaxed">
-                      Use format: <span className="bg-white px-1 font-bold italic rounded">50 Roses (€100)</span> to update shop price.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3 mb-4">
-                  {variants.map((v, idx) => (
-                    <div key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-black/5">
-                      <div className="max-w-[80%]">
-                        <span className="text-xs font-bold text-gray-400 block uppercase">
-                            {v.name} {v.name_en ? <span className="text-[#C9A24D]">/ {v.name_en}</span> : ''}
-                        </span>
-                        <div className="flex flex-col gap-1 mt-1">
-                            <span className="text-[10px] font-bold text-gray-400">DE: <span className="text-[#1F1F1F] font-medium">{v.values}</span></span>
-                            {v.values_en && <span className="text-[10px] font-bold text-[#C9A24D]/70">EN: <span className="text-[#1F1F1F] font-medium">{v.values_en}</span></span>}
-                        </div>
-                      </div>
-                      <button type="button" onClick={() => removeVariant(idx)} className="text-gray-400 hover:text-red-500"><Trash2 size={16} /></button>
-                    </div>
-                  ))}
-                </div>
-
-                {isAddingVariant ? (
-                  <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                        <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                        <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
-                    </div>
-                    
-                    {/* ✨ UPDATED: 2-Row Layout for Better Visibility & Usability */}
-                    <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
-                        <div className="grid grid-cols-2 gap-3">
-                           <div className="space-y-1">
-                               <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
-                               <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
-                           </div>
-                           <div className="space-y-1">
-                               <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
-                               <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
-                           </div>
-                        </div>
-                        
-                        <div className="flex items-end gap-3">
-                           <div className="flex-1 space-y-1">
-                                <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
-                                <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
-                           </div>
-                           <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
-                        </div>
-
-                        {tempList.length > 0 && (
-                            <div className="flex flex-wrap gap-2 pt-2 border-t border-black/5 mt-2">
-                                {tempList.map((t, i) => (
-                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5">
-                                            <div className="flex items-center gap-2 justify-between">
-                                                <span className="text-[10px] font-bold">{t.de}</span>
-                                                <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
-                                            </div>
-                                            <span className="text-[9px] text-[#C9A24D]">{t.en} {t.stock ? `(${t.stock})` : ''}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button type="button" onClick={handleAddVariant} className="flex-1 bg-[#1F1F1F] text-xs font-bold py-2 rounded-lg text-white">Save Option</button>
-                      <button type="button" onClick={() => { setIsAddingVariant(false); setTempList([]); }} className="flex-1 bg-black/5 text-xs font-bold py-2 rounded-lg">Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setIsAddingVariant(true)} className="w-full py-3 rounded-xl border border-dashed border-black/20 text-xs font-bold text-gray-400 hover:text-[#1F1F1F] hover:border-[#1F1F1F] transition-colors flex items-center justify-center gap-2">
-                    <Plus size={14} /> Add Option
-                  </button>
-                )}
-              </div>
 
               {/* EXTRAS (With Image & Variant Support) */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
@@ -1086,6 +1036,109 @@ export default function EditProductPage() {
                 )}
               </div>
 
+            </div>
+
+            {/* RIGHT COLUMN */}
+            <div className="space-y-6">
+              {/* IMAGES */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-bold text-lg mb-4">Images</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {images.map((img, idx) => (
+                    <div key={idx} className="relative space-y-2 group">
+                      <div className="relative aspect-[4/5] rounded-lg overflow-hidden border border-black/5">
+                        <img src={img} alt={`Product ${idx}`} className="w-full h-full object-cover" />
+                        
+                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm p-2 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button type="button" onClick={() => moveImage(idx, 'left')} disabled={idx === 0} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowLeftIcon size={14}/></button>
+                          <button type="button" onClick={() => removeImage(idx)} className="p-1 text-white hover:text-red-500"><Trash2 size={14} /></button>
+                          <button type="button" onClick={() => moveImage(idx, 'right')} disabled={idx === images.length - 1} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowRight size={14}/></button>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 rounded px-2 py-1 border border-black/5 text-center">
+                        <span className="text-[9px] font-bold text-gray-400 uppercase block leading-tight">Pos {idx + 1}</span>
+                        <span className="text-[10px] font-bold text-[#C9A24D] uppercase truncate block">
+                          {colorLabels[idx] || "Extra"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <label className={`aspect-[4/5] rounded-lg border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploading ? (
+                      <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400">
+                        <Upload size={24} />
+                        <span className="text-[10px] font-bold uppercase">Add Photo</span>
+                      </div>
+                    )}
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'product')} disabled={isUploading} />
+                  </label>
+                </div>
+                <p className="text-xs text-gray-400 italic">
+                  {isUploading ? "Uploading..." : "Tip: Images are automatically cropped to 4:5 Portrait mode."}
+                </p>
+              </div>
+
+              {/* PRODUCT VIDEOS */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
+                <h3 className="font-bold text-lg mb-4">Product Videos</h3>
+                <div className="grid grid-cols-1 gap-4">
+                  {videoUrls.map((url, idx) => (
+                    <div key={idx} className="relative rounded-xl overflow-hidden border border-black/5 aspect-video bg-black group">
+                      <video src={url} className="w-full h-full object-cover" muted loop autoPlay />
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[9px] font-bold text-white uppercase tracking-widest">Video {idx + 1}</div>
+                      <button 
+                        type="button" 
+                        onClick={() => removeVideo(idx)} 
+                        className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <label className={`w-full aspect-video rounded-xl border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploadingVideo ? (
+                      <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400">
+                        <Video size={24} />
+                        <span className="text-[10px] font-bold uppercase">Add Video (MP4)</span>
+                      </div>
+                    )}
+                    <input type="file" className="hidden" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg mb-4">Pricing & Promotion</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
+                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
+                    <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
+                      <Tag size={10} /> Promotion (Optional)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={promoLabel} 
+                      onChange={(e) => setPromoLabel(e.target.value)} 
+                      placeholder="e.g. 2 for 50" 
+                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30" 
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </form>
