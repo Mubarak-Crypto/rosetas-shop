@@ -2,6 +2,10 @@ import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabase"; 
 import ProductClient from "../../../components/ProductClient"; 
 
+// ✨ SPEED BOOST: Enable ISR (Incremental Static Regeneration)
+// This caches the specific product page for 60 seconds so it loads instantly.
+export const revalidate = 60;
+
 // 1. Generate Metadata (SEO)
 export async function generateMetadata(props: { params: Promise<{ id: string }> }) {
   const params = await props.params; // ⚠️ Await the params here

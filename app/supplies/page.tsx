@@ -1,8 +1,9 @@
 import { supabase } from "../../lib/supabase";
 import SuppliesClient from "../../components/SuppliesClient";
 
-// Force dynamic to ensure stock is always real-time
-export const dynamic = 'force-dynamic';
+// ✨ SPEED BOOST: Switched to ISR (Incremental Static Regeneration)
+// This makes the supplies page load instantly and refreshes data every 60 seconds.
+export const revalidate = 60;
 
 export default async function SuppliesPage() {
   

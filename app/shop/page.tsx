@@ -1,8 +1,9 @@
 import { supabase } from "../../lib/supabase";
 import ShopClient from "../../components/ShopClient";
 
-// Force dynamic because we use searchParams (optional, but good for real-time stock)
-export const dynamic = 'force-dynamic';
+// ✨ UPDATE: Switched to ISR (Incremental Static Regeneration) for instant loading
+// This refreshes the product data every 60 seconds instead of every single request.
+export const revalidate = 60;
 
 export default async function ShopPage() {
   // 1. Fetch All Active Products (We filter on client for instant speed)
