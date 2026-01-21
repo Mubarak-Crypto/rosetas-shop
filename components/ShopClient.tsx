@@ -178,7 +178,8 @@ function ShopContent({ initialProducts, initialSettings, initialColors }: ShopCl
                               {language === 'EN' ? "Perfect For" : "Perfekt für"}
                           </p>
                           <ul className="text-xs text-[#1F1F1F]/80 space-y-0.5 list-disc list-inside font-medium">
-                              {perfectForList.slice(0, 2).map((item: string, i: number) => (
+                              {/* ✨ REMOVED .slice(0, 2) - Now shows ALL items */}
+                              {perfectForList.map((item: string, i: number) => (
                                   <li key={i}>{item}</li>
                               ))}
                           </ul>
