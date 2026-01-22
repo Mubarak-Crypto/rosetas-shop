@@ -8,6 +8,8 @@ import CartSidebar from "../components/CartSidebar";
 import Footer from "../components/Footer"; 
 import Script from "next/script"; // ✨ Added for Tidio Integration
 import VacationBanner from "../components/VacationBanner"; // ✨ NEW: Import Vacation Banner
+import CookieConsent from "../components/CookieConsent"; // ✨ NEW: Import Cookie Consent Banner
+
 // 🗑️ Removed unused SocialProof import
 
 const inter = Inter({ subsets: ["latin"] });
@@ -42,6 +44,10 @@ export default function RootLayout({
 
               {/* 3. The Footer (Now visible at the bottom) */}
               <Footer /> 
+
+              {/* ✨ NEW: Cookie Consent Banner (Overlay at bottom) */}
+              <CookieConsent />
+
             </WishlistProvider>
           </CartProvider>
         </LanguageProvider>
