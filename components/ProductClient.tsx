@@ -54,6 +54,9 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const [letterFont, setLetterFont] = useState<'Classic' | 'Modern' | 'Handwritten'>('Classic');
   const [shortNoteText, setShortNoteText] = useState("");
 
+  // ✨ NEW: Legal Checkbox State
+  const [withdrawalAccepted, setWithdrawalAccepted] = useState(false);
+
   // State for selected Extras
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
   
@@ -425,8 +428,19 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const isLetterInputVisible = hasLetterExtraSelected;
   const isShortNoteInputVisible = hasShortNoteExtraSelected;
   const isRibbonValid = isRibbonInputVisible ? customText.trim().length > 0 : true;
+  
+  // ✨ Check if the product is personalized (triggers the withdrawal check)
+  const isPersonalizedOrder = 
+      customText.trim().length > 0 || 
+      letterText.trim().length > 0 || 
+      shortNoteText.trim().length > 0 ||
+      selectedExtras.length > 0;
+
   const isCurrentlyInStock = currentVariantStock > 0; 
-  const canAddToCart = allOptionsSelected && isRibbonValid && isCurrentlyInStock;
+  
+  // ✨ Updated Logic: Requires checkbox if personalized
+  const canAddToCart = allOptionsSelected && isRibbonValid && isCurrentlyInStock && (!isPersonalizedOrder || withdrawalAccepted);
+  
   const isSupplyProduct = product.category === 'supplies' || product.category === 'Floristenbedarf';
   const avgRating = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 5.0;
   const productVideos = Array.isArray(product.video_url) ? product.video_url : (product.video_url ? [product.video_url] : []);
@@ -519,6 +533,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             transition={{ duration: 0.5 }}
                             className="w-full h-full relative"
                         >
+                            {/* ✨ MAIN IMAGE: Still object-cover to look beautiful in the main frame */}
                             <Image 
                                 src={activeImage || "/placeholder.jpg"}
                                 alt={product.name || "Product Image"}
@@ -564,7 +579,8 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                     (!showVideo && activeImage === img) ? "border-[#D4C29A] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                 >
-                    <Image src={img} alt="Thumbnail" width={80} height={80} className="w-full h-full object-cover" />
+                    {/* ✨ THUMBNAIL FIX: object-contain to show full image without cropping */}
+                    <Image src={img} alt="Thumbnail" width={80} height={80} className="w-full h-full object-contain bg-white" />
                 </button>
                 ))}
             </div>
@@ -701,11 +717,11 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             >
                                 {extra.image && (
                                     <div 
-                                            className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
-                                            onClick={(e) => {
-                                                e.stopPropagation(); 
-                                                setZoomImage(extra.image);
-                                            }}
+                                                    className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); 
+                                                        setZoomImage(extra.image);
+                                                    }}
                                     >
                                             <Image src={extra.image} alt={extra.name} width={64} height={64} className="w-full h-full object-cover" />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
@@ -740,19 +756,19 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
                                 {isSelected && extra.allowQuantity && (
                                     <div className="flex items-center bg-white rounded-lg border border-[#D4C29A] ml-4 overflow-hidden shadow-sm h-8">
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, -1); }}
-                                                className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
-                                            >
-                                                <Minus size={12} />
-                                            </button>
-                                            <span className="w-8 text-center text-xs font-bold text-[#1F1F1F]">{quantity}</span>
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, 1); }}
-                                                className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
-                                            >
-                                                <Plus size={12} />
-                                            </button>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, -1); }}
+                                                    className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
+                                                >
+                                                    <Minus size={12} />
+                                                </button>
+                                                <span className="w-8 text-center text-xs font-bold text-[#1F1F1F]">{quantity}</span>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); updateExtraQuantity(extra.name, 1); }}
+                                                    className="w-8 h-full flex items-center justify-center hover:bg-[#F6EFE6] text-[#1F1F1F] transition-colors"
+                                                >
+                                                    <Plus size={12} />
+                                                </button>
                                     </div>
                                 )}
                             </div>
@@ -880,6 +896,31 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
             </div>
 
+            {/* ✨ NEW: RIGHT OF WITHDRAWAL NOTICE (Conditional) */}
+            {isPersonalizedOrder && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-6 animate-in fade-in slide-in-from-top-2">
+                    <h4 className="text-xs font-bold text-amber-900 mb-2 uppercase tracking-wider flex items-center gap-2">
+                        <AlertCircle size={14} />
+                        {language === 'EN' ? "Right of Withdrawal Notice:" : "Hinweis zum Widerrufsrecht:"}
+                    </h4>
+                    <div className="flex gap-3 items-start">
+                        <input 
+                            type="checkbox" 
+                            id="withdrawal-check" 
+                            checked={withdrawalAccepted} 
+                            onChange={(e) => setWithdrawalAccepted(e.target.checked)}
+                            className="mt-1 w-5 h-5 accent-[#D4C29A] cursor-pointer shrink-0"
+                        />
+                        <label htmlFor="withdrawal-check" className="text-xs text-[#1F1F1F]/80 font-medium cursor-pointer leading-relaxed">
+                            {language === 'EN' 
+                                ? "This product is made individually according to your wishes. A right of withdrawal does not exist pursuant to § 312g (2) No. 1 BGB." 
+                                : "Dieses Produkt wird individuell nach Ihren Wünschen angefertigt. Ein Widerrufsrecht besteht gemäß § 312g Abs. 2 Nr. 1 BGB nicht."}
+                            <span className="text-red-500 ml-1">*</span>
+                        </label>
+                    </div>
+                </div>
+            )}
+
             <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-black/5 mt-4">
                 {/* Quantity and Add to Cart Section */}
                 <div className="flex items-center bg-white rounded-full border border-black/5 px-4 py-3 w-fit shadow-sm">
@@ -907,7 +948,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 <span className={canAddToCart ? "text-white" : ""}>
                     {canAddToCart 
                     ? `${t('add_to_cart')} - €${totalPrice.toFixed(2)}` 
-                    : !isCurrentlyInStock ? t('out_of_stock') : !allOptionsSelected ? t('select_options') : t('ribbon_placeholder')}
+                    : !isCurrentlyInStock ? t('out_of_stock') : !allOptionsSelected ? t('select_options') : (isPersonalizedOrder && !withdrawalAccepted ? (language === 'EN' ? "Accept Policy" : "Richtlinie akzeptieren") : t('ribbon_placeholder'))}
                 </span>
                 </button>
 

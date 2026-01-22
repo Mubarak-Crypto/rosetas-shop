@@ -125,15 +125,20 @@ export default function CartSidebar() {
                       key={item.uniqueId} 
                       className="flex gap-4 bg-white/40 p-4 rounded-2xl border border-black/5 shadow-sm"
                     >
-                      {/* ✨ FIX: Changed object-contain to object-cover here */}
-                      <div className="w-20 h-20 bg-black rounded-xl overflow-hidden border border-black/5 flex-shrink-0">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      </div>
+                      {/* ✨ FIX: Clickable Image links back to product */}
+                      <Link href={`/product/${item.productId}`} onClick={() => setIsCartOpen(false)} className="cursor-pointer">
+                          <div className="w-20 h-20 bg-black rounded-xl overflow-hidden border border-black/5 flex-shrink-0 hover:opacity-80 transition-opacity">
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          </div>
+                      </Link>
 
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
                           <div className="flex justify-between items-start">
-                            <h3 className="font-bold text-[#1F1F1F] text-sm">{item.name}</h3>
+                            {/* ✨ FIX: Clickable Title links back to product */}
+                            <Link href={`/product/${item.productId}`} onClick={() => setIsCartOpen(false)} className="cursor-pointer hover:text-[#C9A24D] transition-colors">
+                                <h3 className="font-bold text-[#1F1F1F] text-sm">{item.name}</h3>
+                            </Link>
                             <button onClick={() => removeFromCart(item.uniqueId)} className="text-[#1F1F1F]/30 hover:text-red-500 transition-colors">
                               <Trash2 size={14} />
                             </button>

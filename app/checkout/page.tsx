@@ -29,6 +29,8 @@ const shippingBlacklist = [
 ];
 
 // 🌏 Rosetta's Global Shipping Data
+// ✨ UPDATED: USA Rates (5kg=100, 10kg=150, 20kg=210). 
+// Note: 'rate10kg' is used as the base for Standard items (5kg tier here).
 const shippingRates: Record<string, { rate10kg: number; rate20kg: number; express10kg?: number; express20kg?: number }> = {
   "Belgium": { rate10kg: 25, rate20kg: 31 },
   "Bulgaria": { rate10kg: 25, rate20kg: 32 },
@@ -64,7 +66,8 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
   "Switzerland": { rate10kg: 35, rate20kg: 51 },
   "Iceland": { rate10kg: 39, rate20kg: 54 },
   "Liechtenstein": { rate10kg: 39, rate20kg: 54 },
-  "United States": { rate10kg: 80, rate20kg: 150 },
+  // ✨ USA: Standard (5kg) = 100, Heavy (20kg) = 210. (10kg=150 logic reserved for medium items)
+  "United States": { rate10kg: 100, rate20kg: 210 }, 
   "Chile": { rate10kg: 79, rate20kg: 150 },
   "Egypt": { rate10kg: 65, rate20kg: 78 },
   "Algeria": { rate10kg: 65, rate20kg: 78 },
@@ -149,6 +152,11 @@ function PaymentForm({
     } else if (paymentIntent && paymentIntent.status === "succeeded") {
       
       let shippingMethodString = isExpress ? "Express" : "Standard";
+      // ✨ FORCE EXPRESS LABEL FOR USA
+      if (formData.country === "United States") {
+          shippingMethodString = "Express (USA)";
+      }
+
       if (packagingType === 'gift') {
         shippingMethodString += " + Gift Packaging";
         if (giftNote && giftNote.trim() !== "") {
@@ -496,17 +504,25 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
-    if (step === 2 && finalTotal > 0) {
+    if (step === 2 && finalTotal > 0.50) { // ✨ CHECK: Ensure total is valid for Stripe
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // ✨ SECURE: We send the cart details + extras so the server can verify
+        // Note: You must update your backend to use 'cart' to recalculate price if you want 100% security
         body: JSON.stringify({ 
             amount: Math.round(finalTotal * 100),
-            discountCode: appliedCode 
+            discountCode: appliedCode,
+            cart: cart, 
+            country: formData.country,
+            isExpress: isExpress,
+            packagingType: packagingType,
+            tipAmount: tipAmount,
+            donationAmount: donationAmount
         }),
       }).then((res) => res.json()).then((data) => setClientSecret(data.clientSecret));
     }
-  }, [step, finalTotal, appliedCode]);
+  }, [step, finalTotal, appliedCode, cart, formData.country, isExpress, packagingType, tipAmount, donationAmount]);
 
   if (cart.length === 0) return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex flex-col items-center justify-center gap-4">
@@ -717,9 +733,10 @@ export default function CheckoutPage() {
                              <div className="mt-3 animate-in fade-in slide-in-from-top-1">
                                  <input 
                                      type="number" 
+                                     min="0"
                                      placeholder="€" 
                                      className="w-full border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-[#C9A24D]"
-                                     onChange={(e) => setTipAmount(parseFloat(e.target.value) || 0)}
+                                     onChange={(e) => setTipAmount(Math.max(0, parseFloat(e.target.value) || 0))}
                                  />
                              </div>
                           )}
@@ -766,9 +783,10 @@ export default function CheckoutPage() {
                                  {donationOption === 'custom' && (
                                      <input 
                                          type="number" 
+                                         min="0"
                                          placeholder="€ Amount" 
                                          className="w-full border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-blue-600"
-                                         onChange={(e) => setDonationAmount(parseFloat(e.target.value) || 0)}
+                                         onChange={(e) => setDonationAmount(Math.max(0, parseFloat(e.target.value) || 0))}
                                      />
                                  )}
 
@@ -866,7 +884,8 @@ export default function CheckoutPage() {
           <div className="space-y-3 border-t border-black/10 pt-6">
             <div className="flex justify-between text-[#1F1F1F]/60 font-medium"><span>Subtotal</span><span>€{cartTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-[#1F1F1F]/60 font-medium">
-              <span>Shipping ({formData.country} - {isExpress ? "Express" : "Standard"})</span>
+              {/* ✨ UPDATED: Show Express label for USA automatically */}
+              <span>Shipping ({formData.country} - {isExpress || formData.country === "United States" ? "Express" : "Standard"})</span>
               {/* ✨ UPDATED: Show multiplier if > 1 box */}
               <span>
                   {boxCount > 1 ? `(${boxCount}x) ` : ""}

@@ -124,22 +124,46 @@ function ShopContent({ initialProducts, initialSettings, initialColors }: ShopCl
               {/* ✨ UPDATED TITLE: Bolder & Larger */}
               <h2 className="text-3xl font-extrabold text-[#1F1F1F] mb-3 flex items-center justify-center gap-3">
                 {language === 'EN' ? "Let Roses Speak" : "Lass Rosen sprechen"}
-                <div className="relative pb-1">
-                    {/* ✨ CUSTOM ROSE ICON: Full Bloom Stencil Style (Matching your image) */}
+                <div className="relative pb-2">
+                    {/* ✨ CUSTOM ROSE ICON: Updated to match your sketch (5 petals, line art) */}
                     <svg 
-                      width="40" 
-                      height="40" 
+                      width="50" 
+                      height="50" 
                       viewBox="0 0 100 100" 
-                      fill="currentColor" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="1.5"
+                      strokeLinecap="round" 
+                      strokeLinejoin="round"
                       className="text-[#1F1F1F] drop-shadow-md"
                     >
-                      {/* Detailed Rose Bloom Path */}
-                      <path d="M49.8,18.5c-3.1,1.1-5.7,3.4-7.5,6.2c-2.4,3.8-3.1,8.6-1.5,12.9c0.8,2.1,2.1,4,3.7,5.5c2.6,2.5,6.3,3.8,9.9,3.6 c4.2-0.2,8.2-2.3,10.7-5.8c2-2.9,2.7-6.5,2.1-9.9c-0.6-3.7-3.1-7-6.4-8.9C57.8,20.4,53.9,19.3,49.8,18.5z M51.5,23.1 c2.8,0.2,5.4,1.6,7.1,3.9c1.6,2.1,2.1,4.9,1.3,7.5c-0.8,2.7-3.1,4.9-5.8,5.7c-3.4,1-7.1-0.2-9.5-2.9c-1.8-2.1-2.4-5.1-1.5-7.7 C44.1,26.5,47.5,23.8,51.5,23.1z" />
-                      <path d="M33.6,35.8c-1.3,1.9-2.2,4.1-2.7,6.4c-0.8,4.1,0.3,8.4,2.9,11.6c2.7,3.3,6.7,5.3,10.9,5.5c1.8,0.1,3.7-0.2,5.4-0.9 c-1.6-1.1-3.1-2.4-4.3-3.9c-2.2-2.7-3.4-6.1-3.3-9.6c0.1-2.6,0.9-5.1,2.3-7.3C40.9,37.3,37.2,36.4,33.6,35.8z" />
-                      <path d="M68.4,33.2c-2.6-0.6-5.4-0.6-7.9,0.2c1.7,2.2,2.7,4.8,3,7.6c0.2,3.3-0.8,6.6-2.8,9.2c-1.1,1.4-2.5,2.7-4,3.7 c2.3,1.2,4.9,1.7,7.5,1.3c4.1-0.7,7.8-3.2,9.9-6.8c2-3.4,2.2-7.6,0.5-11.2C73.2,35.3,71,33.8,68.4,33.2z" />
-                      <path d="M25.5,52.1c-1.9,3.4-2.6,7.4-1.8,11.3c0.9,4.3,3.8,8,7.7,10.1c3.8,2.1,8.3,2.4,12.4,0.9c2.3-0.8,4.4-2.2,6.1-4 c-2.9-0.6-5.6-1.9-7.9-3.9c-3.7-3.2-6.1-7.7-6.8-12.5C31.5,53.2,28.4,52.5,25.5,52.1z" />
-                      <path d="M76.5,50.8c-0.6,4.7-2.9,9.1-6.4,12.3c-2.3,2-5,3.4-7.9,4.1c1.8,1.8,4,3.2,6.4,4c4.1,1.4,8.7,1,12.5-1.1 c3.8-2.2,6.6-5.9,7.4-10.2c0.8-4.2-0.2-8.5-2.6-12C82.8,49.1,79.7,49.9,76.5,50.8z" />
-                      <path d="M49.9,65.8c-2.5,2.4-5.7,4-9.1,4.5c-1.5,0.2-3,0.2-4.5-0.1c1.9,3.7,5.2,6.5,9.2,7.7c4.6,1.4,9.6,0.9,13.8-1.4 c-2.3-1.8-4.3-4-5.8-6.6C52.4,69.2,51.2,67.6,49.9,65.8z" />
+                      {/* Center */}
+                      <path d="M50 52 C52 52 53 50 50 48 C47 50 48 52 50 52" fill="currentColor" stroke="none" />
+                      
+                      {/* Petal 1 (Top) */}
+                      <path d="M50 48 C45 35 40 15 50 5 C60 15 55 35 50 48" />
+                      <path d="M50 48 C48 35 48 20 50 10" strokeWidth="0.5" opacity="0.6" />
+                      <path d="M50 48 C52 35 52 20 50 10" strokeWidth="0.5" opacity="0.6" />
+
+                      {/* Petal 2 (Top Right) */}
+                      <path d="M50 48 C60 42 80 35 95 40 C85 55 65 52 50 48" />
+                      <path d="M50 48 C65 44 80 40 90 42" strokeWidth="0.5" opacity="0.6" />
+                      <path d="M50 48 C62 46 75 44 85 45" strokeWidth="0.5" opacity="0.6" />
+
+                      {/* Petal 3 (Bottom Right) */}
+                      <path d="M50 52 C65 55 80 70 75 90 C60 85 52 65 50 52" />
+                      <path d="M50 52 C60 60 70 75 72 85" strokeWidth="0.5" opacity="0.6" />
+                      <path d="M50 52 C58 58 65 70 68 80" strokeWidth="0.5" opacity="0.6" />
+
+                      {/* Petal 4 (Bottom Left) */}
+                      <path d="M50 52 C48 65 40 85 25 90 C20 70 35 55 50 52" />
+                      <path d="M50 52 C40 60 30 75 28 85" strokeWidth="0.5" opacity="0.6" />
+                      <path d="M50 52 C42 58 35 70 32 80" strokeWidth="0.5" opacity="0.6" />
+
+                      {/* Petal 5 (Top Left) */}
+                      <path d="M50 48 C35 52 15 55 5 40 C20 35 40 42 50 48" />
+                      <path d="M50 48 C35 44 20 40 10 42" strokeWidth="0.5" opacity="0.6" />
+                      <path d="M50 48 C38 46 25 44 15 45" strokeWidth="0.5" opacity="0.6" />
                     </svg>
                 </div>
               </h2>
@@ -150,10 +174,10 @@ function ShopContent({ initialProducts, initialSettings, initialColors }: ShopCl
                   : "Farben mit Bedeutung. Wählen Sie Ihre Botschaft."}
               </p>
               
-              {/* ✨ NEW: Toggle Button (Now Visible on ALL Screens) */}
+              {/* ✨ NEW: Toggle Button - NOW Soft beige (#E6DCCA) */}
               <button 
                 onClick={() => setShowColorGuide(!showColorGuide)}
-                className="inline-flex items-center gap-2 bg-[#1F1F1F] text-white px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all hover:bg-[#333]"
+                className="inline-flex items-center gap-2 bg-[#E6DCCA] text-[#1F1F1F] px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all hover:bg-[#d8c8b0]"
               >
                 {showColorGuide 
                     ? (language === 'EN' ? "Hide Color Guide" : "Farbleitfaden verbergen") 
@@ -252,10 +276,10 @@ function ShopContent({ initialProducts, initialSettings, initialColors }: ShopCl
                 key={product.id}
                 id={product.id}
                 title={language === 'EN' && product.name_en ? product.name_en : product.name} 
-                price={product.price}
-                salePrice={product.sale_price}
-                isOnSale={product.is_on_sale}
-                globalDiscount={globalSettings?.is_global_sale_active ? globalSettings?.global_discount_percentage : 0}
+                price={product.price} 
+                salePrice={product.sale_price} 
+                isOnSale={product.is_on_sale} 
+                globalDiscount={globalSettings?.is_global_sale_active ? globalSettings?.global_discount_percentage : 0} 
                 category={product.category}
                 image={product.images?.[0] || "/products/red-glitter.jpg"} 
                 videoUrl={product.video_url} 
