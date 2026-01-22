@@ -219,6 +219,15 @@ export default function Footer() {
             <Link href="/impressum" className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>{t('footer_impressum')}</Link>
             <Link href="/terms" className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>{t('footer_terms')}</Link>
             <Link href="/privacy" className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>{t('footer_policy')}</Link>
+            
+            {/* ✨ NEW: Cookie Settings Button (Re-opens banner) */}
+            <button 
+              onClick={() => window.dispatchEvent(new Event("open-cookie-settings"))}
+              className="hover:text-[#D4C29A] transition-colors text-left"
+              style={forceWhite}
+            >
+              {language === 'EN' ? "Cookie Settings" : "Cookie-Einstellungen"}
+            </button>
           </div>
         </div>
 
