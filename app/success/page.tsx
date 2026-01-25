@@ -106,7 +106,7 @@ function SuccessContent() {
 
       <h1 className="text-4xl md:text-5xl font-bold mb-4">{t('success_title')}</h1>
       
-      {/* ✨ NEW: Display Order Number immediately if available */}
+      {/* ✨ NEW: Display Branded Order Number ROSETAS-00037 style */}
       {orderId && (
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
@@ -121,7 +121,10 @@ function SuccessContent() {
             <p className="text-[10px] font-black uppercase tracking-widest text-[#1F1F1F]/40 leading-none mb-1">
               {language === 'EN' ? "Order Number" : "Bestellnummer"}
             </p>
-            <p className="text-lg font-bold text-[#1F1F1F]">#{orderId}</p>
+            <p className="text-lg font-bold text-[#1F1F1F]">
+              {/* If the URL already has the branded string from checkout, show it, otherwise format here */}
+              {orderId.includes('ROSETAS-') ? orderId : `ROSETAS-${String(orderId).padStart(5, '0')}`}
+            </p>
           </div>
         </motion.div>
       )}

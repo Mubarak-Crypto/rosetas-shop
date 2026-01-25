@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"; 
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash, ArrowLeft } from "lucide-react"; 
+import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash, ArrowLeft, ShieldAlert, ChevronDown } from "lucide-react"; // ✨ Added ShieldAlert and ChevronDown
 import Image from "next/image"; 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation"; 
@@ -53,6 +53,9 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const [letterText, setLetterText] = useState("");
   const [letterFont, setLetterFont] = useState<'Classic' | 'Modern' | 'Handwritten'>('Classic');
   const [shortNoteText, setShortNoteText] = useState("");
+
+  // ✨ NEW: Safety Reveal State
+  const [showSafety, setShowSafety] = useState(false);
 
   // ✨ NEW: Legal Checkbox State
   const [withdrawalAccepted, setWithdrawalAccepted] = useState(false);
@@ -468,6 +471,10 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
   const activeColor = selectedOptions['Color'] || selectedOptions['Farbe'] || selectedOptions['Colour'] || "";
 
+  // ✨ NEW: Extract the correct safety text based on language
+  const safetyText = language === 'EN' ? product.safety_instructions_en : product.safety_instructions_de;
+  const hasSafetyInstructions = safetyText && safetyText.trim().length > 0;
+
   return (
     <main className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] selection:bg-[#C9A24D] selection:text-white pb-20">
       <Navbar />
@@ -533,7 +540,6 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             transition={{ duration: 0.5 }}
                             className="w-full h-full relative"
                         >
-                            {/* ✨ MAIN IMAGE: Still object-cover to look beautiful in the main frame */}
                             <Image 
                                 src={activeImage || "/placeholder.jpg"}
                                 alt={product.name || "Product Image"}
@@ -579,7 +585,6 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                     (!showVideo && activeImage === img) ? "border-[#D4C29A] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                 >
-                    {/* ✨ FINAL THUMBNAIL FIX: aspect-square and object-cover to remove white space */}
                     <div className="relative w-full h-full aspect-square">
                         <Image 
                             src={img} 
@@ -637,9 +642,43 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 </div>
             </div>
 
-            <p className="text-[#1F1F1F]/60 font-medium leading-relaxed border-b border-black/5 pb-8 whitespace-pre-line">
-                {language === 'EN' && product.description_en ? product.description_en : product.description}
-            </p>
+            <div className="space-y-4">
+                <p className="text-[#1F1F1F]/60 font-medium leading-relaxed whitespace-pre-line">
+                    {language === 'EN' && product.description_en ? product.description_en : product.description}
+                </p>
+
+                {/* ✨ NEW: CARE & SAFETY REVEAL SECTION */}
+                {hasSafetyInstructions && (
+                    <div className="pt-2">
+                        <button 
+                            type="button"
+                            onClick={() => setShowSafety(!showSafety)}
+                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#D4C29A] hover:text-[#1F1F1F] transition-colors group"
+                        >
+                            <ShieldAlert size={14} /> 
+                            {language === 'EN' ? "Care & Safety Instructions" : "Pflege- & Sicherheitshinweise"}
+                            <ChevronDown size={14} className={`transition-transform duration-300 ${showSafety ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        <AnimatePresence>
+                            {showSafety && (
+                                <motion.div 
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="mt-4 p-4 bg-white/50 border border-[#D4C29A]/20 rounded-2xl">
+                                        <p className="text-xs text-[#1F1F1F]/70 font-medium leading-relaxed italic whitespace-pre-line">
+                                            {safetyText}
+                                        </p>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
+            </div>
 
             {/* VARIANTS */}
             {product.variants && product.variants.length > 0 && (
@@ -725,11 +764,11 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             >
                                 {extra.image && (
                                     <div 
-                                                    className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation(); 
-                                                        setZoomImage(extra.image);
-                                                    }}
+                                                                    className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation(); 
+                                                                        setZoomImage(extra.image);
+                                                                    }}
                                     >
                                             <Image src={extra.image} alt={extra.name} width={64} height={64} className="w-full h-full object-cover" />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
@@ -781,7 +820,6 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                                 )}
                             </div>
 
-                            {/* Render Variants (Buttons) */}
                             {isSelected && extra.variants && extra.variants.length > 0 && (
                                 <div className="pl-20 pr-4 animate-in slide-in-from-top-2 fade-in">
                                     <p className="text-[10px] font-bold text-[#1F1F1F]/40 uppercase mb-1.5 ml-1">
@@ -968,7 +1006,6 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 </button>
             </div>
 
-            {/* ... Rest of footer components ... */}
             </motion.div>
         </div>
 

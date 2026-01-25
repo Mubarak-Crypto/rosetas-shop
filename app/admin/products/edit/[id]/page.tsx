@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2 } from "lucide-react"; 
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert } from "lucide-react"; 
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -47,6 +47,11 @@ export default function EditProductPage() {
   const [status, setStatus] = useState("active");
   const [description, setDescription] = useState("");
   const [descriptionEn, setDescriptionEn] = useState(""); 
+
+  // ✨ NEW: Safety Instructions States
+  const [safetyInstructions, setSafetyInstructions] = useState("");
+  const [safetyInstructionsEn, setSafetyInstructionsEn] = useState("");
+
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [needsRibbon, setNeedsRibbon] = useState(false); 
@@ -115,6 +120,11 @@ export default function EditProductPage() {
         setNameEn(data.name_en || ""); 
         setDescription(data.description || "");
         setDescriptionEn(data.description_en || ""); 
+
+        // ✨ NEW: Load Safety Instructions
+        setSafetyInstructions(data.safety_instructions_de || "");
+        setSafetyInstructionsEn(data.safety_instructions_en || "");
+
         setPrice(data.price.toString());
         setCategory(data.category || "");
         setStock(data.stock?.toString() || "0");
@@ -336,8 +346,6 @@ export default function EditProductPage() {
     setNewVariantNameEn(variant.name_en || "");
 
     // Parse the values string back into TempList format
-    // Format: "Red | Stock: 5, Blue, Green"
-    // Format EN: "Red, Blue, Green"
     const valuesDe = variant.values.split(',').map(s => s.trim());
     const valuesEn = variant.values_en ? variant.values_en.split(',').map(s => s.trim()) : [];
 
@@ -377,13 +385,11 @@ export default function EditProductPage() {
     };
 
     if (editingVariantIndex !== null) {
-        // ✨ UPDATE EXISTING VARIANT
         const updatedVariants = [...variants];
         updatedVariants[editingVariantIndex] = newVariantObj;
         setVariants(updatedVariants);
         setEditingVariantIndex(null);
     } else {
-        // ADD NEW VARIANT
         setVariants([...variants, newVariantObj]);
     }
 
@@ -403,7 +409,6 @@ export default function EditProductPage() {
     setTempExtraVariant("");
   };
 
-  // Prepare Edit Extra
   const handleEditExtra = (index: number) => {
     const ex = extras[index];
     setNewExtraName(ex.name);
@@ -416,7 +421,7 @@ export default function EditProductPage() {
     setExtraVariantsList(ex.variants || []);
     
     setEditingExtraIndex(index);
-    setIsAddingExtra(true); // Open the form
+    setIsAddingExtra(true); 
   };
 
   const handleAddExtra = () => {
@@ -471,6 +476,9 @@ export default function EditProductPage() {
         name_en: nameEn, 
         description,
         description_en: descriptionEn, 
+        // ✨ NEW: Added Safety Instructions to update logic
+        safety_instructions_de: safetyInstructions,
+        safety_instructions_en: safetyInstructionsEn,
         price: parseFloat(price),
         category: category.trim(),
         stock: parseInt(stock) || 0,
@@ -638,6 +646,30 @@ export default function EditProductPage() {
                     <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={4} placeholder="English description..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none"></textarea>
                   </div>
                 </div>
+
+                {/* ✨ NEW: SAFETY INSTRUCTIONS SECTION */}
+                <div className="space-y-4 pt-4 border-t border-black/5">
+                  <h4 className="font-bold text-sm flex items-center gap-2 text-red-500">
+                    <ShieldAlert size={16} /> Safety & Care Instructions (Reveal Button Content)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1.5">
+                        <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
+                        Safety Tips (German)
+                      </label>
+                      <textarea value={safetyInstructions} onChange={(e) => setSafetyInstructions(e.target.value)} rows={3} placeholder="z.B. Nicht essbar, von Kindern fernhalten..." className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic"></textarea>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
+                        <span className="w-4 h-3 bg-[#C9A24D]/20 rounded-sm text-[8px] flex items-center justify-center text-[#C9A24D]">EN</span>
+                        Safety Tips (English)
+                      </label>
+                      <textarea value={safetyInstructionsEn} onChange={(e) => setSafetyInstructionsEn(e.target.value)} rows={3} placeholder="e.g. Not edible, keep away from children..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic"></textarea>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
@@ -735,22 +767,22 @@ export default function EditProductPage() {
                     
                     <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
                         <div className="grid grid-cols-2 gap-3">
-                           <div className="space-y-1">
-                               <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
-                               <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
-                           </div>
-                           <div className="space-y-1">
-                               <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
-                               <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
-                           </div>
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
+                                <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
+                                <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                            </div>
                         </div>
                         
                         <div className="flex items-end gap-3">
-                           <div className="flex-1 space-y-1">
-                                <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
-                                <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
-                           </div>
-                           <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
+                            <div className="flex-1 space-y-1">
+                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
+                                 <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                            </div>
+                            <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
                         </div>
 
                         {tempList.length > 0 && (

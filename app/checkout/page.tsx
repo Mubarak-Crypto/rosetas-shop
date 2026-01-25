@@ -164,7 +164,7 @@ function PaymentForm({
         }
       }
 
-      // ✨ UPDATED: Select 'id' back from Supabase to use as Order Number on Success Page
+      // ✨ UPDATED: Select 'id' back from Supabase to generate the Branded Order Number ROSETAS-00037
       const { data: orderData, error: dbError } = await supabase.from('orders').insert([{
           customer_name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
@@ -209,9 +209,12 @@ function PaymentForm({
         }),
       });
 
-      // ✨ UPDATED: Redirect with captured ID from Supabase
-      const finalOrderId = orderData?.id || "";
-      window.location.href = `/success?order_id=${finalOrderId}`;
+      // ✨ UPDATED: Format the ID as ROSETAS-00037 and redirect
+      // We take the database ID, pad it with zeros to 5 digits, and add the prefix
+      const rawId = orderData?.id ? String(orderData.id).padStart(5, '0') : "00000";
+      const brandedOrderId = `ROSETAS-${rawId}`;
+
+      window.location.href = `/success?order_id=${brandedOrderId}`;
     }
     setIsLoading(false);
   };

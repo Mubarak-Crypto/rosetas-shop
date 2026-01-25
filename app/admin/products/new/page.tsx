@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react"; 
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2 } from "lucide-react"; // ✨ Added Edit2
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert } from "lucide-react"; // ✨ Added ShieldAlert for Safety section
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -47,6 +47,11 @@ export default function AddProductPage() {
   const [status, setStatus] = useState("active");
   const [description, setDescription] = useState("");
   const [descriptionEn, setDescriptionEn] = useState(""); 
+
+  // ✨ NEW: Safety Instructions States
+  const [safetyInstructions, setSafetyInstructions] = useState("");
+  const [safetyInstructionsEn, setSafetyInstructionsEn] = useState("");
+
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [needsRibbon, setNeedsRibbon] = useState(false); 
@@ -401,6 +406,9 @@ export default function AddProductPage() {
           name_en: nameEn, 
           description, 
           description_en: descriptionEn, 
+          // ✨ NEW: Added Safety Instructions to save logic
+          safety_instructions_de: safetyInstructions,
+          safety_instructions_en: safetyInstructionsEn,
           price: finalPrice, 
           category: category.trim(), 
           stock: finalStock, 
@@ -542,6 +550,30 @@ export default function AddProductPage() {
                     <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={4} placeholder="English description..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none"></textarea>
                   </div>
                 </div>
+
+                {/* ✨ NEW: SAFETY INSTRUCTIONS SECTION */}
+                <div className="space-y-4 pt-4 border-t border-black/5">
+                  <h4 className="font-bold text-sm flex items-center gap-2 text-red-500">
+                    <ShieldAlert size={16} /> Safety & Care Instructions (Reveal Button Content)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1.5">
+                        <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
+                        Safety Tips (German)
+                      </label>
+                      <textarea value={safetyInstructions} onChange={(e) => setSafetyInstructions(e.target.value)} rows={3} placeholder="z.B. Nicht essbar, von Kindern fernhalten..." className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic"></textarea>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
+                        <span className="w-4 h-3 bg-[#C9A24D]/20 rounded-sm text-[8px] flex items-center justify-center text-[#C9A24D]">EN</span>
+                        Safety Tips (English)
+                      </label>
+                      <textarea value={safetyInstructionsEn} onChange={(e) => setSafetyInstructionsEn(e.target.value)} rows={3} placeholder="e.g. Not edible, keep away from children..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic"></textarea>
+                    </div>
+                  </div>
+                </div>
+
               </div>
 
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
@@ -652,7 +684,6 @@ export default function AddProductPage() {
                                         );
                                         setStockMatrix(updated);
                                       }}
-                                      // ✨ Added text-[#1F1F1F] so it is visible against white background
                                       className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold text-[#1F1F1F] outline-none focus:border-[#C9A24D]"
                                       placeholder="0"
                                     />
@@ -812,22 +843,22 @@ export default function AddProductPage() {
                     {/* ✨ UPDATED: 2-Row Layout for Better Visibility & Usability */}
                     <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
                         <div className="grid grid-cols-2 gap-3">
-                           <div className="space-y-1">
-                               <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
-                               <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
-                           </div>
-                           <div className="space-y-1">
-                               <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
-                               <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
-                           </div>
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
+                                <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                            </div>
+                            <div className="space-y-1">
+                                <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
+                                <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                            </div>
                         </div>
                         
                         <div className="flex items-end gap-3">
-                           <div className="flex-1 space-y-1">
-                                <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
-                                <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
-                           </div>
-                           <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
+                            <div className="flex-1 space-y-1">
+                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
+                                 <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                            </div>
+                            <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
                         </div>
 
                         {tempList.length > 0 && (
@@ -954,7 +985,7 @@ export default function AddProductPage() {
                             <button 
                                 type="button"
                                 onClick={() => setNewExtraAllowQty(!newExtraAllowQty)}
-                                className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${newExtraAllowQty ? 'bg-[#C9A24D] justify-end' : 'bg-gray-200 justify-start'}`}
+                                className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${newExtraAllowQty ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}
                             >
                                 <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
                             </button>
