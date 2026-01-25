@@ -164,8 +164,8 @@ function PaymentForm({
         }
       }
 
-      // ✨ UPDATED: Include Discount Info in Database
-      const { error: dbError } = await supabase.from('orders').insert([{
+      // ✨ UPDATED: Select 'id' back from Supabase to use as Order Number on Success Page
+      const { data: orderData, error: dbError } = await supabase.from('orders').insert([{
           customer_name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
           phone: formData.phone,
@@ -184,7 +184,7 @@ function PaymentForm({
           donor_is_public: isPublicDonor,
           discount_code: discountCode, 
           discount_amount: discountAmount 
-      }]);
+      }]).select('id').single();
 
       if (dbError) console.error("Error saving order:", dbError);
 
@@ -209,7 +209,9 @@ function PaymentForm({
         }),
       });
 
-      window.location.href = "/success";
+      // ✨ UPDATED: Redirect with captured ID from Supabase
+      const finalOrderId = orderData?.id || "";
+      window.location.href = `/success?order_id=${finalOrderId}`;
     }
     setIsLoading(false);
   };

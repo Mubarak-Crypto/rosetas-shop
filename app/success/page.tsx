@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle, ArrowRight, Star } from "lucide-react";
+import { useEffect, useState, Suspense } from "react";
+// ✨ UPDATED: Added Loader2 to imports to fix the red line
+import { CheckCircle, ArrowRight, Star, Hash, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Language Import
 import { motion } from "framer-motion";
 import { supabase } from "../../lib/supabase"; // ✨ Need Supabase for stock updates
+import { useSearchParams } from "next/navigation";
 
-export default function SuccessPage() {
+function SuccessContent() {
   const { clearCart, cart } = useCart(); // ✨ Added cart to reference last items
   const { t, language } = useLanguage(); // ✨ Access translation function
+  const searchParams = useSearchParams();
   const [purchasedItems, setPurchasedItems] = useState<any[]>([]);
+  
+  // ✨ NEW: Capture Order ID from URL
+  const orderId = searchParams.get("order_id");
 
   useEffect(() => {
     // Capture items and handle stock deduction
@@ -99,6 +105,27 @@ export default function SuccessPage() {
       </motion.div>
 
       <h1 className="text-4xl md:text-5xl font-bold mb-4">{t('success_title')}</h1>
+      
+      {/* ✨ NEW: Display Order Number immediately if available */}
+      {orderId && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8 p-4 bg-white rounded-2xl border border-black/5 shadow-sm flex items-center gap-3 w-full max-w-xs mx-auto"
+        >
+          <div className="w-10 h-10 bg-[#CDAF95]/20 rounded-full flex items-center justify-center text-[#CDAF95]">
+            <Hash size={20} />
+          </div>
+          <div className="text-left">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#1F1F1F]/40 leading-none mb-1">
+              {language === 'EN' ? "Order Number" : "Bestellnummer"}
+            </p>
+            <p className="text-lg font-bold text-[#1F1F1F]">#{orderId}</p>
+          </div>
+        </motion.div>
+      )}
+
       <p className="text-[#1F1F1F]/60 max-w-md mb-8 text-lg font-medium">
         {t('success_message')}
       </p>
@@ -159,5 +186,18 @@ export default function SuccessPage() {
       </div>
 
     </div>
+  );
+}
+
+// 🌐 Wrapper to handle useSearchParams in Next.js 13/14
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#F6EFE6] flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#C9A24D]" size={40} />
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }

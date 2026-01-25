@@ -17,6 +17,8 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Rosetas Bouquets - Luxury Glitter Roses",
   description: "Hand-crafted satin roses from Essen, Germany.",
+  // ✨ NEW: Viewport settings to prevent horizontal zoom/scroll bugs on mobile
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
 };
 
 export default function RootLayout({
@@ -26,7 +28,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      {/* ✨ Added overflow-x-hidden to body to prevent messy horizontal scrolling on phones */}
+      <body className={`${inter.className} antialiased overflow-x-hidden w-full min-h-screen relative`}>
         {/* ✨ Wrapped with LanguageProvider to enable DE/EN switching */}
         <LanguageProvider>
           <CartProvider>

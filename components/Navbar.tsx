@@ -70,12 +70,14 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="relative z-50 flex items-center justify-between px-4 md:px-6 py-4 md:py-6 max-w-7xl mx-auto text-[#1F1F1F]">
+      {/* ✨ UPDATED: Added w-full and px-3 for tighter mobile screens to prevent overflow */}
+      <nav className="relative z-50 flex items-center justify-between px-3 md:px-6 py-4 md:py-6 max-w-7xl mx-auto text-[#1F1F1F] w-full">
         
-        <div className="flex items-center gap-4 md:gap-6">
+        {/* ✨ UPDATED: Added min-w-0 and gap-2 to keep the left side compact on mobile */}
+        <div className="flex items-center gap-2 md:gap-6 min-w-0">
           
           {/* HAMBURGER MENU ICON (Left) */}
-          <div className="relative" ref={menuRef}>
+          <div className="relative flex-shrink-0" ref={menuRef}>
               <button 
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                   className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ${isMenuOpen ? 'bg-[#1F1F1F] text-white rotate-90' : 'hover:bg-black/5 text-[#1F1F1F]'}`}
@@ -129,16 +131,16 @@ export default function Navbar() {
               </AnimatePresence>
           </div>
 
-          {/* Logo Section */}
-          <Link href="/" className="flex items-center gap-2 md:gap-4 group flex-shrink">
-            <div className="relative w-10 h-10 md:w-14 md:h-14 flex-shrink-0">
+          {/* Logo Section - ✨ UPDATED: Enhanced shrinking logic for narrow screens */}
+          <Link href="/" className="flex items-center gap-1.5 md:gap-4 group min-w-0 flex-shrink">
+            <div className="relative w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 flex-shrink-0">
               <img 
                 src="/r-logo.png" 
                 alt="R Logo" 
                 className="w-full h-full object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)] mix-blend-multiply brightness-95 contrast-125 transition-transform group-hover:scale-110 duration-300" 
               />
             </div>
-            <div className="relative h-6 md:h-10 w-auto flex-shrink">
+            <div className="relative h-5 sm:h-6 md:h-10 w-auto flex-shrink min-w-0">
               <img 
                 src="/logo-rosetas-bouquets.png" 
                 alt="Rosetas Bouquets" 
@@ -149,31 +151,32 @@ export default function Navbar() {
 
         </div>
         
-        {/* Right Side Icons */}
-        <div className="flex gap-2 md:gap-4 items-center flex-shrink-0">
+        {/* Right Side Icons - ✨ UPDATED: gap-1.5 for mobile to save space */}
+        <div className="flex gap-1.5 md:gap-4 items-center flex-shrink-0">
           
           {/* SEARCH TRIGGER - VISIBLE ONLY IN SHOP SECTION */}
           {pathname?.startsWith('/shop') && (
              <button 
                 onClick={() => setIsSearchOpen(true)}
-                className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 transition-all text-[#1F1F1F]"
+                className="flex items-center justify-center w-9 h-9 md:w-10 md:h-10 rounded-full hover:bg-black/5 transition-all text-[#1F1F1F]"
                 title="Search by Occasion"
              >
-                <Search size={20} strokeWidth={2} />
+                {/* ✨ FIXED: Removed md:size and used className for responsive sizing */}
+                <Search strokeWidth={2} className="w-[18px] h-[18px] md:w-[20px] md:h-[20px]" />
              </button>
           )}
 
-          <div className="flex items-center gap-2 bg-black/5 border border-black/5 px-3 py-1.5 rounded-full backdrop-blur-sm">
+          <div className="flex items-center gap-1 md:gap-2 bg-black/5 border border-black/5 px-2 md:px-3 py-1.5 rounded-full backdrop-blur-sm">
             <button 
               onClick={() => setLanguage('DE')}
-              className={`text-[10px] font-black tracking-widest transition-colors ${language === 'DE' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+              className={`text-[9px] md:text-[10px] font-black tracking-widest transition-colors ${language === 'DE' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
             >
               DE
             </button>
             <span className="w-[1px] h-3 bg-black/10"></span>
             <button 
               onClick={() => setLanguage('EN')}
-              className={`text-[10px] font-black tracking-widest transition-colors ${language === 'EN' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+              className={`text-[9px] md:text-[10px] font-black tracking-widest transition-colors ${language === 'EN' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
             >
               EN
             </button>
@@ -200,10 +203,10 @@ export default function Navbar() {
           
           <button 
             onClick={() => setIsCartOpen(true)}
-            className="px-3 py-2 md:px-5 md:py-2 btn-luminous rounded-full transition-all flex items-center gap-2 active:scale-95 shadow-sm"
+            className="px-2.5 py-2 md:px-5 md:py-2 btn-luminous rounded-full transition-all flex items-center gap-1.5 md:gap-2 active:scale-95 shadow-sm flex-shrink-0"
           >
-            <ShoppingBag strokeWidth={2.5} className="text-[#1F1F1F] w-4 h-4" />
-            <span className="font-black uppercase tracking-tighter text-[#1F1F1F] text-xs md:text-sm">
+            <ShoppingBag strokeWidth={2.5} className="text-[#1F1F1F] w-3.5 h-3.5 md:w-4 md:h-4" />
+            <span className="font-black uppercase tracking-tighter text-[#1F1F1F] text-[10px] md:text-sm">
               {t('cart')} ({cartCount})
             </span> 
           </button>

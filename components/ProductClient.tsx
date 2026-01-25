@@ -575,12 +575,20 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 <button
                     key={`img-${idx}`}
                     onClick={() => { setActiveImage(img); setShowVideo(false); }}
-                    className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${
+                    className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white ${
                     (!showVideo && activeImage === img) ? "border-[#D4C29A] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                 >
-                    {/* ✨ THUMBNAIL FIX: object-contain to show full image without cropping */}
-                    <Image src={img} alt="Thumbnail" width={80} height={80} className="w-full h-full object-contain bg-white" />
+                    {/* ✨ FINAL THUMBNAIL FIX: aspect-square and object-cover to remove white space */}
+                    <div className="relative w-full h-full aspect-square">
+                        <Image 
+                            src={img} 
+                            alt="Thumbnail" 
+                            fill
+                            className="object-cover" 
+                            sizes="80px"
+                        />
+                    </div>
                 </button>
                 ))}
             </div>
@@ -1111,7 +1119,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                         <video 
                             ref={videoRef}
                             src={zoomVideo} 
-                            className="w-full max-h-[80vh] rounded-2xl shadow-2xl"
+                            className="w-full max-h-[80vh] rounded-2xl shadow-2xl" 
                             controls 
                             autoPlay 
                             loop={false} 

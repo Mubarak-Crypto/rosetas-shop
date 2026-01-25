@@ -121,51 +121,38 @@ function ShopContent({ initialProducts, initialSettings, initialColors }: ShopCl
         {categoryFilter !== "supplies" && categoryFilter !== "Floristenbedarf" && (
           <section className="mb-20 animate-in slide-in-from-bottom-10 fade-in duration-700">
             <div className="text-center mb-6">
-              {/* ✨ UPDATED TITLE: Bolder & Larger */}
-              <h2 className="text-3xl font-extrabold text-[#1F1F1F] mb-3 flex items-center justify-center gap-3">
+              {/* ✨ FIXED: h2 with whitespace-nowrap and inline SVG to prevent break */}
+              <h2 className="text-3xl font-extrabold text-[#1F1F1F] mb-3 flex items-center justify-center gap-3 whitespace-nowrap flex-nowrap">
                 {language === 'EN' ? "Let Roses Speak" : "Lass Rosen sprechen"}
-                <div className="relative pb-2">
-                    {/* ✨ CUSTOM ROSE ICON: Updated to match your sketch (5 petals, line art) */}
-                    <svg 
-                      width="50" 
-                      height="50" 
-                      viewBox="0 0 100 100" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="1.5"
-                      strokeLinecap="round" 
-                      strokeLinejoin="round"
-                      className="text-[#1F1F1F] drop-shadow-md"
-                    >
-                      {/* Center */}
-                      <path d="M50 52 C52 52 53 50 50 48 C47 50 48 52 50 52" fill="currentColor" stroke="none" />
-                      
-                      {/* Petal 1 (Top) */}
-                      <path d="M50 48 C45 35 40 15 50 5 C60 15 55 35 50 48" />
-                      <path d="M50 48 C48 35 48 20 50 10" strokeWidth="0.5" opacity="0.6" />
-                      <path d="M50 48 C52 35 52 20 50 10" strokeWidth="0.5" opacity="0.6" />
-
-                      {/* Petal 2 (Top Right) */}
-                      <path d="M50 48 C60 42 80 35 95 40 C85 55 65 52 50 48" />
-                      <path d="M50 48 C65 44 80 40 90 42" strokeWidth="0.5" opacity="0.6" />
-                      <path d="M50 48 C62 46 75 44 85 45" strokeWidth="0.5" opacity="0.6" />
-
-                      {/* Petal 3 (Bottom Right) */}
-                      <path d="M50 52 C65 55 80 70 75 90 C60 85 52 65 50 52" />
-                      <path d="M50 52 C60 60 70 75 72 85" strokeWidth="0.5" opacity="0.6" />
-                      <path d="M50 52 C58 58 65 70 68 80" strokeWidth="0.5" opacity="0.6" />
-
-                      {/* Petal 4 (Bottom Left) */}
-                      <path d="M50 52 C48 65 40 85 25 90 C20 70 35 55 50 52" />
-                      <path d="M50 52 C40 60 30 75 28 85" strokeWidth="0.5" opacity="0.6" />
-                      <path d="M50 52 C42 58 35 70 32 80" strokeWidth="0.5" opacity="0.6" />
-
-                      {/* Petal 5 (Top Left) */}
-                      <path d="M50 48 C35 52 15 55 5 40 C20 35 40 42 50 48" />
-                      <path d="M50 48 C35 44 20 40 10 42" strokeWidth="0.5" opacity="0.6" />
-                      <path d="M50 48 C38 46 25 44 15 45" strokeWidth="0.5" opacity="0.6" />
-                    </svg>
-                </div>
+                <span className="inline-block relative">
+                  {/* ✨ UPDATED HEART BOUQUET SVG */}
+                  <svg
+                    width="45"
+                    height="45"
+                    viewBox="0 0 64 64"
+                    fill="none"
+                    stroke="#8B5E3C"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="drop-shadow-sm align-middle"
+                  >
+                    <path d="M28 50 L24 58 L32 55 L40 58 L36 50" fill="white" />
+                    <rect x="27" y="48" width="10" height="3" rx="1.5" fill="white" />
+                    <path d="M15 30 C15 30 20 50 32 50 C44 50 49 30 49 30 L15 30 Z" fill="white" />
+                    <path d="M22 18 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M32 16 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M42 18 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M18 24 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M28 24 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M38 24 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M48 24 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M23 30 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M32 31 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M41 30 c-2-3-6-3-6 0 c0 3 6 6 6 6 s6-3 6-6 c0-3-4-3-6 0" />
+                    <path d="M15 30 Q32 35 49 30" fill="none" />
+                  </svg>
+                </span>
               </h2>
               {/* ✨ UPDATED SUBTITLE: Darker & Semibold */}
               <p className="text-[#1F1F1F]/80 max-w-2xl mx-auto font-semibold text-base mb-6">
@@ -174,7 +161,7 @@ function ShopContent({ initialProducts, initialSettings, initialColors }: ShopCl
                   : "Farben mit Bedeutung. Wählen Sie Ihre Botschaft."}
               </p>
               
-              {/* ✨ NEW: Toggle Button - NOW Soft beige (#E6DCCA) */}
+              {/* ✨ NEW: Toggle Button - SOFT BEIGE (#E6DCCA) */}
               <button 
                 onClick={() => setShowColorGuide(!showColorGuide)}
                 className="inline-flex items-center gap-2 bg-[#E6DCCA] text-[#1F1F1F] px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-all hover:bg-[#d8c8b0]"
