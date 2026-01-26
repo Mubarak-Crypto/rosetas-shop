@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next"; // ✨ Added Viewport Type
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "../context/CartContext";
@@ -9,16 +9,24 @@ import Footer from "../components/Footer";
 import Script from "next/script"; // ✨ Added for Tidio Integration
 import VacationBanner from "../components/VacationBanner"; // ✨ NEW: Import Vacation Banner
 import CookieConsent from "../components/CookieConsent"; // ✨ NEW: Import Cookie Consent Banner
+import ExitIntentPopup from "../components/ExitIntentPopup"; // ✨ NEW: Import Exit Intent Popup
 
 // 🗑️ Removed unused SocialProof import
 
 const inter = Inter({ subsets: ["latin"] });
 
+// ✨ NEW: Separated Viewport export to fix Next.js warnings
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "Rosetas Bouquets - Luxury Glitter Roses",
   description: "Hand-crafted satin roses from Essen, Germany.",
-  // ✨ NEW: Viewport settings to prevent horizontal zoom/scroll bugs on mobile
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
+  // viewport moved to its own export above to fix the console warning
 };
 
 export default function RootLayout({
@@ -32,12 +40,16 @@ export default function RootLayout({
       <body className={`${inter.className} antialiased overflow-x-hidden w-full min-h-screen relative`}>
         {/* ✨ Wrapped with LanguageProvider to enable DE/EN switching */}
         <LanguageProvider>
+          {/* ✨ Re-ordered CartProvider to ensure it wraps correctly */}
           <CartProvider>
             {/* ✨ NEW: Wrapped with WishlistProvider for Saved Items */}
             <WishlistProvider>
               
               {/* ✨ NEW: Vacation Banner (Shows only if active) */}
               <VacationBanner />
+
+              {/* ✨ NEW: Exit Intent Popup (Triggers on leave) */}
+              <ExitIntentPopup />
 
               {/* 1. The Main Content of the page */}
               {children}

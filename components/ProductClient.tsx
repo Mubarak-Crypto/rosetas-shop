@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useRef } from "react"; 
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash, ArrowLeft, ShieldAlert, ChevronDown } from "lucide-react"; // ✨ Added ShieldAlert and ChevronDown
+import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash, ArrowLeft, ShieldAlert, ChevronDown, ChevronUp } from "lucide-react"; 
 import Image from "next/image"; 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation"; 
-import Navbar from "./Navbar"; // Adjusted path for components folder
-import { supabase } from "../lib/supabase"; // Adjusted path
-import { useCart } from "../context/CartContext"; // Adjusted path
-import { useLanguage } from "../context/LanguageContext"; // Adjusted path
-import { useWishlist } from "../context/WishlistContext"; // Adjusted path
-import RelatedProducts from "./RelatedProducts"; // Adjusted path
+import Navbar from "./Navbar"; 
+import { supabase } from "../lib/supabase"; 
+import { useCart } from "../context/CartContext"; 
+import { useLanguage } from "../context/LanguageContext"; 
+import { useWishlist } from "../context/WishlistContext"; 
+import RelatedProducts from "./RelatedProducts"; 
 
 interface ProductClientProps {
   initialProduct: any;
@@ -54,10 +54,10 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const [letterFont, setLetterFont] = useState<'Classic' | 'Modern' | 'Handwritten'>('Classic');
   const [shortNoteText, setShortNoteText] = useState("");
 
-  // ✨ NEW: Safety Reveal State
+  // ✨ STATE: Safety Reveal
   const [showSafety, setShowSafety] = useState(false);
 
-  // ✨ NEW: Legal Checkbox State
+  // ✨ STATE: Legal Checkbox
   const [withdrawalAccepted, setWithdrawalAccepted] = useState(false);
 
   // State for selected Extras
@@ -82,7 +82,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const handleOptionSelect = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
     
-    // ✨ FIX START: Check for Color OR Supply Category
+    // Check for Color OR Supply Category
     const isColorVariant = optionName.toLowerCase().includes('color') || optionName.toLowerCase().includes('farbe') || optionName.toLowerCase().includes('colour');
     const isSupplyProduct = product.category === 'supplies' || product.category === 'Floristenbedarf';
 
@@ -100,18 +100,15 @@ export default function ProductClient({ initialProduct, initialSettings, initial
         }
       }
     }
-    // ✨ FIX END
   };
 
   const toggleExtra = (extraName: string) => {
     let limit = 100;
 
-    // ✨ BUG FIX: Strictly check for size 20 (ignore 200, 120, etc.)
+    // Strictly check for size 20 (ignore 200, 120, etc.)
     const isTwentyRoses = Object.values(selectedOptions).some(val => {
-         // Find the first number in the string (e.g., "20 Roses" -> 20, "200 Roses" -> 200)
          const match = val.match(/\d+/);
          if (match) {
-             // If the number is exactly 20, return true
              return parseInt(match[0]) === 20;
          }
          return false;
@@ -561,7 +558,8 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 )}
             </motion.div>
 
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide items-center">
+            {/* ✨ UPDATED: Added py-4 to container to fix top clipping */}
+            <div className="flex gap-4 overflow-x-auto py-4 px-4 scrollbar-hide items-center">
                 {productVideos.map((vidUrl: string, idx: number) => {
                     const isValidVideo = vidUrl && vidUrl.trim() !== "";
                     if (!isValidVideo) return null;
@@ -569,8 +567,10 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                     <button
                         key={`vid-${idx}`}
                         onClick={() => { setActiveVideo(vidUrl); setShowVideo(true); }}
-                        className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 flex items-center justify-center bg-black ${
-                            (showVideo && activeVideo === vidUrl) ? "border-[#D4C29A] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
+                        className={`relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center bg-black transition-all duration-300 ease-out ${
+                            (showVideo && activeVideo === vidUrl) 
+                            ? "scale-110 shadow-xl ring-2 ring-[#D4C29A] ring-offset-2 z-20 opacity-100" 
+                            : "border-2 border-transparent opacity-60 hover:opacity-100 hover:scale-105 z-0"
                         }`}
                     >
                         <Play size={24} className="text-white fill-current" />
@@ -581,16 +581,18 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 <button
                     key={`img-${idx}`}
                     onClick={() => { setActiveImage(img); setShowVideo(false); }}
-                    className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white ${
-                    (!showVideo && activeImage === img) ? "border-[#D4C29A] scale-110 shadow-lg" : "border-transparent opacity-60 hover:opacity-100"
+                    className={`relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-white transition-all duration-300 ease-out ${
+                    (!showVideo && activeImage === img) 
+                        ? "scale-110 shadow-xl ring-2 ring-[#D4C29A] ring-offset-2 z-20 opacity-100" 
+                        : "border-2 border-transparent opacity-60 hover:opacity-100 hover:scale-105 z-0"
                     }`}
                 >
-                    <div className="relative w-full h-full aspect-square">
+                    <div className="relative w-full h-full aspect-square rounded-lg overflow-hidden p-0.5">
                         <Image 
                             src={img} 
                             alt="Thumbnail" 
                             fill
-                            className="object-cover" 
+                            className="object-cover rounded-md" 
                             sizes="80px"
                         />
                     </div>
@@ -764,11 +766,11 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             >
                                 {extra.image && (
                                     <div 
-                                                                    className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation(); 
-                                                                        setZoomImage(extra.image);
-                                                                    }}
+                                        className="relative w-16 h-16 mr-4 flex-shrink-0 cursor-zoom-in group/zoom rounded-lg overflow-hidden border border-black/5"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); 
+                                            setZoomImage(extra.image);
+                                        }}
                                     >
                                             <Image src={extra.image} alt={extra.name} width={64} height={64} className="w-full h-full object-cover" />
                                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
@@ -1006,6 +1008,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 </button>
             </div>
 
+            {/* ... Rest of footer components ... */}
             </motion.div>
         </div>
 
@@ -1156,7 +1159,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                         <video 
                             ref={videoRef}
                             src={zoomVideo} 
-                            className="w-full max-h-[80vh] rounded-2xl shadow-2xl" 
+                            className="w-full max-h-[80vh] rounded-2xl shadow-2xl"
                             controls 
                             autoPlay 
                             loop={false} 
@@ -1171,7 +1174,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
             </motion.div>
             )}
         </AnimatePresence>
-        </div>
+      </div>
     </main>
   );
 }
