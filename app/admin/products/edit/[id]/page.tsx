@@ -499,6 +499,8 @@ export default function EditProductPage() {
       alert("Error updating: " + error.message);
     } else {
       alert("Product updated successfully!");
+      // ✨ FIXED: Force refresh the data so list view updates instantly
+      router.refresh(); 
       router.push("/admin/products");
     }
     setIsSaving(false);
@@ -901,7 +903,7 @@ export default function EditProductPage() {
                             <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center"><ImageIcon size={12} className="text-gray-400"/></div>
                         )}
                         <div>
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2">
                                 <span className="text-sm text-[#1F1F1F] font-bold block">
                                     {ex.name} {ex.name_en ? <span className="text-[#C9A24D]">/ {ex.name_en}</span> : ''}
                                 </span>

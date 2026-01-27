@@ -46,6 +46,7 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
   "Malta": { rate10kg: 25, rate20kg: 32 },
   "Monaco": { rate10kg: 25, rate20kg: 32 },
   "Netherlands": { rate10kg: 25, rate20kg: 32 },
+  "Austria": { rate10kg: 25, rate20kg: 31 }, // ✨ ADDED: Austria Rates
   "Poland": { rate10kg: 25, rate20kg: 32 },
   "Portugal": { rate10kg: 25, rate20kg: 32 },
   "Romania": { rate10kg: 25, rate20kg: 32 },
@@ -259,6 +260,8 @@ export default function CheckoutPage() {
   const [donorName, setDonorName] = useState("");
   const [isPublicDonor, setIsPublicDonor] = useState(false);
   const [isDonationActive, setIsDonationActive] = useState(false);
+  // ✨ NEW: Separate State for Tips
+  const [isTipActive, setIsTipActive] = useState(false);
 
   // Promo Code State
   const [promoCodeInput, setPromoCodeInput] = useState("");
@@ -277,6 +280,8 @@ export default function CheckoutPage() {
           
           if (data) {
               setIsDonationActive(data.is_donation_active);
+              // ✨ NEW: Load Tip Status
+              setIsTipActive(data.is_tip_active);
               // ✨ NEW: Set Vacation Data
               setVacationSettings({
                   isActive: data.is_vacation_mode_active,
@@ -711,122 +716,128 @@ export default function CheckoutPage() {
                 <button onClick={() => setStep(1)} className="text-[#C9A24D] text-sm font-bold hover:underline">{t('checkout_change')}</button>
               </div>
               
-              {/* ... Benevolence Section (Preserved) ... */}
-              {isDonationActive && (
+              {/* ✨ UPDATED: Benevolence Section with Separate Logic */}
+              {(isDonationActive || isTipActive) && (
                   <div className="space-y-6 animate-in fade-in slide-in-from-right-2">
-                      <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                          <div className="flex items-center gap-2 mb-4">
-                             <div className="p-1.5 bg-[#C9A24D]/10 rounded-lg text-[#C9A24D]"><Coffee size={18}/></div>
-                             <h3 className="font-bold text-sm">{language === 'EN' ? "Support the Team (Optional)" : "Team unterstützen (Optional)"}</h3>
-                          </div>
-                          <div className="flex gap-2">
-                             {['3%', '5%', '5eur', 'custom'].map(opt => (
-                                 <button
-                                     key={opt}
-                                     onClick={() => handleTipClick(opt)}
-                                     className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
-                                         tipOption === opt 
-                                         ? "bg-[#1F1F1F] text-white border-[#1F1F1F]" 
-                                         : "bg-white border-black/10 hover:border-[#1F1F1F] text-[#1F1F1F]/60"
-                                     }`}
-                                 >
-                                     {opt === '3%' ? '3%' : opt === '5%' ? '5%' : opt === '5eur' ? '€5' : 'Custom'}
-                                 </button>
-                             ))}
-                          </div>
-                          {tipOption === 'custom' && (
-                             <div className="mt-3 animate-in fade-in slide-in-from-top-1">
-                                 <input 
-                                     type="number" 
-                                     min="0"
-                                     placeholder="€" 
-                                     className="w-full border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-[#C9A24D]"
-                                     onChange={(e) => setTipAmount(Math.max(0, parseFloat(e.target.value) || 0))}
-                                 />
-                             </div>
-                          )}
-                      </div>
-
-                      <div className={`transition-all duration-300 border rounded-2xl p-6 shadow-sm ${showDonation ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-black/5'}`}>
-                          <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowDonation(!showDonation)}>
-                             <div className="flex items-center gap-2">
-                                 <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Droplets size={18}/></div>
-                                 <div>
-                                     <h3 className="font-bold text-sm text-[#1F1F1F]">{language === 'EN' ? "Water Well Project" : "Brunnenbau-Projekt"}</h3>
-                                     <p className="text-[10px] text-[#1F1F1F]/50 font-medium">Build a well, change lives.</p>
-                                 </div>
-                             </div>
-                             <div className={`w-5 h-5 rounded-full border border-black/10 flex items-center justify-center transition-all ${showDonation ? 'bg-blue-600 border-blue-600' : 'bg-white'}`}>
-                                 {showDonation && <Check size={12} className="text-white" />}
-                             </div>
-                          </div>
-
-                          {showDonation && (
-                             <div className="mt-4 pt-4 border-t border-black/5 space-y-4 animate-in fade-in">
-                                 <p className="text-xs text-[#1F1F1F]/70 leading-relaxed italic">
-                                     {language === 'EN' 
-                                     ? "Your donation goes directly to building water wells. We print donor names on a banner at the site." 
-                                     : "Ihre Spende fließt direkt in den Bau von Wasserbrunnen. Wir drucken die Namen der Spender auf ein Banner vor Ort."}
-                                 </p>
-                                 
-                                 <div className="flex gap-2">
-                                     {[10, 20, 50, 'custom'].map(val => (
-                                         <button
-                                             key={val}
-                                             onClick={() => handleDonationClick(val as number | 'custom')}
-                                             className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
-                                                 donationOption === val 
-                                                 ? "bg-blue-600 text-white border-blue-600" 
-                                                 : "bg-white border-black/10 hover:border-blue-600 text-[#1F1F1F]/60"
-                                             }`}
-                                         >
-                                             {val === 'custom' ? 'Custom' : `€${val}`}
-                                         </button>
-                                     ))}
-                                 </div>
-
-                                 {donationOption === 'custom' && (
+                      {/* TIPS SECTION */}
+                      {isTipActive && (
+                          <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
+                              <div className="flex items-center gap-2 mb-4">
+                                 <div className="p-1.5 bg-[#C9A24D]/10 rounded-lg text-[#C9A24D]"><Coffee size={18}/></div>
+                                 <h3 className="font-bold text-sm">{language === 'EN' ? "Support the Team (Optional)" : "Team unterstützen (Optional)"}</h3>
+                              </div>
+                              <div className="flex gap-2">
+                                 {['3%', '5%', '5eur', 'custom'].map(opt => (
+                                     <button
+                                         key={opt}
+                                         onClick={() => handleTipClick(opt)}
+                                         className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                                             tipOption === opt 
+                                             ? "bg-[#1F1F1F] text-white border-[#1F1F1F]" 
+                                             : "bg-white border-black/10 hover:border-[#1F1F1F] text-[#1F1F1F]/60"
+                                         }`}
+                                     >
+                                         {opt === '3%' ? '3%' : opt === '5%' ? '5%' : opt === '5eur' ? '€5' : 'Custom'}
+                                     </button>
+                                 ))}
+                              </div>
+                              {tipOption === 'custom' && (
+                                 <div className="mt-3 animate-in fade-in slide-in-from-top-1">
                                      <input 
                                          type="number" 
                                          min="0"
-                                         placeholder="€ Amount" 
-                                         className="w-full border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-blue-600"
-                                         onChange={(e) => setDonationAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                                         placeholder="€" 
+                                         className="w-full border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-[#C9A24D]"
+                                         onChange={(e) => setTipAmount(Math.max(0, parseFloat(e.target.value) || 0))}
                                      />
-                                 )}
-
-                                 <div className="bg-white p-3 rounded-xl border border-black/5 space-y-2">
-                                     <label className="text-[10px] font-bold uppercase tracking-wide text-[#1F1F1F]/40 block">
-                                         {language === 'EN' ? "Name for Banner (Optional)" : "Name für Banner (Optional)"}
-                                     </label>
-                                     <input 
-                                         type="text" 
-                                         placeholder={language === 'EN' ? "e.g. The Smith Family" : "z.B. Familie Müller"}
-                                         value={donorName}
-                                         onChange={(e) => setDonorName(e.target.value)}
-                                         className="w-full bg-[#F6EFE6]/50 border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-[#C9A24D]"
-                                     />
-                                     
-                                     {donorName.trim().length > 0 && (
-                                         <div className="flex items-start gap-2 pt-1">
-                                             <input 
-                                                 type="checkbox" 
-                                                 id="publicConsent" 
-                                                 checked={isPublicDonor} 
-                                                 onChange={(e) => setIsPublicDonor(e.target.checked)} 
-                                                 className="mt-0.5 accent-blue-600 cursor-pointer" 
-                                             />
-                                             <label htmlFor="publicConsent" className="text-[10px] text-[#1F1F1F]/60 leading-tight cursor-pointer">
-                                                 {language === 'EN' 
-                                                 ? "I agree that my name may be displayed publicly for donor recognition." 
-                                                 : "Ich stimme zu, dass mein Name zur Spenderanerkennung öffentlich angezeigt werden darf."}
-                                             </label>
-                                         </div>
-                                     )}
                                  </div>
-                             </div>
-                          )}
-                      </div>
+                              )}
+                          </div>
+                      )}
+
+                      {/* WATER WELL SECTION */}
+                      {isDonationActive && (
+                          <div className={`transition-all duration-300 border rounded-2xl p-6 shadow-sm ${showDonation ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-black/5'}`}>
+                              <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowDonation(!showDonation)}>
+                                 <div className="flex items-center gap-2">
+                                     <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Droplets size={18}/></div>
+                                     <div>
+                                         <h3 className="font-bold text-sm text-[#1F1F1F]">{language === 'EN' ? "Water Well Project" : "Brunnenbau-Projekt"}</h3>
+                                         <p className="text-[10px] text-[#1F1F1F]/50 font-medium">Build a well, change lives.</p>
+                                     </div>
+                                 </div>
+                                 <div className={`w-5 h-5 rounded-full border border-black/10 flex items-center justify-center transition-all ${showDonation ? 'bg-blue-600 border-blue-600' : 'bg-white'}`}>
+                                     {showDonation && <Check size={12} className="text-white" />}
+                                 </div>
+                              </div>
+
+                              {showDonation && (
+                                 <div className="mt-4 pt-4 border-t border-black/5 space-y-4 animate-in fade-in">
+                                     <p className="text-xs text-[#1F1F1F]/70 leading-relaxed italic">
+                                         {language === 'EN' 
+                                         ? "Your donation goes directly to building water wells. We print donor names on a banner at the site." 
+                                         : "Ihre Spende fließt direkt in den Bau von Wasserbrunnen. Wir drucken die Namen der Spender auf ein Banner vor Ort."}
+                                     </p>
+                                     
+                                     <div className="flex gap-2">
+                                         {[10, 20, 50, 'custom'].map(val => (
+                                             <button
+                                                 key={val}
+                                                 onClick={() => handleDonationClick(val as number | 'custom')}
+                                                 className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                                                     donationOption === val 
+                                                     ? "bg-blue-600 text-white border-blue-600" 
+                                                     : "bg-white border-black/10 hover:border-blue-600 text-[#1F1F1F]/60"
+                                                 }`}
+                                             >
+                                                 {val === 'custom' ? 'Custom' : `€${val}`}
+                                             </button>
+                                         ))}
+                                     </div>
+
+                                     {donationOption === 'custom' && (
+                                         <input 
+                                             type="number" 
+                                             min="0"
+                                             placeholder="€ Amount" 
+                                             className="w-full border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-blue-600"
+                                             onChange={(e) => setDonationAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                                         />
+                                     )}
+
+                                     <div className="bg-white p-3 rounded-xl border border-black/5 space-y-2">
+                                         <label className="text-[10px] font-bold uppercase tracking-wide text-[#1F1F1F]/40 block">
+                                             {language === 'EN' ? "Name for Banner (Optional)" : "Name für Banner (Optional)"}
+                                         </label>
+                                         <input 
+                                             type="text" 
+                                             placeholder={language === 'EN' ? "e.g. The Smith Family" : "z.B. Familie Müller"}
+                                             value={donorName}
+                                             onChange={(e) => setDonorName(e.target.value)}
+                                             className="w-full bg-[#F6EFE6]/50 border border-black/10 rounded-lg p-2 text-sm outline-none focus:border-[#C9A24D]"
+                                         />
+                                         
+                                         {donorName.trim().length > 0 && (
+                                             <div className="flex items-start gap-2 pt-1">
+                                                 <input 
+                                                     type="checkbox" 
+                                                     id="publicConsent" 
+                                                     checked={isPublicDonor} 
+                                                     onChange={(e) => setIsPublicDonor(e.target.checked)} 
+                                                     className="mt-0.5 accent-blue-600 cursor-pointer" 
+                                                 />
+                                                 <label htmlFor="publicConsent" className="text-[10px] text-[#1F1F1F]/60 leading-tight cursor-pointer">
+                                                     {language === 'EN' 
+                                                     ? "I agree that my name may be displayed publicly for donor recognition." 
+                                                     : "Ich stimme zu, dass mein Name zur Spenderanerkennung öffentlich angezeigt werden darf."}
+                                                 </label>
+                                             </div>
+                                         )}
+                                     </div>
+                                 </div>
+                              )}
+                          </div>
+                      )}
                   </div>
               )}
 
@@ -904,12 +915,14 @@ export default function CheckoutPage() {
               </div>
             )}
             
-            {isDonationActive && tipAmount > 0 && (
+            {/* ✨ UPDATED: Only show Tip line if tips are active and amount > 0 */}
+            {isTipActive && tipAmount > 0 && (
                 <div className="flex justify-between text-[#1F1F1F] font-bold text-sm">
                     <span>Tip (Team Support)</span>
                     <span>+€{tipAmount.toFixed(2)}</span>
                 </div>
             )}
+            {/* ✨ UPDATED: Only show Donation line if donations are active and amount > 0 */}
             {isDonationActive && donationAmount > 0 && (
                 <div className="flex justify-between text-blue-600 font-bold text-sm">
                     <span>Water Well Donation</span>

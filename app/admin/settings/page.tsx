@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabase";
-import { Save, Upload, Eye, EyeOff, MoveVertical, Loader2, Layout, Maximize, Type, LayoutDashboard, Droplets, Palette, Plus, Trash2, X, Check, Heart, Quote, Star, Plane } from "lucide-react"; // ✨ Added Plane
+import { Save, Upload, Eye, EyeOff, MoveVertical, Loader2, Layout, Maximize, Type, LayoutDashboard, Droplets, Palette, Plus, Trash2, X, Check, Heart, Quote, Star, Plane, Coffee } from "lucide-react"; // ✨ Added Coffee
 import Link from "next/link"; 
 import CategoryTranslationManager from "../../../components/admin/CategoryTranslationManager"; 
 
@@ -108,7 +108,8 @@ export default function StorefrontSettings() {
         hero_title: settings.hero_title,      
         hero_subtitle: settings.hero_subtitle, 
         show_hero_image: settings.show_hero_image,
-        is_donation_active: settings.is_donation_active,
+        is_donation_active: settings.is_donation_active, // Water Well
+        is_tip_active: settings.is_tip_active, // ✨ NEW: Tips
         // ✨ NEW: Save Vacation Mode Settings
         is_vacation_mode_active: settings.is_vacation_mode_active,
         vacation_start_date: settings.vacation_start_date,
@@ -255,14 +256,33 @@ export default function StorefrontSettings() {
                    <Droplets size={20} />
                    <h3 className="font-bold text-lg text-[#1F1F1F]">Checkout Features</h3>
                </div>
+               
+               {/* Water Well Toggle */}
                <div className="flex items-center justify-between p-4 bg-[#F6EFE6] rounded-xl border border-[#C9A24D]/20">
                    <div>
-                       <p className="font-bold text-sm text-[#1F1F1F]">Water Well & Tips</p>
-                       <p className="text-[10px] text-[#1F1F1F]/50">Enable donation/tip section at checkout.</p>
+                       <p className="font-bold text-sm text-[#1F1F1F]">Water Well Project</p>
+                       <p className="text-[10px] text-[#1F1F1F]/50">Enable water well donation option.</p>
                    </div>
                    <button 
                        onClick={() => setSettings({...settings, is_donation_active: !settings.is_donation_active})}
                        className={`w-12 h-6 rounded-full transition-all flex items-center p-1 ${settings.is_donation_active ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}
+                   >
+                       <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                   </button>
+               </div>
+
+               {/* Tips Toggle */}
+               <div className="flex items-center justify-between p-4 bg-[#F6EFE6] rounded-xl border border-[#C9A24D]/20">
+                   <div className="flex items-center gap-2">
+                       <Coffee size={16} className="text-[#C9A24D]"/>
+                       <div>
+                           <p className="font-bold text-sm text-[#1F1F1F]">Team Support / Tips</p>
+                           <p className="text-[10px] text-[#1F1F1F]/50">Enable team tipping option.</p>
+                       </div>
+                   </div>
+                   <button 
+                       onClick={() => setSettings({...settings, is_tip_active: !settings.is_tip_active})}
+                       className={`w-12 h-6 rounded-full transition-all flex items-center p-1 ${settings.is_tip_active ? 'bg-[#1F1F1F] justify-end' : 'bg-gray-300 justify-start'}`}
                    >
                        <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
                    </button>

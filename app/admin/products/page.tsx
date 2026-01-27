@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Loader2, Video, Globe, Bookmark } from "lucide-react"; // ✨ Added Bookmark icon for Ribbon status
+import { Plus, Search, Edit, Trash2, Loader2, Video, Globe, Bookmark } from "lucide-react"; 
 import Link from "next/link";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
@@ -51,15 +51,31 @@ export default function AdminProducts() {
   };
 
   /**
-   * ✨ NEW HELPER: Calculate Total Stock
-   * Since Rosetta wants individual stock per combination, the main table 
-   * should now show the SUM of all those combination stocks.
+   * ✨ UPDATED HELPER: Calculate Total Stock
+   * Now correctly sums up the 'stock_matrix' for complex products (Bouquets),
+   * and falls back to 'stock' for simple products (Supplies).
    */
   const calculateTotalStock = (product: any) => {
-    if (product.variants && Array.isArray(product.variants)) {
-      return product.variants.reduce((acc: number, variant: any) => acc + (Number(variant.stock) || 0), 0);
+    // 1. Check Stock Matrix (The true inventory for bouquets with Size/Color)
+    if (product.stock_matrix && Array.isArray(product.stock_matrix) && product.stock_matrix.length > 0) {
+      const matrixTotal = product.stock_matrix.reduce((acc: number, item: any) => {
+        // Only add positive stock numbers (ignore -1 if used for unlimited)
+        const qty = Number(item.stock);
+        return acc + (qty > 0 ? qty : 0);
+      }, 0);
+      
+      // If we found matrix stock, return it
+      if (matrixTotal > 0) return matrixTotal;
     }
-    return product.stock || 0; // Fallback to legacy stock field
+
+    // 2. Check Variants (Legacy fallback)
+    if (product.variants && Array.isArray(product.variants)) {
+      const variantTotal = product.variants.reduce((acc: number, variant: any) => acc + (Number(variant.stock) || 0), 0);
+      if (variantTotal > 0) return variantTotal;
+    }
+
+    // 3. Fallback to global stock field (Simple items like Tape/Ribbon)
+    return product.stock || 0; 
   };
 
   return (
@@ -113,10 +129,10 @@ export default function AdminProducts() {
                 <tr>
                   <th className="px-6 py-4">Product</th>
                   <th className="px-6 py-4">Bilingual</th>
-                  <th className="px-6 py-4">Ribbon {/* ✨ NEW: Ribbon Mandatory Column */}</th> 
+                  <th className="px-6 py-4">Ribbon {/* ✨ Ribbon Mandatory Column */}</th> 
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
-                  <th className="px-6 py-4">Total Stock {/* Updated label */}</th> 
+                  <th className="px-6 py-4">Total Stock</th> 
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -150,7 +166,7 @@ export default function AdminProducts() {
                     </td>
 
                     <td className="px-6 py-4">
-                      {/* ✨ NEW: Ribbon Status Indicator */}
+                      {/* ✨ Ribbon Status Indicator */}
                       <div className="flex items-center gap-2">
                         {product.needs_ribbon ? (
                           <span className="flex items-center gap-1 text-[10px] font-black uppercase text-[#C9A24D] bg-[#C9A24D]/10 px-2 py-1 rounded">
@@ -166,7 +182,7 @@ export default function AdminProducts() {
                     <td className="px-6 py-4 text-sm font-mono font-bold text-[#C9A24D]">€{product.price}</td>
                     
                     <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">
-                      {/* ✨ UPDATED: Logic to show combined stock from all variants */}
+                      {/* ✨ UPDATED: Shows sum of stock_matrix if available, otherwise simple stock */}
                       {calculateTotalStock(product)} units
                     </td>
 

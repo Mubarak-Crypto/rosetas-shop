@@ -31,6 +31,7 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
   "Malta": { rate10kg: 25, rate20kg: 32 },
   "Monaco": { rate10kg: 25, rate20kg: 32 },
   "Netherlands": { rate10kg: 25, rate20kg: 32 },
+  "Austria": { rate10kg: 25, rate20kg: 31 }, // ✨ ADDED: Austria Rates
   "Poland": { rate10kg: 25, rate20kg: 32 },
   "Portugal": { rate10kg: 25, rate20kg: 32 },
   "Romania": { rate10kg: 25, rate20kg: 32 },

@@ -98,10 +98,35 @@ function SuccessContent() {
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.5, type: "spring" }}
-        /* ✅ FIXED: Kept green but adjusted shadow for light background */
-        className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-8 shadow-[0_0_30px_rgba(34,197,94,0.2)]"
+        className="mb-8"
       >
-        <CheckCircle size={48} className="text-white" />
+        {/* ✨ UPDATED: Custom SVG Icon to match the Sage Green Squircle Tick */}
+        <svg 
+          width="100" 
+          height="100" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* The Rounded Square Box */}
+          <rect 
+            x="2.5" 
+            y="2.5" 
+            width="19" 
+            height="19" 
+            rx="5" 
+            stroke="#8FC9A9" 
+            strokeWidth="3" 
+          />
+          {/* The Checkmark */}
+          <path 
+            d="M7.5 12L10.5 15.5L16.5 8.5" 
+            stroke="#8FC9A9" 
+            strokeWidth="3" 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+          />
+        </svg>
       </motion.div>
 
       <h1 className="text-4xl md:text-5xl font-bold mb-4">{t('success_title')}</h1>

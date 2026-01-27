@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // ✨ Added for data revalidation
+import { useRouter } from "next/navigation"; 
 import { motion } from "framer-motion"; 
 import { supabase } from "../../../lib/supabase";
-import { Star, Save, Plus, Instagram, MessageCircle, Trash2, CheckCircle, Loader2, Check } from "lucide-react";
+import { Star, Save, Plus, Instagram, MessageCircle, Trash2, CheckCircle, Loader2, Check, ShoppingBag, Upload, X, Image as ImageIcon } from "lucide-react"; // ✨ Added new icons
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 
 export default function AdminReviewsPage() {
-  const router = useRouter(); // ✨ Initialize router
+  const router = useRouter(); 
   const [products, setProducts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  
+  // ✨ NEW: Uploading State
+  const [isUploading, setIsUploading] = useState(false);
 
   // New Review Form State
   const [formData, setFormData] = useState({
@@ -22,7 +25,8 @@ export default function AdminReviewsPage() {
     comment: "",
     is_verified: true,
     source: "whatsapp",
-    status: "approved" // ✨ Default to approved when admin manually adds
+    status: "approved",
+    image_url: "" // ✨ Added image_url to state
   });
 
   useEffect(() => {
@@ -39,6 +43,36 @@ export default function AdminReviewsPage() {
     setIsLoading(false);
   };
 
+  // ✨ NEW: Image Upload Handler
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    setIsUploading(true);
+
+    try {
+      const fileName = `review-${Date.now()}.${file.name.split('.').pop()}`;
+      const filePath = `${fileName}`;
+
+      // Upload to 'products' bucket (reusing existing bucket for simplicity)
+      const { error: uploadError } = await supabase.storage
+        .from('products') 
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('products')
+        .getPublicUrl(filePath);
+
+      setFormData({ ...formData, image_url: publicUrl });
+    } catch (err: any) {
+      alert("Error uploading image: " + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { error } = await supabase.from('reviews').insert([formData]);
@@ -47,13 +81,12 @@ export default function AdminReviewsPage() {
       alert("Error saving review: " + error.message);
     } else {
       setIsAdding(false);
-      setFormData({ product_id: "", customer_name: "", rating: 5, comment: "", is_verified: true, source: "whatsapp", status: "approved" });
+      setFormData({ product_id: "", customer_name: "", rating: 5, comment: "", is_verified: true, source: "whatsapp", status: "approved", image_url: "" });
       await fetchInitialData();
-      router.refresh(); // ✨ Force Product Pages to update their review lists
+      router.refresh(); 
     }
   };
 
-  // ✨ NEW: Approve function to make pending reviews live
   const approveReview = async (id: string) => {
     const { error } = await supabase
       .from('reviews')
@@ -68,33 +101,26 @@ export default function AdminReviewsPage() {
     }
   };
 
-  // ✨ UPDATED: Robust delete logic that refreshes the whole site cache
   const deleteReview = async (e: React.MouseEvent, id: string) => {
     e.preventDefault(); 
     e.stopPropagation();
     
     if (!confirm("Are you sure you want to delete this review?")) return;
     
-    // Save current state in case we need to revert
     const previousReviews = [...reviews];
 
     try {
-      // 1. Instantly remove from UI for a fast feel
       setReviews(reviews.filter(r => r.id !== id));
-
-      // 2. Delete from Database
       const { error } = await supabase.from('reviews').delete().eq('id', id);
       
       if (error) {
         throw error;
       }
-
-      // 3. Sync with the rest of the app (Ensures it's gone from Product Page too)
       router.refresh(); 
 
     } catch (error: any) {
       alert("Error deleting review: " + error.message);
-      setReviews(previousReviews); // Put it back in the list if the database call failed
+      setReviews(previousReviews); 
     }
   };
 
@@ -160,6 +186,32 @@ export default function AdminReviewsPage() {
                 </div>
               </div>
 
+              {/* ✨ IMAGE UPLOAD SECTION */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-2">Review Photo (Optional)</label>
+                <div className="flex items-center gap-4">
+                    {formData.image_url ? (
+                        <div className="relative w-20 h-20 rounded-2xl overflow-hidden border border-black/10 group">
+                            <img src={formData.image_url} alt="Review" className="w-full h-full object-cover" />
+                            <button 
+                                type="button" 
+                                onClick={() => setFormData({...formData, image_url: ""})}
+                                className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <X size={20} className="text-white" />
+                            </button>
+                        </div>
+                    ) : (
+                        <label className={`w-20 h-20 rounded-2xl bg-[#F6EFE6] border-2 border-dashed border-black/10 flex flex-col items-center justify-center cursor-pointer hover:border-[#C9A24D] transition-colors ${isUploading ? 'opacity-50' : ''}`}>
+                            {isUploading ? <Loader2 size={20} className="animate-spin text-[#C9A24D]" /> : <Upload size={20} className="text-[#1F1F1F]/40" />}
+                            <span className="text-[8px] font-bold text-[#1F1F1F]/40 uppercase mt-1">Upload</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                        </label>
+                    )}
+                    <p className="text-xs text-[#1F1F1F]/40 font-medium italic">Add a photo to make the review look more authentic.</p>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-2">Review Content</label>
                 <textarea 
@@ -186,7 +238,7 @@ export default function AdminReviewsPage() {
 
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-2 mb-3 block">Review Source</label>
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     <button 
                       type="button"
                       onClick={() => setFormData({...formData, source: 'whatsapp'})}
@@ -200,6 +252,14 @@ export default function AdminReviewsPage() {
                       className={`p-3 rounded-xl border-2 transition-all ${formData.source === 'instagram' ? 'bg-pink-50 border-pink-500' : 'bg-white border-black/5 opacity-40'}`}
                     >
                       <Instagram size={24} className="text-pink-600" />
+                    </button>
+                    {/* ✨ NEW: Shop/Website Button */}
+                    <button 
+                      type="button"
+                      onClick={() => setFormData({...formData, source: 'website'})}
+                      className={`p-3 rounded-xl border-2 transition-all ${formData.source === 'website' ? 'bg-blue-50 border-blue-500' : 'bg-white border-black/5 opacity-40'}`}
+                    >
+                      <ShoppingBag size={24} className="text-blue-600" />
                     </button>
                   </div>
                 </div>
@@ -219,18 +279,33 @@ export default function AdminReviewsPage() {
           <div className="grid grid-cols-1 gap-6">
             {reviews.length > 0 ? reviews.map(review => (
               <div key={review.id} className={`bg-white p-8 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border shadow-sm hover:shadow-md transition-shadow ${review.status === 'pending' ? 'border-yellow-200 bg-yellow-50/30' : 'border-black/5'}`}>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <span className="font-black text-xl">{review.customer_name}</span>
-                    <div className="flex items-center gap-2 bg-[#F6EFE6] px-3 py-1 rounded-lg">
-                       {review.source === 'whatsapp' ? <MessageCircle size={12} className="text-green-600" /> : <Instagram size={12} className="text-pink-600" />}
-                       <span className="text-[10px] font-black uppercase tracking-tighter opacity-60">{review.source === 'website' ? 'direct' : review.source}</span>
+                <div className="flex gap-6 items-start">
+                    {/* ✨ REVIEW IMAGE PREVIEW */}
+                    {review.image_url ? (
+                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-black/5 flex-shrink-0">
+                            <img src={review.image_url} alt="Customer" className="w-full h-full object-cover" />
+                        </div>
+                    ) : (
+                        <div className="w-20 h-20 rounded-2xl bg-[#F6EFE6] flex items-center justify-center border border-black/5 flex-shrink-0">
+                            <ImageIcon size={24} className="text-[#1F1F1F]/20" />
+                        </div>
+                    )}
+
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                            <span className="font-black text-xl">{review.customer_name}</span>
+                            <div className="flex items-center gap-2 bg-[#F6EFE6] px-3 py-1 rounded-lg">
+                                {review.source === 'whatsapp' && <MessageCircle size={12} className="text-green-600" />}
+                                {review.source === 'instagram' && <Instagram size={12} className="text-pink-600" />}
+                                {review.source === 'website' && <ShoppingBag size={12} className="text-blue-600" />}
+                                <span className="text-[10px] font-black uppercase tracking-tighter opacity-60">{review.source === 'website' ? 'Shop' : review.source}</span>
+                            </div>
+                            {review.is_verified && <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 rounded font-black uppercase">Verified</span>}
+                            {review.status === 'pending' && <span className="text-[10px] bg-yellow-500 text-white px-2 py-0.5 rounded font-black uppercase tracking-tighter">Pending Approval</span>}
+                        </div>
+                        <p className="text-[#1F1F1F] font-medium opacity-80 leading-relaxed italic">"{review.comment}"</p>
+                        <p className="text-[10px] font-black text-[#C9A24D] uppercase tracking-widest">Linked to: {review.products?.name}</p>
                     </div>
-                    {review.is_verified && <span className="text-[10px] bg-green-600 text-white px-2 py-0.5 rounded font-black uppercase">Verified</span>}
-                    {review.status === 'pending' && <span className="text-[10px] bg-yellow-500 text-white px-2 py-0.5 rounded font-black uppercase tracking-tighter">Pending Approval</span>}
-                  </div>
-                  <p className="text-[#1F1F1F] font-medium opacity-80 leading-relaxed italic">"{review.comment}"</p>
-                  <p className="text-[10px] font-black text-[#C9A24D] uppercase tracking-widest">Linked to: {review.products?.name}</p>
                 </div>
                 
                 <div className="flex items-center gap-4 self-end md:self-center">
