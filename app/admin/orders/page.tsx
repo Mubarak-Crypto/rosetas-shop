@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet } from "lucide-react"; // ✨ Added Wallet icon
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw } from "lucide-react"; 
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -24,17 +24,42 @@ export default function AdminOrdersPage() {
   // FETCH ORDERS
   const fetchOrders = async () => {
     setIsLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (data) setOrders(data);
+    if (error) {
+        console.error("Error fetching orders:", error);
+    } else if (data) {
+        setOrders(data);
+    }
     setIsLoading(false);
   };
 
+  // ✨ NEW: REALTIME SUBSCRIPTION (Live Updates)
   useEffect(() => {
+    // 1. Initial Fetch
     fetchOrders();
+
+    // 2. Subscribe to changes
+    const channel = supabase
+      .channel('realtime-orders')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'orders' },
+        (payload) => {
+          console.log('Realtime change received!', payload);
+          // If a new order comes in or an order changes, just re-fetch to be safe and accurate
+          fetchOrders(); 
+        }
+      )
+      .subscribe();
+
+    // 3. Cleanup on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // ✨ Mark as Shipped & Sending Email
@@ -66,7 +91,8 @@ export default function AdminOrdersPage() {
           body: JSON.stringify({
             email: orderToUpdate.customer_email || orderToUpdate.email, 
             customerName: orderToUpdate.customer_name,
-            orderId: orderToUpdate.id.toString().slice(0, 8).toUpperCase(), 
+            // ✨ UPDATED: Send the branded ID in the email too
+            orderId: `ROSETAS-${String(orderToUpdate.id).padStart(5, '0')}`, 
             trackingNumber: trackingNumber,
             carrier: carrier,
             productId: firstItem?.productId || firstItem?.id,
@@ -78,13 +104,15 @@ export default function AdminOrdersPage() {
             console.error("Email API failed:", await response.text());
         }
 
+        // Optimistic Update (UI updates instantly)
         setOrders(prev => prev.map(o => 
           o.id === shippingModal.orderId 
             ? { ...o, status: 'shipped', tracking_number: trackingNumber, carrier: carrier } 
             : o
         ));
 
-        alert(`Order #${shippingModal.orderId} marked as shipped! Email sent.`);
+        // ✨ UPDATED: Alert shows branded ID
+        alert(`Order #ROSETAS-${String(shippingModal.orderId).padStart(5, '0')} marked as shipped! Email sent.`);
       }
       
       setShippingModal({ open: false, orderId: null });
@@ -117,11 +145,15 @@ export default function AdminOrdersPage() {
 
     // 3. SEARCH FILTER
     const searchLower = searchTerm.toLowerCase();
+    // ✨ UPDATED: Generate the branded ID string for searching
+    const formattedId = `ROSETAS-${String(order.id).padStart(5, '0')}`.toLowerCase();
+
     const matchesSearch = 
       order.customer_name?.toLowerCase().includes(searchLower) ||
       order.email?.toLowerCase().includes(searchLower) ||
       order.country?.toLowerCase().includes(searchLower) || 
-      order.id.toString().includes(searchLower);
+      order.id.toString().includes(searchLower) ||
+      formattedId.includes(searchLower); // ✨ Allow searching by "ROSETAS-00..."
 
     return matchesTab && matchesCategory && matchesSearch;
   });
@@ -156,6 +188,15 @@ export default function AdminOrdersPage() {
               </h1>
               
               <div className="flex flex-col sm:flex-row gap-4">
+                {/* ✨ MANUAL REFRESH BUTTON (Just in case) */}
+                <button 
+                    onClick={fetchOrders}
+                    className="p-2 bg-white border border-black/10 rounded-xl hover:bg-black/5 transition-colors text-[#1F1F1F]/60"
+                    title="Force Refresh"
+                >
+                    <RefreshCw size={20} className={isLoading ? "animate-spin" : ""} />
+                </button>
+
                 <div className="bg-white p-1 rounded-xl flex gap-1 border border-black/5 shadow-sm">
                    <button 
                     onClick={() => setActiveCategory('all')}
@@ -271,7 +312,11 @@ export default function AdminOrdersPage() {
                         <div className="flex items-center gap-4 text-sm text-[#1F1F1F]/40 mt-1 font-medium">
                           <span className="flex items-center gap-1"><Mail size={12} /> {order.email || order.customer_email}</span>
                           <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(order.created_at).toLocaleDateString()}</span>
-                          <span className="bg-black/5 px-2 py-0.5 rounded text-xs text-[#1F1F1F]/60 font-mono">#{order.id.toString().slice(0,8).toUpperCase()}</span>
+                          
+                          {/* ✨ UPDATED: Branded Order ID Display */}
+                          <span className="bg-black/5 px-2 py-0.5 rounded text-xs text-[#1F1F1F]/60 font-mono font-bold">
+                            ROSETAS-{String(order.id).padStart(5, '0')}
+                          </span>
                         </div>
                       </div>
                       

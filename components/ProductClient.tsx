@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"; 
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash, ArrowLeft, ShieldAlert, ChevronDown, ChevronUp } from "lucide-react"; 
+import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash, ArrowLeft, ShieldAlert, ChevronDown, ChevronUp, Image as ImageIcon, Upload } from "lucide-react"; // ✨ Added Image/Upload icons
 import Image from "next/image"; 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation"; 
@@ -34,8 +34,10 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const [globalSettings, setGlobalSettings] = useState<any>(initialSettings); 
   const [reviews, setReviews] = useState<any[]>(initialReviews);
   
-  const [newReview, setNewReview] = useState({ customer_name: "", rating: 5, comment: "" });
+  // ✨ Review State Updated with Image URL
+  const [newReview, setNewReview] = useState({ customer_name: "", rating: 5, comment: "", image_url: "" });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const [activeImage, setActiveImage] = useState<string>("");
   const [activeVideo, setActiveVideo] = useState<string | null>(null); 
@@ -78,6 +80,37 @@ export default function ProductClient({ initialProduct, initialSettings, initial
         }
     }
   }, [product]);
+
+  // ✨ NEW: Handle Review Image Upload
+  const handleReviewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
+    setIsUploadingImage(true);
+
+    try {
+        const fileName = `review-customer-${Date.now()}.${file.name.split('.').pop()}`;
+        const filePath = `${fileName}`;
+
+        // Upload to 'products' bucket (reusing existing bucket)
+        const { error: uploadError } = await supabase.storage
+            .from('products') 
+            .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('products')
+            .getPublicUrl(filePath);
+
+        setNewReview(prev => ({ ...prev, image_url: publicUrl }));
+    } catch (err: any) {
+        alert(language === 'EN' ? "Error uploading image." : "Fehler beim Hochladen des Bildes.");
+        console.error(err);
+    } finally {
+        setIsUploadingImage(false);
+    }
+  };
 
   const handleOptionSelect = (optionName: string, value: string) => {
     setSelectedOptions(prev => ({ ...prev, [optionName]: value }));
@@ -387,11 +420,12 @@ export default function ProductClient({ initialProduct, initialSettings, initial
         comment: newReview.comment,
         source: 'website',
         is_verified: true, 
-        status: 'pending' 
+        status: 'pending',
+        image_url: newReview.image_url // ✨ Save the image URL
       }
     ]);
     if (!error) {
-      setNewReview({ customer_name: "", rating: 5, comment: "" });
+      setNewReview({ customer_name: "", rating: 5, comment: "", image_url: "" });
     }
     setIsSubmittingReview(false);
   };
@@ -772,10 +806,10 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                                             setZoomImage(extra.image);
                                         }}
                                     >
-                                            <Image src={extra.image} alt={extra.name} width={64} height={64} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
-                                                <ZoomIn size={14} className="text-white" />
-                                            </div>
+                                        <Image src={extra.image} alt={extra.name} width={64} height={64} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
+                                            <ZoomIn size={14} className="text-white" />
+                                        </div>
                                     </div>
                                 )}
 
@@ -1061,8 +1095,32 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                     value={newReview.comment}
                     onChange={e => setNewReview({...newReview, comment: e.target.value})}
                     />
+                    
+                    {/* ✨ IMAGE UPLOAD BUTTON */}
+                    <div className="flex items-center gap-3">
+                        <label className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 border border-black/5 cursor-pointer hover:bg-gray-100 transition-colors ${isUploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
+                            {isUploadingImage ? <Loader2 size={16} className="animate-spin text-[#C9A24D]"/> : <Upload size={16} className="text-[#1F1F1F]/40"/>}
+                            <span className="text-xs font-bold text-[#1F1F1F]/60">
+                                {language === 'EN' ? "Add Photo" : "Foto hinzufügen"}
+                            </span>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleReviewImageUpload} disabled={isUploadingImage}/>
+                        </label>
+                        {newReview.image_url && (
+                            <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-black/10 group">
+                                <Image src={newReview.image_url} alt="Preview" fill className="object-cover" />
+                                <button 
+                                    type="button" 
+                                    onClick={() => setNewReview(prev => ({ ...prev, image_url: "" }))}
+                                    className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X size={14} className="text-white" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <button 
-                    disabled={isSubmittingReview}
+                    disabled={isSubmittingReview || isUploadingImage}
                     className="w-full bg-[#1F1F1F] text-white py-3 rounded-xl font-bold hover:scale-[1.02] transition-transform disabled:opacity-50"
                     >
                     {isSubmittingReview ? t('posting') : t('post_review')}
@@ -1092,22 +1150,35 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 reviews.map((review) => (
                     <div key={review.id} className="border-b border-black/5 pb-8 last:border-0">
                     <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-3">
-                        <span className="font-bold text-lg">{review.customer_name}</span>
-                        {review.is_verified && (
-                            <span className="flex items-center gap-1 text-[10px] font-black uppercase text-green-600 bg-green-50 px-2 py-0.5 rounded">
-                            <Check size={10} strokeWidth={4} /> {language === 'EN' ? "Verified Buyer" : "Verifizierter Käufer"}
-                            </span>
-                        )}
-                        {review.source !== 'website' && (
-                            <span className="text-[10px] font-bold uppercase opacity-40 italic">via {review.source}</span>
-                        )}
-                        </div>
-                        <div className="flex text-[#D4C29A]">
-                        {[...Array(review.rating)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
+                        <div className="flex gap-4">
+                            {/* ✨ REVIEW IMAGE DISPLAY */}
+                            {review.image_url && (
+                                <div 
+                                    className="w-16 h-16 rounded-xl overflow-hidden border border-black/5 flex-shrink-0 cursor-zoom-in"
+                                    onClick={() => setZoomImage(review.image_url)}
+                                >
+                                    <Image src={review.image_url} alt="Review" width={64} height={64} className="w-full h-full object-cover" />
+                                </div>
+                            )}
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <span className="font-bold text-lg">{review.customer_name}</span>
+                                    {review.is_verified && (
+                                        <span className="flex items-center gap-1 text-[10px] font-black uppercase text-green-600 bg-green-50 px-2 py-0.5 rounded">
+                                        <Check size={10} strokeWidth={4} /> {language === 'EN' ? "Verified Buyer" : "Verifizierter Käufer"}
+                                        </span>
+                                    )}
+                                    {review.source !== 'website' && (
+                                        <span className="text-[10px] font-bold uppercase opacity-40 italic">via {review.source}</span>
+                                    )}
+                                </div>
+                                <div className="flex text-[#D4C29A]">
+                                    {[...Array(review.rating)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <p className="text-[#1F1F1F]/70 leading-relaxed font-medium">"{review.comment}"</p>
+                    <p className="text-[#1F1F1F]/70 leading-relaxed font-medium mt-2">"{review.comment}"</p>
                     </div>
                 ))
                 ) : (
