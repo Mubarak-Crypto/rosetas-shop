@@ -13,9 +13,13 @@ export async function POST(req: Request) {
     // 🔍 DEBUG LOG: Check your terminal after clicking 'Ship' to see if productId exists
     console.log("Attempting to send shipping email to:", email, "for Product ID:", productId); 
 
+    // ✨ UPDATED: Use Environment Variable for the domain (fallback to real domain if missing)
+    // This fixes the "Invalid Response" error on the review link before the domain is connected.
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://rosetasbouquets.com';
+
     // ✨ This is the secret link that unlocks the review form on the product page
     // It uses the productId passed from your Admin panel
-    const reviewLink = `https://rosetasbouquets.com/product/${productId}?verify=true`;
+    const reviewLink = `${baseUrl}/product/${productId}?verify=true`;
 
     const { data, error } = await resend.emails.send({
       from: 'Rosetas <onboarding@resend.dev>', // Keep this as is for your test account
@@ -53,7 +57,7 @@ export async function POST(req: Request) {
                 font-weight: bold; 
                 font-size: 13px; 
                 text-transform: uppercase; 
-                letter-spacing: 1px;
+                letter-spacing: 1px; 
                 border: 2px solid #ffffff; /* White border for the glow foundation */
                 box-shadow: 0 0 15px rgba(255, 255, 255, 0.8); /* The glowing aura */
               }
