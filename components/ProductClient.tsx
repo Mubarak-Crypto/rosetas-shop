@@ -26,14 +26,18 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const { language, t } = useLanguage(); 
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist(); 
   const videoRef = useRef<HTMLVideoElement>(null); 
+  
+  // ✨ NEW: Ref to scroll to review section automatically
+  const reviewSectionRef = useRef<HTMLElement>(null);
 
-  const isVerifiedBuyer = searchParams.get('verify') === 'true';
+  // ✨ UPDATED: Logic to verify buyer OR if they clicked "Review Now" from success page
+  const isVerifiedBuyer = searchParams.get('verify') === 'true' || searchParams.get('action') === 'write_review';
 
   // Initialize state with data passed from Server
   const [product, setProduct] = useState<any>(initialProduct);
   const [globalSettings, setGlobalSettings] = useState<any>(initialSettings); 
   const [reviews, setReviews] = useState<any[]>(initialReviews);
-  
+   
   // ✨ Review State Updated with Image URL
   const [newReview, setNewReview] = useState({ customer_name: "", rating: 5, comment: "", image_url: "" });
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -42,13 +46,13 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const [activeImage, setActiveImage] = useState<string>("");
   const [activeVideo, setActiveVideo] = useState<string | null>(null); 
   const [showVideo, setShowVideo] = useState<boolean>(false); 
-  
+   
   const [zoomImage, setZoomImage] = useState<string | null>(null); 
   const [zoomVideo, setZoomVideo] = useState<string | null>(null); 
-  
+   
   const [quantity, setQuantity] = useState(1);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
-  
+   
   // --- PERSONALIZATION STATES ---
   const [customText, setCustomText] = useState(""); 
   const [textPlacement, setTextPlacement] = useState<'option1' | 'option2'>('option1');
@@ -64,7 +68,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
   // State for selected Extras
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
-  
+   
   const [extraVariants, setExtraVariants] = useState<Record<string, string | string[]>>({});
   const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
 
@@ -80,6 +84,16 @@ export default function ProductClient({ initialProduct, initialSettings, initial
         }
     }
   }, [product]);
+
+  // ✨ NEW: Auto-scroll to reviews if action=write_review is in URL
+  useEffect(() => {
+    if (searchParams.get('action') === 'write_review') {
+        // Short timeout to ensure DOM is ready
+        setTimeout(() => {
+            reviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 800);
+    }
+  }, [searchParams]);
 
   // ✨ NEW: Handle Review Image Upload
   const handleReviewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1055,7 +1069,8 @@ export default function ProductClient({ initialProduct, initialSettings, initial
             />
         </section>
 
-        <section className="max-w-7xl mx-auto px-6 pt-24 border-t border-black/5 mt-24">
+        {/* ✨ UPDATED: Added ref to scroll to this review section automatically */}
+        <section ref={reviewSectionRef} className="max-w-7xl mx-auto px-6 pt-24 border-t border-black/5 mt-24">
             {/* Review Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
             <div className="space-y-8">

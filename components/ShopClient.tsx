@@ -160,10 +160,10 @@ function ShopContent({ initialProducts, initialSettings, initialColors }: ShopCl
                   : "Farben mit Bedeutung. Wählen Sie Ihre Botschaft."}
               </p>
               
-              {/* ✨ UPDATED: Glowing Button with ring-white and shadow */}
+              {/* ✨ UPDATED: Thin white border (border-2) instead of shadow/ring */}
               <button 
                 onClick={() => setShowColorGuide(!showColorGuide)}
-                className="inline-flex items-center gap-2 bg-[#E6DCCA] text-[#1F1F1F] px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(255,255,255,0.8)] ring-4 ring-white active:scale-95 transition-all hover:bg-[#d8c8b0] hover:shadow-[0_0_25px_rgba(255,255,255,1)]"
+                className="inline-flex items-center gap-2 bg-[#E6DCCA] text-[#1F1F1F] px-6 py-3 rounded-full font-bold uppercase tracking-widest text-xs border-2 border-white shadow-sm active:scale-95 transition-all hover:bg-[#d8c8b0]"
               >
                 {showColorGuide 
                     ? (language === 'EN' ? "Hide Color Guide" : "Farbleitfaden verbergen") 

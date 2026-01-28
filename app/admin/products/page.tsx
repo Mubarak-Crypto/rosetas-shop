@@ -52,30 +52,35 @@ export default function AdminProducts() {
 
   /**
    * ✨ UPDATED HELPER: Calculate Total Stock
-   * Now correctly sums up the 'stock_matrix' for complex products (Bouquets),
-   * and falls back to 'stock' for simple products (Supplies).
+   * Now prioritizes 'Total Capacity' (product.stock) over the sum of variants.
+   * This ensures bouquets show "3" (capacity) instead of "4000" (component parts).
    */
   const calculateTotalStock = (product: any) => {
-    // 1. Check Stock Matrix (The true inventory for bouquets with Size/Color)
+    // 1. Priority: Main Stock / Total Capacity
+    // If this value exists (even if 0), it acts as the strict limit for the product.
+    if (product.stock !== undefined && product.stock !== null) {
+        if (product.stock === -1) return "Unlimited";
+        return product.stock;
+    }
+
+    // 2. Fallback: Check Stock Matrix (Legacy or Component calculation)
+    // Only used if main stock is completely missing (null/undefined)
     if (product.stock_matrix && Array.isArray(product.stock_matrix) && product.stock_matrix.length > 0) {
       const matrixTotal = product.stock_matrix.reduce((acc: number, item: any) => {
-        // Only add positive stock numbers (ignore -1 if used for unlimited)
         const qty = Number(item.stock);
         return acc + (qty > 0 ? qty : 0);
       }, 0);
       
-      // If we found matrix stock, return it
       if (matrixTotal > 0) return matrixTotal;
     }
 
-    // 2. Check Variants (Legacy fallback)
+    // 3. Fallback: Variants Sum
     if (product.variants && Array.isArray(product.variants)) {
       const variantTotal = product.variants.reduce((acc: number, variant: any) => acc + (Number(variant.stock) || 0), 0);
       if (variantTotal > 0) return variantTotal;
     }
 
-    // 3. Fallback to global stock field (Simple items like Tape/Ribbon)
-    return product.stock || 0; 
+    return 0; 
   };
 
   return (
@@ -182,7 +187,7 @@ export default function AdminProducts() {
                     <td className="px-6 py-4 text-sm font-mono font-bold text-[#C9A24D]">€{product.price}</td>
                     
                     <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">
-                      {/* ✨ UPDATED: Shows sum of stock_matrix if available, otherwise simple stock */}
+                      {/* ✨ UPDATED: Shows Total Capacity (product.stock) first */}
                       {calculateTotalStock(product)} units
                     </td>
 

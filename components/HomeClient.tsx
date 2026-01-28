@@ -2,11 +2,10 @@
 
 import { useRef } from "react"; 
 import { motion } from "framer-motion";
-import { ChevronRight, Star, Loader2, ArrowRight, Scissors, Sparkles, Heart, Crown, ArrowDown } from "lucide-react"; 
+import { ChevronRight, Star, Loader2, ArrowRight, Scissors, Sparkles, Heart, Crown, ArrowDown, Globe, BookOpen } from "lucide-react"; 
 import ProductCard from "./ProductCard"; 
 import Features from "./Features"; 
 import Navbar from "./Navbar";
-import CharityImpact from "./CharityImpact"; 
 import Link from "next/link";
 import Image from "next/image"; 
 import { useLanguage } from "../context/LanguageContext"; 
@@ -65,12 +64,14 @@ export default function HomeClient({ products = [], settings = null }: { product
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 pt-12 pb-24 lg:pt-20 lg:pb-32 grid xl:grid-cols-2 gap-12 items-center">
+      {/* ✨ UPDATED: Tighter spacing on mobile (pt-6) but restored gap-12 to prevent overlap */}
+      <section className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 pt-6 pb-12 md:pt-12 md:pb-24 lg:pt-20 lg:pb-32 grid xl:grid-cols-2 gap-10 md:gap-12 items-center">
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
-          className="space-y-8 relative z-20"
+          /* ✨ UPDATED: Centered text on mobile (text-center), Left on desktop (md:text-left) */
+          className="space-y-4 md:space-y-8 relative z-20 text-center md:text-left"
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#D4C29A]/30 bg-[#D4C29A]/10 text-[#D4C29A] text-[10px] md:text-xs font-bold tracking-widest uppercase shadow-sm">
@@ -79,6 +80,7 @@ export default function HomeClient({ products = [], settings = null }: { product
           </div>
 
           {/* ✨ FIXED: Strictly 2 lines, responsive font size for S24 Ultra */}
+          {/* ✨ UPDATED: Flex Center on mobile for 2nd line */}
           <h1 className="font-bold leading-tight text-[#1F1F1F] tracking-tight font-playfair">
             {/* Line 1: Not just Flowers */}
             <span className="block text-[32px] sm:text-5xl md:text-7xl xl:text-8xl whitespace-nowrap overflow-visible">
@@ -86,7 +88,7 @@ export default function HomeClient({ products = [], settings = null }: { product
             </span>
             
             {/* Line 2: — A Statement */}
-            <span className="flex items-center gap-2 md:gap-4 mt-1 md:mt-2 whitespace-nowrap flex-nowrap overflow-visible">
+            <span className="flex items-center justify-center md:justify-start gap-2 md:gap-4 mt-0 md:mt-2 whitespace-nowrap flex-nowrap overflow-visible">
               <span className="opacity-40 text-2xl md:text-6xl font-light font-sans shrink-0">—</span>
               <span 
                 className="handwritten-font text-[48px] sm:text-7xl md:text-8xl xl:text-9xl silver-glow-text pr-4 md:pr-6 py-2 leading-none" 
@@ -96,11 +98,13 @@ export default function HomeClient({ products = [], settings = null }: { product
             </span>
           </h1>
           
-          <p className="text-base md:text-lg text-[#1F1F1F]/60 max-w-md leading-relaxed font-medium">
+          {/* ✨ UPDATED: Centered paragraph on mobile via parent class */}
+          <p className="text-base md:text-lg text-[#1F1F1F]/60 max-w-md leading-relaxed font-medium mx-auto md:mx-0">
             {t('hero_subtitle')}
           </p>
 
-          <div className="flex flex-wrap gap-4 pt-4">
+          {/* ✨ UPDATED: Centered Button on mobile (justify-center) */}
+          <div className="flex flex-wrap gap-4 pt-2 md:pt-4 mb-6 md:mb-0 justify-center md:justify-start">
             <button 
               onClick={scrollToShop}
               className="group relative px-6 py-4 md:px-8 md:py-5 rounded-full transition-all flex items-center gap-3 active:scale-95 z-30" 
@@ -124,7 +128,7 @@ export default function HomeClient({ products = [], settings = null }: { product
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative h-[350px] lg:h-[500px] w-full flex items-center justify-center mt-8 xl:mt-0"
+          className="relative h-[350px] lg:h-[500px] w-full flex items-center justify-center mt-0 xl:mt-0"
         >
           <div className="relative w-full max-w-sm md:max-w-md aspect-[4/5] rounded-[2rem] md:rounded-[3rem] bg-white border border-black/5 flex items-center justify-center overflow-hidden shadow-2xl">
             {settings?.show_hero_image && settings?.hero_image_url ? (
@@ -227,14 +231,16 @@ export default function HomeClient({ products = [], settings = null }: { product
       </section>
 
       {/* Best Sellers */}
+      {/* ✨ UPDATED: Centered Header on Mobile (text-center), Left on Desktop (md:text-left) */}
       <section ref={shopSectionRef} id="shop" className="relative z-10 max-w-7xl mx-auto px-6 py-20 border-t border-black/5 scroll-mt-20">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 text-center md:text-left">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold mb-2">{t('our_collection')}</h2>
             <p className="text-[#1F1F1F]/40 font-medium">{language === 'EN' ? "Chosen by our most exclusive clients." : "Ausgewählt von unseren exklusivsten Kunden."}</p>
           </div>
           
-          <Link href="/shop" className="w-fit">
+          {/* ✨ UPDATED: Centered Button on Mobile (mx-auto), Left on Desktop (md:mx-0) */}
+          <Link href="/shop" className="w-fit mx-auto md:mx-0">
             <button 
                 className="px-6 py-3 rounded-full font-bold uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-2 transition-all hover:scale-105 active:scale-95 border backdrop-blur-sm"
                 style={{
@@ -301,7 +307,118 @@ export default function HomeClient({ products = [], settings = null }: { product
         </div>
       </section>
 
-      <CharityImpact />
+      {/* ✨ IMPACT SECTION (Dynamic 3-Column Grid) */}
+      {/* 1. Corrected Link: now points to /impact-report
+          2. Corrected Color: 3rd card is now a Cream Tone (bg-[#F4EBE0])
+      */}
+      {settings?.show_impact_section && (
+        <section className="relative px-4 md:px-6 py-20 bg-[#F6EFE6] border-t border-black/5">
+            <div className="max-w-7xl mx-auto space-y-16">
+                
+                {/* Section Header */}
+                <div className="text-center space-y-4 max-w-3xl mx-auto">
+                    <div className="inline-flex items-center gap-2 text-[#D4C29A] text-xs font-black uppercase tracking-[0.2em] bg-[#D4C29A]/10 px-4 py-2 rounded-full">
+                        <Globe size={12} /> {language === 'EN' ? "Verified Impact" : "Verifizierter Einfluss"}
+                    </div>
+                    <h2 className="text-4xl md:text-6xl font-playfair font-bold text-[#1F1F1F] leading-tight">
+                        {language === 'EN' 
+                          ? (settings?.impact_title_en || "More Than Just Flowers")
+                          : (settings?.impact_title_de || "Mehr als nur Blumen")
+                        }
+                    </h2>
+                    <p className="text-lg text-[#1F1F1F]/60 leading-relaxed">
+                        {language === 'EN' 
+                          ? (settings?.impact_subtitle_en || "Every bouquet you purchase helps us build wells and support communities.")
+                          : (settings?.impact_subtitle_de || "Jeder Strauß hilft uns, Brunnen zu bauen und Gemeinschaften zu unterstützen.")
+                        }
+                    </p>
+                </div>
+
+                {/* ✨ The 3-Column Grid Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+                    
+                    {/* Grid 1: Water Wells */}
+                    <div className="group relative h-[450px] rounded-[2.5rem] overflow-hidden shadow-xl transition-all hover:-translate-y-2">
+                        <Image 
+                            src={settings?.impact_card1_image || "/impact/water-well.jpg"} 
+                            alt="Water Well Project" 
+                            fill 
+                            className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        <div className="absolute bottom-0 left-0 p-8 text-white">
+                            <div className="bg-[#D4C29A] text-[#1F1F1F] text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-4 uppercase tracking-wider">
+                                {language === 'EN' ? "Ongoing Project" : "Laufendes Projekt"}
+                            </div>
+                            <h3 className="text-2xl font-bold mb-2">
+                                {language === 'EN' 
+                                  ? (settings?.impact_card1_title_en || "Water Wells")
+                                  : (settings?.impact_card1_title_de || "Wasserbrunnen")
+                                }
+                            </h3>
+                            <p className="text-white/80 text-sm leading-relaxed">
+                                {language === 'EN' 
+                                  ? (settings?.impact_card1_text_en || "10% of profits go directly to building water wells.")
+                                  : (settings?.impact_card1_text_de || "10% der Gewinne fließen direkt in den Bau von Wasserbrunnen.")
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Grid 2: Community */}
+                    <div className="group relative h-[450px] rounded-[2.5rem] overflow-hidden shadow-xl transition-all hover:-translate-y-2">
+                        <Image 
+                            src={settings?.impact_card2_image || "/impact/community.jpg"} 
+                            alt="Community Support" 
+                            fill 
+                            className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                        <div className="absolute bottom-0 left-0 p-8 text-white">
+                            <div className="bg-white text-[#1F1F1F] text-[10px] font-bold px-3 py-1 rounded-full w-fit mb-4 uppercase tracking-wider">
+                                {language === 'EN' ? "Local Impact" : "Lokaler Einfluss"}
+                            </div>
+                            <h3 className="text-2xl font-bold mb-2">
+                                {language === 'EN' 
+                                  ? (settings?.impact_card2_title_en || "Community")
+                                  : (settings?.impact_card2_title_de || "Gemeinschaft")
+                                }
+                            </h3>
+                            <p className="text-white/80 text-sm leading-relaxed">
+                                {language === 'EN' 
+                                  ? (settings?.impact_card2_text_en || "Beyond water, we support local orphanages and food drives.")
+                                  : (settings?.impact_card2_text_de || "Neben Wasser unterstützen wir lokale Waisenhäuser und Lebensmittelaktionen.")
+                                }
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Grid 3: Read Full Report (Designed Card - Cream Color) */}
+                    {/* ✨ Fixed Link: /impact-report */}
+                    {/* ✨ Fixed Color: bg-[#F4EBE0] (Cream) */}
+                    <Link href="/impact-report" className="group h-[450px] rounded-[2.5rem] overflow-hidden bg-[#F4EBE0] border border-[#D4C29A]/20 shadow-sm transition-all hover:-translate-y-2 hover:shadow-xl flex flex-col items-center justify-center text-center p-8 relative">
+                        
+                        <div className="relative z-10 w-24 h-24 bg-white/50 rounded-full flex items-center justify-center mb-8 group-hover:scale-110 transition-transform duration-500 border border-[#D4C29A]/20 backdrop-blur-sm">
+                            <ArrowRight size={32} className="text-[#D4C29A]" />
+                        </div>
+                        
+                        <h3 className="relative z-10 text-3xl font-playfair font-bold text-[#1F1F1F] mb-4">
+                            {language === 'EN' ? "Read Full Impact Report" : "Vollständigen Bericht lesen"}
+                        </h3>
+                        
+                        <p className="relative z-10 text-[#1F1F1F]/50 text-sm max-w-[200px] mb-8 font-medium">
+                            {language === 'EN' ? "See exactly how your purchase changes lives." : "Sehen Sie genau, wie Ihr Kauf Leben verändert."}
+                        </p>
+
+                        <span className="relative z-10 text-[#D4C29A] text-xs font-black uppercase tracking-widest border-b border-[#D4C29A] pb-1">
+                            {language === 'EN' ? "Explore" : "Entdecken"}
+                        </span>
+                    </Link>
+
+                </div>
+            </div>
+        </section>
+      )}
 
       <Features />
 

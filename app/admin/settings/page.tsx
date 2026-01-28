@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabase";
-import { Save, Upload, Eye, EyeOff, MoveVertical, Loader2, Layout, Maximize, Type, LayoutDashboard, Droplets, Palette, Plus, Trash2, X, Check, Heart, Quote, Star, Plane, Coffee } from "lucide-react"; // ✨ Added Coffee
+import { Save, Upload, Eye, EyeOff, MoveVertical, Loader2, Layout, Maximize, Type, LayoutDashboard, Droplets, Palette, Plus, Trash2, X, Check, Heart, Quote, Star, Plane, Coffee, Globe, Image as ImageIcon } from "lucide-react"; 
 import Link from "next/link"; 
 import CategoryTranslationManager from "../../../components/admin/CategoryTranslationManager"; 
 
@@ -70,13 +70,14 @@ export default function StorefrontSettings() {
     setIsLoadingColors(false);
   };
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ✨ IMPROVED: Generic Upload Handler for any image field
+  const handleGenericUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
     const fileExt = file.name.split('.').pop();
-    const fileName = `hero-bg-${Date.now()}.${fileExt}`;
+    const fileName = `storefront-${fieldKey}-${Date.now()}.${fileExt}`;
     const filePath = `storefront/${fileName}`;
 
     // Upload to your existing 'product-images' bucket
@@ -92,7 +93,7 @@ export default function StorefrontSettings() {
         .getPublicUrl(filePath);
       
       // ✨ Added timestamp to force the preview to refresh immediately
-      setSettings({ ...settings, hero_image_url: `${publicUrl}?t=${Date.now()}` });
+      setSettings((prev: any) => ({ ...prev, [fieldKey]: `${publicUrl}?t=${Date.now()}` }));
     }
     setIsUploading(false);
   };
@@ -108,13 +109,41 @@ export default function StorefrontSettings() {
         hero_title: settings.hero_title,      
         hero_subtitle: settings.hero_subtitle, 
         show_hero_image: settings.show_hero_image,
+        
         is_donation_active: settings.is_donation_active, // Water Well
         is_tip_active: settings.is_tip_active, // ✨ NEW: Tips
+        
         // ✨ NEW: Save Vacation Mode Settings
         is_vacation_mode_active: settings.is_vacation_mode_active,
         vacation_start_date: settings.vacation_start_date,
         vacation_end_date: settings.vacation_end_date,
         vacation_message: settings.vacation_message,
+
+        // ✨ NEW: Impact Section Settings (Bilingual Update)
+        show_impact_section: settings.show_impact_section,
+        
+        impact_title_en: settings.impact_title_en,
+        impact_title_de: settings.impact_title_de,
+        
+        impact_subtitle_en: settings.impact_subtitle_en,
+        impact_subtitle_de: settings.impact_subtitle_de,
+        
+        impact_card1_title_en: settings.impact_card1_title_en,
+        impact_card1_title_de: settings.impact_card1_title_de,
+        
+        impact_card1_text_en: settings.impact_card1_text_en,
+        impact_card1_text_de: settings.impact_card1_text_de,
+        
+        impact_card1_image: settings.impact_card1_image, // Images are shared
+        
+        impact_card2_title_en: settings.impact_card2_title_en,
+        impact_card2_title_de: settings.impact_card2_title_de,
+        
+        impact_card2_text_en: settings.impact_card2_text_en,
+        impact_card2_text_de: settings.impact_card2_text_de,
+        
+        impact_card2_image: settings.impact_card2_image, // Images are shared
+
         updated_at: new Date().toISOString(),
       })
       .eq('id', SETTINGS_ID);
@@ -206,8 +235,8 @@ export default function StorefrontSettings() {
             <div className="flex items-center gap-2 text-[#C9A24D] font-bold text-xs uppercase tracking-widest mb-2">
               <Layout size={14} /> Admin Control
             </div>
-            <h1 className="text-4xl font-bold text-[#1F1F1F]">Hero & Checkout Settings</h1>
-            <p className="text-[#1F1F1F]/50 mt-1 font-medium">Customize visuals, colors, and features.</p>
+            <h1 className="text-4xl font-bold text-[#1F1F1F]">Storefront Settings</h1>
+            <p className="text-[#1F1F1F]/50 mt-1 font-medium">Customize visuals, content, and features.</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -387,7 +416,7 @@ export default function StorefrontSettings() {
                   <p className="font-bold text-sm">Click to upload new bouquet photo</p>
                 </div>
               </div>
-              <input type="file" id="hero-file" hidden onChange={handleUpload} accept="image/*" />
+              <input type="file" id="hero-file" hidden onChange={(e) => handleGenericUpload(e, 'hero_image_url')} accept="image/*" />
             </div>
 
             {/* 3. Zoom Level Slider */}
@@ -456,6 +485,200 @@ export default function StorefrontSettings() {
                     <p className="text-[10px] text-[#1F1F1F]/40 uppercase font-black tracking-widest mt-1">{settings.hero_subtitle || 'Premium Velvet Finish'}</p>
                     </div>
                 </div>
+                </div>
+            </div>
+
+            {/* ✨ NEW: IMPACT SECTION SETTINGS */}
+            <div className="space-y-6 pt-8 border-t border-black/5">
+                <div className="flex items-center gap-2 mb-2 text-[#1F1F1F]">
+                    <Globe size={20} className="text-[#C9A24D]" />
+                    <h2 className="text-2xl font-bold">Impact Section</h2>
+                </div>
+                
+                <div className="bg-white p-8 rounded-[2rem] border border-black/5 shadow-sm space-y-8">
+                    
+                    {/* Master Switch */}
+                    <div className="flex items-center justify-between p-4 bg-[#F6EFE6] rounded-xl border border-[#C9A24D]/20">
+                        <div>
+                            <p className="font-bold text-sm text-[#1F1F1F]">Show Impact Section on Homepage</p>
+                            <p className="text-[10px] text-[#1F1F1F]/50">Hides the "More Than Just Flowers" block completely.</p>
+                        </div>
+                        <button 
+                            onClick={() => setSettings({...settings, show_impact_section: !settings.show_impact_section})}
+                            className={`w-12 h-6 rounded-full transition-all flex items-center p-1 ${settings.show_impact_section ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}
+                        >
+                            <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                        </button>
+                    </div>
+
+                    {settings.show_impact_section && (
+                        <div className="space-y-8 animate-in fade-in slide-in-from-top-4">
+                            
+                            {/* Main Title & Text */}
+                            <div className="space-y-4">
+                                <h3 className="font-bold text-sm uppercase tracking-wider text-[#1F1F1F]/40">Main Content</h3>
+                                
+                                {/* Title EN/DE */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-[#1F1F1F]">Section Title</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <input 
+                                            type="text" 
+                                            value={settings.impact_title_en || ''}
+                                            onChange={(e) => setSettings({...settings, impact_title_en: e.target.value})}
+                                            className="w-full bg-[#F6EFE6] rounded-xl px-4 py-3 font-bold text-lg text-[#1F1F1F] focus:ring-2 focus:ring-[#C9A24D]"
+                                            placeholder="English Title"
+                                        />
+                                        <input 
+                                            type="text" 
+                                            value={settings.impact_title_de || ''}
+                                            onChange={(e) => setSettings({...settings, impact_title_de: e.target.value})}
+                                            className="w-full bg-[#F6EFE6] rounded-xl px-4 py-3 font-bold text-lg text-[#1F1F1F] focus:ring-2 focus:ring-[#C9A24D]"
+                                            placeholder="German Title"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                {/* Subtitle EN/DE */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-[#1F1F1F]">Main Description</label>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <textarea 
+                                            rows={3}
+                                            value={settings.impact_subtitle_en || ''}
+                                            onChange={(e) => setSettings({...settings, impact_subtitle_en: e.target.value})}
+                                            className="w-full bg-[#F6EFE6] rounded-xl px-4 py-3 text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#C9A24D] resize-none"
+                                            placeholder="English Description"
+                                        />
+                                        <textarea 
+                                            rows={3}
+                                            value={settings.impact_subtitle_de || ''}
+                                            onChange={(e) => setSettings({...settings, impact_subtitle_de: e.target.value})}
+                                            className="w-full bg-[#F6EFE6] rounded-xl px-4 py-3 text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#C9A24D] resize-none"
+                                            placeholder="German Description"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 1: Water Wells */}
+                            <div className="border-t border-dashed border-black/10 pt-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-sm uppercase tracking-wider text-[#1F1F1F]/40">Left Card (Water Wells)</h3>
+                                    <label htmlFor="card1-upload" className="cursor-pointer text-xs font-bold text-[#C9A24D] hover:underline flex items-center gap-1">
+                                        <ImageIcon size={12}/> Change Image
+                                    </label>
+                                    <input type="file" id="card1-upload" hidden onChange={(e) => handleGenericUpload(e, 'impact_card1_image')} accept="image/*" />
+                                </div>
+                                
+                                <div className="flex gap-4">
+                                    {/* Tiny Preview */}
+                                    <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-black/5">
+                                        {settings.impact_card1_image ? (
+                                            <img src={settings.impact_card1_image} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20}/></div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                        {/* Card 1 Title EN/DE */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={settings.impact_card1_title_en || ''}
+                                                onChange={(e) => setSettings({...settings, impact_card1_title_en: e.target.value})}
+                                                className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm font-bold"
+                                                placeholder="Card Title (EN)"
+                                            />
+                                            <input 
+                                                type="text" 
+                                                value={settings.impact_card1_title_de || ''}
+                                                onChange={(e) => setSettings({...settings, impact_card1_title_de: e.target.value})}
+                                                className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm font-bold"
+                                                placeholder="Card Title (DE)"
+                                            />
+                                        </div>
+                                        {/* Card 1 Text EN/DE */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <textarea 
+                                                rows={2}
+                                                value={settings.impact_card1_text_en || ''}
+                                                onChange={(e) => setSettings({...settings, impact_card1_text_en: e.target.value})}
+                                                className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-xs"
+                                                placeholder="Card Description (EN)"
+                                            />
+                                            <textarea 
+                                                rows={2}
+                                                value={settings.impact_card1_text_de || ''}
+                                                onChange={(e) => setSettings({...settings, impact_card1_text_de: e.target.value})}
+                                                className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-xs"
+                                                placeholder="Card Description (DE)"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Community */}
+                            <div className="border-t border-dashed border-black/10 pt-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-sm uppercase tracking-wider text-[#1F1F1F]/40">Right Card (Community)</h3>
+                                    <label htmlFor="card2-upload" className="cursor-pointer text-xs font-bold text-[#C9A24D] hover:underline flex items-center gap-1">
+                                        <ImageIcon size={12}/> Change Image
+                                    </label>
+                                    <input type="file" id="card2-upload" hidden onChange={(e) => handleGenericUpload(e, 'impact_card2_image')} accept="image/*" />
+                                </div>
+                                
+                                <div className="flex gap-4">
+                                    {/* Tiny Preview */}
+                                    <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-black/5">
+                                        {settings.impact_card2_image ? (
+                                            <img src={settings.impact_card2_image} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={20}/></div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                         {/* Card 2 Title EN/DE */}
+                                         <div className="grid grid-cols-2 gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={settings.impact_card2_title_en || ''}
+                                                onChange={(e) => setSettings({...settings, impact_card2_title_en: e.target.value})}
+                                                className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm font-bold"
+                                                placeholder="Card Title (EN)"
+                                            />
+                                            <input 
+                                                type="text" 
+                                                value={settings.impact_card2_title_de || ''}
+                                                onChange={(e) => setSettings({...settings, impact_card2_title_de: e.target.value})}
+                                                className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-sm font-bold"
+                                                placeholder="Card Title (DE)"
+                                            />
+                                        </div>
+                                        {/* Card 2 Text EN/DE */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <textarea 
+                                                rows={2}
+                                                value={settings.impact_card2_text_en || ''}
+                                                onChange={(e) => setSettings({...settings, impact_card2_text_en: e.target.value})}
+                                                className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-xs"
+                                                placeholder="Card Description (EN)"
+                                            />
+                                            <textarea 
+                                                rows={2}
+                                                value={settings.impact_card2_text_de || ''}
+                                                onChange={(e) => setSettings({...settings, impact_card2_text_de: e.target.value})}
+                                                className="w-full bg-[#F6EFE6] rounded-xl px-4 py-2 text-xs"
+                                                placeholder="Card Description (DE)"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    )}
                 </div>
             </div>
 

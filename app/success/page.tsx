@@ -178,7 +178,8 @@ function SuccessContent() {
             {purchasedItems.map((item, idx) => (
               <Link 
                 key={idx} 
-                href={`/product/${item.productId}?verify=true`}
+                /* ✨ CHANGED: Now adds ?action=write_review to URL for auto-opening review form */
+                href={`/product/${item.productId}?action=write_review`}
                 className="flex items-center justify-between p-4 bg-[#F6EFE6] rounded-2xl hover:bg-[#C9A24D] hover:text-white transition-all group"
               >
                 <span className="font-bold text-sm truncate pr-4">{item.name}</span>
