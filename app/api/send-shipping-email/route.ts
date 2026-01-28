@@ -69,7 +69,7 @@ export async function POST(req: Request) {
             <div class="wrapper">
               <div class="main">
                 <div class="header">
-                  <img src="https://mgeclvsluzofuniyuywa.supabase.co/storage/v1/object/public/product-images/logo-email.png" alt="Rosetas Logo" class="logo-img">
+                  <img src="https://czwrfqdaqgvhvfzknneo.supabase.co/storage/v1/object/public/product-images/logo-email.jpg" alt="Rosetas Logo" class="logo-img">
                   <div style="font-size: 9px; color: #D4C29A; margin-top: 10px; letter-spacing: 2px; font-weight: bold;">LUXURY COLLECTION</div>
                 </div>
                 <div class="content">
