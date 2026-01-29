@@ -116,6 +116,17 @@ export default function Footer() {
             >
               <Mail size={18} className="text-[#D4C29A] group-hover:text-white transition-colors" />
             </a>
+
+            {/* ✨ NEW: Click-to-Call Phone Button */}
+            <a 
+              href="tel:+4915565956604" 
+              className="w-10 h-10 rounded-full bg-[#1F1F1F] flex items-center justify-center transition-all duration-300 group hover:bg-[#2A2A2A]"
+              style={{
+                boxShadow: '0 0 15px rgba(205, 175, 149, 0.4), 0 0 30px rgba(205, 175, 149, 0.2)', /* Shiny beige glow */
+              }}
+            >
+              <Phone size={18} className="text-[#D4C29A] group-hover:text-white transition-colors" />
+            </a>
           </div>
         </div>
 

@@ -64,14 +64,14 @@ export default function HomeClient({ products = [], settings = null }: { product
       <Navbar />
 
       {/* Hero Section */}
-      {/* ✨ UPDATED: Tighter spacing on mobile (pt-6) but restored gap-12 to prevent overlap */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 pt-6 pb-12 md:pt-12 md:pb-24 lg:pt-20 lg:pb-32 grid xl:grid-cols-2 gap-10 md:gap-12 items-center">
+      {/* ✨ UPDATED: Increased padding px-6 to stop text cutting off */}
+      <section className="relative z-10 max-w-7xl mx-auto px-6 pt-6 pb-12 md:pt-12 md:pb-24 lg:pt-20 lg:pb-32 grid xl:grid-cols-2 gap-10 md:gap-12 items-center">
         <motion.div 
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
-          /* ✨ UPDATED: Centered text on mobile (text-center), Left on desktop (md:text-left) */
-          className="space-y-4 md:space-y-8 relative z-20 text-center md:text-left"
+          /* ✨ FIXED: Added 'flex flex-col items-start' to FORCE left alignment */
+          className="space-y-4 md:space-y-8 relative z-20 flex flex-col items-start text-left"
         >
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#D4C29A]/30 bg-[#D4C29A]/10 text-[#D4C29A] text-[10px] md:text-xs font-bold tracking-widest uppercase shadow-sm">
@@ -80,15 +80,15 @@ export default function HomeClient({ products = [], settings = null }: { product
           </div>
 
           {/* ✨ FIXED: Strictly 2 lines, responsive font size for S24 Ultra */}
-          {/* ✨ UPDATED: Flex Center on mobile for 2nd line */}
-          <h1 className="font-bold leading-tight text-[#1F1F1F] tracking-tight font-playfair">
+          <h1 className="font-bold leading-tight text-[#1F1F1F] tracking-tight font-playfair text-left">
             {/* Line 1: Not just Flowers */}
-            <span className="block text-[32px] sm:text-5xl md:text-7xl xl:text-8xl whitespace-nowrap overflow-visible">
+            <span className="block text-[32px] sm:text-5xl md:text-7xl xl:text-8xl whitespace-nowrap overflow-visible text-left">
                 Not just Flowers
             </span>
             
             {/* Line 2: — A Statement */}
-            <span className="flex items-center justify-center md:justify-start gap-2 md:gap-4 mt-0 md:mt-2 whitespace-nowrap flex-nowrap overflow-visible">
+            {/* ✨ FIXED: Removed 'justify-center', added 'justify-start' for Left Alignment */}
+            <span className="flex items-center justify-start gap-2 md:gap-4 mt-0 md:mt-2 whitespace-nowrap flex-nowrap overflow-visible">
               <span className="opacity-40 text-2xl md:text-6xl font-light font-sans shrink-0">—</span>
               <span 
                 className="handwritten-font text-[48px] sm:text-7xl md:text-8xl xl:text-9xl silver-glow-text pr-4 md:pr-6 py-2 leading-none" 
@@ -98,13 +98,14 @@ export default function HomeClient({ products = [], settings = null }: { product
             </span>
           </h1>
           
-          {/* ✨ UPDATED: Centered paragraph on mobile via parent class */}
-          <p className="text-base md:text-lg text-[#1F1F1F]/60 max-w-md leading-relaxed font-medium mx-auto md:mx-0">
+          {/* ✨ FIXED: Removed 'mx-auto' so it stays on the left */}
+          <p className="text-base md:text-lg text-[#1F1F1F]/60 max-w-md leading-relaxed font-medium text-left">
             {t('hero_subtitle')}
           </p>
 
-          {/* ✨ UPDATED: Centered Button on mobile (justify-center) */}
-          <div className="flex flex-wrap gap-4 pt-2 md:pt-4 mb-6 md:mb-0 justify-center md:justify-start">
+          {/* ✨ FIXED: Removed 'justify-center', added 'justify-start' for Left Alignment */}
+          {/* ✨ Added md:mb-0 to reset margin on desktop */}
+          <div className="flex flex-wrap gap-4 pt-2 md:pt-4 mb-6 md:mb-0 justify-start w-full">
             <button 
               onClick={scrollToShop}
               className="group relative px-6 py-4 md:px-8 md:py-5 rounded-full transition-all flex items-center gap-3 active:scale-95 z-30" 
@@ -128,7 +129,8 @@ export default function HomeClient({ products = [], settings = null }: { product
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative h-[350px] lg:h-[500px] w-full flex items-center justify-center mt-0 xl:mt-0"
+          /* ✨ UPDATED: Added md:mt-20 to prevent tablet overlap (Fix 3) */
+          className="relative h-[350px] lg:h-[500px] w-full flex items-center justify-center mt-0 md:mt-20 xl:mt-0"
         >
           <div className="relative w-full max-w-sm md:max-w-md aspect-[4/5] rounded-[2rem] md:rounded-[3rem] bg-white border border-black/5 flex items-center justify-center overflow-hidden shadow-2xl">
             {settings?.show_hero_image && settings?.hero_image_url ? (
