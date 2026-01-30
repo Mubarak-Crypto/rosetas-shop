@@ -88,7 +88,8 @@ export default function AdminProducts() {
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
       <AdminSidebar />
 
-      <main className="flex-1 p-8 overflow-y-auto">
+      {/* ✨ FIXED: Added 'pr-24' to create a buffer zone for the Chat Widget on the right */}
+      <main className="flex-1 p-8 pr-24 overflow-y-auto">
         {/* Header */}
         <header className="flex justify-between items-center mb-10">
           <div>

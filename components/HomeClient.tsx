@@ -129,8 +129,8 @@ export default function HomeClient({ products = [], settings = null }: { product
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          /* ✨ UPDATED: Added md:mt-20 to prevent tablet overlap (Fix 3) */
-          className="relative h-[350px] lg:h-[500px] w-full flex items-center justify-center mt-0 md:mt-20 xl:mt-0"
+          /* ✨ FIXED: Changed 'mt-0' to 'mt-12' for Mobile Spacing */
+          className="relative h-[350px] lg:h-[500px] w-full flex items-center justify-center mt-12 md:mt-20 xl:mt-0"
         >
           <div className="relative w-full max-w-sm md:max-w-md aspect-[4/5] rounded-[2rem] md:rounded-[3rem] bg-white border border-black/5 flex items-center justify-center overflow-hidden shadow-2xl">
             {settings?.show_hero_image && settings?.hero_image_url ? (
