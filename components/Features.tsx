@@ -5,30 +5,31 @@ import { Sparkles, Award, Clock, Gift } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext"; // ✨ Added Language Import
 
 export default function Features() {
-  const { t } = useLanguage(); // ✨ Access translation function
+  // ✨ UPDATED: Added 'language' to access current language state (EN/DE)
+  const { language, t } = useLanguage(); 
 
-  // Updated features array to use translation keys
+  // Updated features array with YOUR SPECIFIC NEW TEXT
   const features = [
     {
-      icon: Award,
-      title: t('feat_1_title'),
-      description: t('feat_1_desc'),
+      icon: Award, // Card 1
+      title: language === 'EN' ? "Design with Recognition" : "Design mit Wiedererkennung",
+      description: language === 'EN' ? "A design you see — and instantly recognize." : "Ein Design, das man sieht – und direkt wiedererkennt.",
       color: "rose"
     },
     {
-      icon: Sparkles,
-      title: t('feat_2_title'),
-      description: t('feat_2_desc'),
+      icon: Sparkles, // Card 2
+      title: language === 'EN' ? "Moments That Last" : "Momente, die bleiben",
+      description: language === 'EN' ? "Not just given — but consciously chosen." : "Nicht nur verschenkt – sondern bewusst ausgewählt.",
       color: "#D8C3A5"
     },
     {
-      icon: Clock,
-      title: t('feat_3_title'),
-      description: t('feat_3_desc'),
+      icon: Clock, // Card 3
+      title: language === 'EN' ? "Craftsmanship at the Highest Level" : "Handwerk auf höchstem Niveau",
+      description: language === 'EN' ? "Quality you can see — and feel." : "Qualität, die man sieht – und spürt.",
       color: "rose"
     },
     {
-      icon: Gift,
+      icon: Gift, // Card 4 (KEPT EXACTLY AS IS)
       title: t('feat_4_title'),
       description: t('feat_4_desc'),
       color: "#D8C3A5"

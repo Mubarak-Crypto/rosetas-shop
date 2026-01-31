@@ -32,11 +32,16 @@ export async function POST(req: Request) {
             <style>
               body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #F6EFE6; margin: 0; padding: 0; }
               .wrapper { width: 100%; background-color: #F6EFE6; padding-bottom: 40px; }
-              .main { background-color: #ffffff; max-width: 600px; margin: 0 auto; border-radius: 24px; overflow: hidden; margin-top: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-              .header { padding: 40px; text-align: center; background-color: #1F1F1F; }
+              
+              /* ✨ UPDATED: Removed border-radius (set to 0px) for Sharp 90-degree corners */
+              .main { background-color: #ffffff; max-width: 600px; margin: 0 auto; border-radius: 0px; overflow: hidden; margin-top: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+              
+              /* ✨ UPDATED: Header is now a perfect square/rectangle (No rounded corners) */
+              .header { padding: 40px; text-align: center; background-color: #1F1F1F; border-radius: 0px; }
               
               /* ✨ Fixed Logo Image Styling */
-              .logo-img { height: 70px; width: auto; display: block; margin: 0 auto; }
+              /* Ensure the image blends by removing any potential background/border issues */
+              .logo-img { height: 70px; width: auto; display: block; margin: 0 auto; border: none; outline: none; }
               
               .content { padding: 40px; text-align: center; color: #1F1F1F; }
               .stars { color: #D4C29A; font-size: 24px; margin-bottom: 10px; }
