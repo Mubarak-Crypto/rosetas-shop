@@ -119,7 +119,8 @@ export default function AdminProducts() {
         </div>
 
         {/* Products Table */}
-        <div className="bg-white border border-black/5 rounded-2xl overflow-hidden min-h-[300px] shadow-sm">
+        {/* 🔥 UPDATED: Changed 'overflow-hidden' to 'overflow-x-auto' to enable the bottom scrollbar */}
+        <div className="bg-white border border-black/5 rounded-2xl overflow-x-auto min-h-[300px] shadow-sm">
           
           {isLoading ? (
             <div className="flex items-center justify-center h-64 text-[#C9A24D]">
@@ -130,7 +131,8 @@ export default function AdminProducts() {
               <p>No products found in database.</p>
             </div>
           ) : (
-            <table className="w-full text-left">
+            /* 🔥 UPDATED: Added 'min-w-[1000px]' to force the table to stay wide and trigger the scrollbar on small screens */
+            <table className="w-full text-left min-w-[1000px]">
               <thead className="bg-gray-50 text-[10px] uppercase text-[#1F1F1F]/50 font-bold tracking-widest border-b border-black/5">
                 <tr>
                   <th className="px-6 py-4">Product</th>
@@ -202,7 +204,8 @@ export default function AdminProducts() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* 🔥 FIX: Buttons are always visible now (removed opacity-0) */}
+                      <div className="flex items-center justify-end gap-2">
                         
                         <Link href={`/admin/products/edit/${product.id}`}>
                           <button className="p-2 hover:bg-black/5 rounded-lg text-[#1F1F1F]/40 hover:text-[#C9A24D] transition-colors">
