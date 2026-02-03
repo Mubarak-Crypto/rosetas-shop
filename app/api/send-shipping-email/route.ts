@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const reviewLink = `${baseUrl}/product/${productId}?verify=true`;
 
     const { data, error } = await resend.emails.send({
-      from: 'Rosetas <onboarding@resend.dev>', // Keep this as is for your test account
+      from: 'Rosetas <orders@rosetasbouquets.com>', // ✨ UPDATED: Now sending from your real domain!
       to: [email],
       subject: `Your Order #${orderId} has been shipped! 🚚`,
       html: `

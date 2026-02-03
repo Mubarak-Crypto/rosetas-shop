@@ -13,12 +13,11 @@ export async function POST(request: Request) {
       `- ${item.quantity}x ${item.name} (${Object.values(item.options).join(", ")})`
     ).join("\n");
 
-    // 2. Send Email to the STORE OWNER (Her)
-    // Note: In 'Test Mode', Resend only allows sending to YOUR email address.
-    // Once you add her domain, you can send to anyone.
+    // 2. Send Email to the STORE OWNER (Her Private Alert)
+    // We send this to her Private Gmail because it is an internal business notification.
     const { data, error } = await resend.emails.send({
-      from: 'Zahrak Orders <onboarding@resend.dev>', // Default test sender
-      to: ['zahrakgroup@gmail.com'], // <--- CHANGE THIS TO YOUR EMAIL FOR TESTING
+      from: 'Rosetas Orders <orders@rosetasbouquets.com>', // Sender (The Website)
+      to: ['Rosetasbouquetsde@gmail.com'], // 📧 Receiver (Her Private Gmail)
       subject: `New Order from ${customerName} (€${total})`,
       html: `
         <h1>New Order Received!</h1>
