@@ -23,10 +23,34 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+// 🚀 GOOGLE SEO UPGRADE: Full Metadata for Search Engines
 export const metadata: Metadata = {
-  title: "Rosetas Bouquets - Luxury Glitter Roses",
-  description: "Hand-crafted satin roses from Essen, Germany.",
-  // viewport moved to its own export above to fix the console warning
+  title: 'Rosetas Bouquets | Luxury Glitter Roses & Eternal Flowers',
+  description: 'Shop the most beautiful glitter roses, eternal bouquets, and luxury floral arrangements. The perfect gift for any occasion. Shipping worldwide.',
+  keywords: [
+    'Glitter Roses', 
+    'Rose Bouquets', 
+    'Eternal Roses', 
+    'Luxury Flowers', 
+    'Glitter Flowers', 
+    'Rosetas Bouquets', 
+    'Glitzer Rosen',        // German
+    'Ewige Rosen',          // German
+    'Rosenstrauß',          // German
+    'Luxus Blumen',         // German
+    'Geschenk für sie',     // German
+    'Germany Flowers'
+  ],
+  icons: {
+    icon: '/favicon.ico',
+  },
+  openGraph: {
+    title: 'Rosetas Bouquets | Luxury Glitter Roses',
+    description: 'The world\'s most sparkly roses. Handcrafted luxury bouquets.',
+    siteName: 'Rosetas Bouquets',
+    type: 'website',
+    locale: 'en_US', 
+  },
 };
 
 export default function RootLayout({
