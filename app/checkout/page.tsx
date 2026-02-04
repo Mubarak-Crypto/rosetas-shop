@@ -143,7 +143,10 @@ function PaymentForm({
 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
-      confirmParams: { return_url: `${window.location.origin}/success` },
+      confirmParams: {
+        return_url: `${window.location.origin}/success`,
+        receipt_email: formData.email, // <--- THIS IS THE CRITICAL MISSING LINE
+      },
       redirect: "if_required", 
     });
 

@@ -91,6 +91,7 @@ export async function POST(request: Request) {
   try {
     // ✨ SECURE: Get all details needed to reconstruct the price
     const { 
+        email, // ✅ Added email here to capture it from the request
         discountCode, 
         cart, 
         country, 
@@ -203,11 +204,13 @@ export async function POST(request: Request) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(finalTotal * 100), // Convert to cents
       currency: "eur",
+      receipt_email: email, // ✅ THE FIX: Attaches email to the official Stripe receipt
       automatic_payment_methods: { enabled: true }, 
       metadata: { 
           discountCode: discountCode || 'NONE',
           tip: safeTip.toString(),
-          donation: safeDonation.toString()
+          donation: safeDonation.toString(),
+          email: email || 'NONE' // ✅ THE FIX: Adds email to metadata for extra search safety
       }, 
     });
 
