@@ -34,19 +34,20 @@ export async function POST(req: Request) {
 
     console.log(`💰 Payment Succeeded: ${paymentIntent.id}`);
 
-    // ✅ THE FIX: Look for the email in all 3 possible places
+    // --- 🕵️‍♂️ THE ULTIMATE EMAIL SEARCH (4 POCKETS) ---
+    
+    // Pocket 1: Receipt Email
     let email = paymentIntent.receipt_email; 
     
-    // Check Metadata (Pocket 2)
+    // Pocket 2: Metadata
     if (!email && paymentIntent.metadata?.email) {
         email = paymentIntent.metadata.email;
     }
     
-    // Check the Charge (Pocket 3 - Deep Search for Card/Apple Pay)
+    // Pocket 3: Charges (Deep Search for Card/Apple Pay)
     if (!email) {
         try {
             console.log('🔍 Searching for hidden email in charges...');
-            // We ask Stripe: "Show me the charge connected to this payment"
             const latestCharge = await stripe.charges.list({ 
                 payment_intent: paymentIntent.id, 
                 limit: 1 
@@ -56,6 +57,28 @@ export async function POST(req: Request) {
             console.log('Could not fetch charges to find email');
         }
     }
+
+    // Pocket 4: The Customer Profile (NEW! 🛠️)
+    // If we still don't have an email, but we have a Customer ID, go get it!
+    if (!email && paymentIntent.customer) {
+        try {
+            console.log('👤 Fetching Customer Profile...');
+            // Ensure we have the ID as a string
+            const customerId = typeof paymentIntent.customer === 'string' 
+                ? paymentIntent.customer 
+                : paymentIntent.customer.id;
+                
+            const customer = await stripe.customers.retrieve(customerId);
+            
+            // Check if it's a valid customer object (not deleted)
+            if ((customer as any).email) {
+                email = (customer as any).email;
+            }
+        } catch (e) {
+            console.log('No email in Customer Profile');
+        }
+    }
+    // ----------------------------------------
 
     // Calculate Amount (Stripe sends cents, so we divide by 100)
     const amountTotal = (paymentIntent.amount / 100).toFixed(2);
@@ -67,7 +90,7 @@ export async function POST(req: Request) {
     const orderId = paymentIntent.metadata?.orderId || paymentIntent.id.slice(-6).toUpperCase();
 
     if (email) {
-      console.log(`✅ Sending confirmation email to: ${email}`);
+      console.log(`✅ FOUND IT! Sending confirmation email to: ${email}`);
 
       // 5. Send the "Luxury Order Confirmation" Email via Resend
       await resend.emails.send({
