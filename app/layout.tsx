@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   title: 'Rosetas Bouquets | Luxury Glitter Roses & Eternal Flowers',
   description: 'Shop the most beautiful glitter roses, eternal bouquets, and luxury floral arrangements. The perfect gift for any occasion. Shipping worldwide.',
   keywords: [
+    // 🏆 BRAND KEYWORDS (New Additions)
+    'Rosetas Bouquets', 'Rose Bouquets', 'Rosetas Bouquts', 'Roses Bouquets',
+    'Rosetas Bouquet online Shop', 'Rosetas Bouquets Shop', 'Rosetas Bouquet Shop',
+
     // 🌟 ORIGINAL KEYWORDS
     'Glitter Roses', 'Rose Bouquets', 'Eternal Roses', 'Luxury Flowers', 
     'Glitter Flowers', 'Rosetas Bouquets', 'Germany Flowers',
