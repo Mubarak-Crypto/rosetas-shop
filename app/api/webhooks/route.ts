@@ -28,17 +28,35 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
   }
 
-  // 4. Handle the "Payment Succeeded" event (The New Signal)
+  // 4. Handle the "Payment Succeeded" event
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object as Stripe.PaymentIntent;
 
-    console.log('💰 Payment Intent Succeeded:', paymentIntent.id);
+    console.log(`💰 Payment Succeeded: ${paymentIntent.id}`);
 
-    // EXTRACT DATA: PaymentIntents store data differently than Checkout Sessions
-    // We try to get the email from the receipt_email (where Stripe sends the receipt)
-    // or fallback to metadata if you saved it there.
-    const email = paymentIntent.receipt_email || paymentIntent.metadata?.email;
+    // ✅ THE FIX: Look for the email in all 3 possible places
+    let email = paymentIntent.receipt_email; 
     
+    // Check Metadata (Pocket 2)
+    if (!email && paymentIntent.metadata?.email) {
+        email = paymentIntent.metadata.email;
+    }
+    
+    // Check the Charge (Pocket 3 - Deep Search for Card/Apple Pay)
+    if (!email) {
+        try {
+            console.log('🔍 Searching for hidden email in charges...');
+            // We ask Stripe: "Show me the charge connected to this payment"
+            const latestCharge = await stripe.charges.list({ 
+                payment_intent: paymentIntent.id, 
+                limit: 1 
+            });
+            email = latestCharge.data[0]?.billing_details?.email || null;
+        } catch (e) {
+            console.log('Could not fetch charges to find email');
+        }
+    }
+
     // Calculate Amount (Stripe sends cents, so we divide by 100)
     const amountTotal = (paymentIntent.amount / 100).toFixed(2);
     
@@ -116,7 +134,7 @@ export async function POST(req: Request) {
         `
       });
     } else {
-        console.log('⚠️ Payment Succeeded but NO Email found in payment_intent');
+        console.log('⚠️ Payment Succeeded but NO Email found in any pocket.');
     }
   }
 
