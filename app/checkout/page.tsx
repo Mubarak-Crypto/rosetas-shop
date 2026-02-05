@@ -168,12 +168,17 @@ function PaymentForm({
         }
       }
 
+      // ✨ UPDATED: Merge Address + House Number for the final order record
+      const fullAddress = formData.houseNumber 
+        ? `${formData.address} ${formData.houseNumber}` 
+        : formData.address;
+
       // ✨ UPDATED: Select 'id' back from Supabase to generate the Branded Order Number ROSETAS-00037
       const { data: orderData, error: dbError } = await supabase.from('orders').insert([{
           customer_name: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
           phone: formData.phone,
-          address: formData.address,
+          address: fullAddress, // ✅ Use the merged address here
           city: formData.city,
           zip: formData.zip,
           country: formData.country,
@@ -206,7 +211,7 @@ function PaymentForm({
         body: JSON.stringify({
           customerName: `${formData.firstName} ${formData.lastName}`,
           email: formData.email,
-          address: `${formData.address}, ${formData.city}, ${formData.country}`,
+          address: `${fullAddress}, ${formData.city}, ${formData.country}`, // ✅ Use merged address for email too
           items: cart,
           total: amount,
           shippingMethod: `${shippingMethodString}${tipAmount > 0 ? ` + Tip: €${tipAmount.toFixed(2)}` : ""}${donationAmount > 0 ? ` + Donation: €${donationAmount.toFixed(2)}` : ""}${discountCode ? ` + Code: ${discountCode}` : ""}`
@@ -302,8 +307,9 @@ export default function CheckoutPage() {
       fetchSettings();
   }, []);
 
+  // ✨ UPDATED: Added 'houseNumber' to state
   const [formData, setFormData] = useState({
-    email: "", firstName: "", lastName: "", address: "", city: "", zip: "", phone: "", country: "Germany"
+    email: "", firstName: "", lastName: "", address: "", houseNumber: "", city: "", zip: "", phone: "", country: "Germany"
   });
 
   // ✨ UPDATED: Shipping Calculation Logic
@@ -474,9 +480,9 @@ export default function CheckoutPage() {
 
   const isBlacklisted = shippingBlacklist.includes(formData.country);
 
-  // ✨ UPDATED: Added 'vacationValid' check
+  // ✨ UPDATED: Added 'vacationValid' check and 'houseNumber' check
   const canProceed = useMemo(() => {
-    const hasAddress = formData.email && formData.phone && formData.address && formData.city && formData.zip;
+    const hasAddress = formData.email && formData.phone && formData.address && formData.houseNumber && formData.city && formData.zip;
     const policyValid = agreedToPolicy;
     const customsValid = isNonEU ? agreedToCustoms : true;
     const withdrawalValid = (!isNonEU && hasPersonalization) ? agreedToWithdrawal : true; 
@@ -505,6 +511,12 @@ export default function CheckoutPage() {
           return;
       }
       
+      // ✨ CHECK HOUSE NUMBER
+      if (!formData.houseNumber.trim()) {
+        alert(language === 'EN' ? "Please enter your house number." : "Bitte geben Sie Ihre Hausnummer ein.");
+        return;
+      }
+
       if (packagingType === 'gift' && giftNote.trim().length === 0) {
           alert(language === 'EN' ? "Please enter a message or occasion for your gift packaging." : "Bitte geben Sie eine Nachricht oder einen Anlass für Ihre Geschenkverpackung ein.");
           return;
@@ -628,7 +640,53 @@ export default function CheckoutPage() {
                 )}
                 
                 <div className="grid grid-cols-2 gap-4"><input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
-                <AutoComplete apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} onPlaceSelected={(place) => { const addressComponents = place.address_components; const city = addressComponents.find((c: any) => c.types.includes("locality"))?.long_name || ""; const zip = addressComponents.find((c: any) => c.types.includes("postal_code"))?.long_name || ""; setFormData({ ...formData, address: place.formatted_address, city, zip }); }} options={{ types: ["address"], fields: ["formatted_address", "address_components"] }} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" placeholder={`${t('checkout_street')} * (Start typing your address...)`} />
+                
+                {/* ✨ SPLIT ADDRESS FIELDS (70% Street / 30% House Number) */}
+                <div className="flex gap-4">
+                  <div className="w-[70%]">
+                    <AutoComplete 
+                      apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} 
+                      onPlaceSelected={(place) => { 
+                        const addressComponents = place.address_components; 
+                        const city = addressComponents.find((c: any) => c.types.includes("locality"))?.long_name || ""; 
+                        const zip = addressComponents.find((c: any) => c.types.includes("postal_code"))?.long_name || ""; 
+                        
+                        // ✨ SMART LOGIC: Extract street and number separately
+                        const street = addressComponents.find((c: any) => c.types.includes("route"))?.long_name || "";
+                        const number = addressComponents.find((c: any) => c.types.includes("street_number"))?.long_name || "";
+                        
+                        // If Google gives us the street, use it. If not, use the full formatted string but try to remove the city/zip.
+                        const finalStreet = street || place.formatted_address.split(',')[0];
+
+                        setFormData({ 
+                          ...formData, 
+                          address: finalStreet,
+                          houseNumber: number, // Auto-fill number if Google finds it
+                          city, 
+                          zip 
+                        }); 
+                      }} 
+                      options={{ types: ["address"], fields: ["formatted_address", "address_components"] }} 
+                      className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" 
+                      placeholder={`${t('checkout_street')} *`} 
+                      // ✨ FORCE VALUE to match state
+                      value={formData.address}
+                      onChange={(e: any) => setFormData({...formData, address: e.target.value})}
+                    />
+                  </div>
+                  <div className="w-[30%]">
+                    <input 
+                      required 
+                      type="text" 
+                      name="houseNumber" 
+                      placeholder={language === 'EN' ? "e.g. 10 *" : "z.B. 10 *"}
+                      value={formData.houseNumber} 
+                      onChange={handleChange} 
+                      className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none text-center font-bold" 
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4"><input required type="text" name="city" placeholder={`${t('checkout_city')} *`} value={formData.city} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="zip" placeholder={`${t('checkout_zip')} *`} value={formData.zip} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
                 
                 {/* PACKAGING OPTIONS */}
@@ -721,7 +779,8 @@ export default function CheckoutPage() {
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
               {/* ... Step 2 content remains same ... */}
               <div className="bg-white/40 border border-black/5 p-6 rounded-2xl flex justify-between items-center shadow-sm">
-                <div><p className="text-[#1F1F1F]/50 text-sm font-medium">Shipping {isExpress ? "(Express)" : "(Standard)"} to:</p><p className="font-bold">{formData.address}, {formData.city}, {formData.country}</p></div>
+                {/* ✨ UPDATED: Display merged address */}
+                <div><p className="text-[#1F1F1F]/50 text-sm font-medium">Shipping {isExpress ? "(Express)" : "(Standard)"} to:</p><p className="font-bold">{formData.address} {formData.houseNumber}, {formData.city}, {formData.country}</p></div>
                 <button onClick={() => setStep(1)} className="text-[#C9A24D] text-sm font-bold hover:underline">{t('checkout_change')}</button>
               </div>
               
