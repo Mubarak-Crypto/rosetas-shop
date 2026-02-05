@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js'; // ✅ Added Supabase Import
 
-// 1. Initialize Stripe and Resend
+// 1. Initialize Stripe, Resend, and Supabase
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16' as any,
 });
 const resend = new Resend(process.env.RESEND_API_KEY);
+
+// ✅ Initialize Supabase to fetch the branded Order ID
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 // 2. This Secret comes from the Stripe Dashboard
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -80,14 +87,33 @@ export async function POST(req: Request) {
     }
     // ----------------------------------------
 
+    // --- 🆔 BRANDED ORDER ID SEARCH (MATCHING ROSETAS-000XX) ---
+    let orderId = paymentIntent.metadata?.orderId || paymentIntent.id.slice(-6).toUpperCase();
+    
+    try {
+        // Wait 2 seconds to ensure the checkout page has finished saving the order to Supabase
+        await new Promise((resolve) => setTimeout(resolve, 2000)); 
+
+        const { data: dbOrder } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('payment_id', paymentIntent.id)
+            .single();
+
+        if (dbOrder?.id) {
+            // This builds the ROSETAS-000XX format to match your success page
+            orderId = `ROSETAS-${String(dbOrder.id).padStart(5, '0')}`;
+        }
+    } catch (e) {
+        console.log('Supabase check failed, using fallback ID');
+    }
+    // ------------------------------------------------------------
+
     // Calculate Amount (Stripe sends cents, so we divide by 100)
     const amountTotal = (paymentIntent.amount / 100).toFixed(2);
     
     // Get Name (From shipping details if available, otherwise default)
     const customerName = paymentIntent.shipping?.name || 'Valued Customer';
-    
-    // Create a short Order ID
-    const orderId = paymentIntent.metadata?.orderId || paymentIntent.id.slice(-6).toUpperCase();
 
     if (email) {
       console.log(`✅ FOUND IT! Sending confirmation email to: ${email}`);
@@ -96,7 +122,7 @@ export async function POST(req: Request) {
       await resend.emails.send({
         from: 'Rosetas <orders@rosetasbouquets.com>',
         to: [email],
-        subject: `Your Order #${orderId} is confirmed! ✨`, 
+        subject: `Your Order ${orderId} is confirmed! ✨`, 
         html: `
         <!DOCTYPE html>
         <html>
@@ -132,7 +158,7 @@ export async function POST(req: Request) {
                   
                   <div class="tracking-card">
                     <span class="label">Order Number</span>
-                    <span class="value">#${orderId}</span>
+                    <span class="value">${orderId}</span>
                     
                     <span class="label">Total Amount</span>
                     <span class="value">€${amountTotal}</span>

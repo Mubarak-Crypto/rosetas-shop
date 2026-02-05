@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 
     // Roses & Rose Gifts
     'buy glitter rose', 'glitter rose gift', 'eternal rose gift', 'rose gift box', 
-    'rose box gift', 'rose basket', 'roses as a gift', 'luxury rose gift', 
+    'rose gift box', 'rose basket', 'roses as a gift', 'luxury rose gift', 
     'luxury rose gift box', 'rose gift for birthday', 'romantic rose gift',
 
     // Glitter Flowers Specifics
@@ -159,6 +159,7 @@ export const metadata: Metadata = {
   ],
   icons: {
     icon: '/favicon.ico',
+    apple: '/logo-black.png', // ✨ Updated: Black logo for phone home screens
   },
   openGraph: {
     title: 'Rosetas Bouquets | Luxury Glitter Roses',
@@ -166,6 +167,14 @@ export const metadata: Metadata = {
     siteName: 'Rosetas Bouquets',
     type: 'website',
     locale: 'en_US', 
+    images: [
+      {
+        url: '/logo-black.png', // ✨ Updated: Fixes the white border in link previews
+        width: 1200,
+        height: 630,
+        alt: 'Rosetas Bouquets Luxury Logo',
+      },
+    ],
   },
 };
 
