@@ -87,8 +87,9 @@ export async function POST(req: Request) {
     }
     // ----------------------------------------
 
-    // --- 🆔 BRANDED ORDER ID SEARCH (MATCHING ROSETAS-000XX) ---
+    // --- 🆔 BRANDED ORDER ID & NAME SEARCH (MATCHING ROSETAS-000XX) ---
     let orderId = paymentIntent.metadata?.orderId || paymentIntent.id.slice(-6).toUpperCase();
+    let dbCustomerName = null; // ✨ NEW: Holder for the name from database
     
     try {
         // Wait 2 seconds to ensure the checkout page has finished saving the order to Supabase
@@ -96,7 +97,7 @@ export async function POST(req: Request) {
 
         const { data: dbOrder } = await supabase
             .from('orders')
-            .select('id')
+            .select('id, customer_name') // ✨ UPDATED: Fetch 'customer_name' too
             .eq('payment_id', paymentIntent.id)
             .single();
 
@@ -104,6 +105,12 @@ export async function POST(req: Request) {
             // This builds the ROSETAS-000XX format to match your success page
             orderId = `ROSETAS-${String(dbOrder.id).padStart(5, '0')}`;
         }
+        
+        // ✨ NEW: If we found the order, grab the name exactly as they typed it
+        if (dbOrder?.customer_name) {
+            dbCustomerName = dbOrder.customer_name;
+        }
+
     } catch (e) {
         console.log('Supabase check failed, using fallback ID');
     }
@@ -112,8 +119,8 @@ export async function POST(req: Request) {
     // Calculate Amount (Stripe sends cents, so we divide by 100)
     const amountTotal = (paymentIntent.amount / 100).toFixed(2);
     
-    // Get Name (From shipping details if available, otherwise default)
-    const customerName = paymentIntent.shipping?.name || 'Valued Customer';
+    // ✨ UPDATED: Get Name (Prioritize Database Name, then Shipping Name, then Default)
+    const customerName = dbCustomerName || paymentIntent.shipping?.name || 'Valued Customer';
 
     if (email) {
       console.log(`✅ FOUND IT! Sending confirmation email to: ${email}`);
