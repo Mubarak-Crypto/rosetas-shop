@@ -167,14 +167,7 @@ export const metadata: Metadata = {
     siteName: 'Rosetas Bouquets',
     type: 'website',
     locale: 'en_US', 
-    images: [
-      {
-        url: '/logo-black.png', // ✨ Updated: Fixes the white border in link previews
-        width: 1200,
-        height: 630,
-        alt: 'Rosetas Bouquets Luxury Logo',
-      },
-    ],
+    // ✨ I REMOVED the "images" list here so it uses your new opengraph-image.png automatically!
   },
 };
 
