@@ -98,8 +98,8 @@ export default function AdminProducts() {
           </div>
           
           <Link href="/admin/products/new">
-            {/* ✅ FIXED: Button forced to Ink Black with Gold hover */}
-            <button className="bg-[#1F1F1F] hover:bg-[#C9A24D] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg">
+            {/* ✅ FIXED: Button forced to Ink Black with Luxury Beige hover */}
+            <button className="bg-[#1F1F1F] hover:bg-[#D4C29A] text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg">
               <Plus size={20} />
               Add New Product
             </button>
@@ -113,7 +113,7 @@ export default function AdminProducts() {
             <input 
               type="text" 
               placeholder="Search products..." 
-              className="w-full bg-white border border-black/5 rounded-xl pl-12 pr-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#1F1F1F]"
+              className="w-full bg-white border border-black/5 rounded-xl pl-12 pr-4 py-3 text-sm focus:border-[#D4C29A] outline-none transition-colors text-[#1F1F1F]"
             />
           </div>
         </div>
@@ -123,7 +123,7 @@ export default function AdminProducts() {
         <div className="bg-white border border-black/5 rounded-2xl overflow-x-auto min-h-[300px] shadow-sm">
           
           {isLoading ? (
-            <div className="flex items-center justify-center h-64 text-[#C9A24D]">
+            <div className="flex items-center justify-center h-64 text-[#D4C29A]">
               <Loader2 className="animate-spin" size={48} />
             </div>
           ) : products.length === 0 ? (
@@ -157,7 +157,7 @@ export default function AdminProducts() {
                             <div className="w-full h-full bg-black/5" />
                           )}
                           {product.video_url && (
-                            <div className="absolute top-0 right-0 bg-[#C9A24D] p-0.5 rounded-bl">
+                            <div className="absolute top-0 right-0 bg-[#D4C29A] p-0.5 rounded-bl">
                               <Video size={10} className="text-white" />
                             </div>
                           )}
@@ -169,7 +169,7 @@ export default function AdminProducts() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded ${product.name ? 'bg-black text-white' : 'bg-gray-100 text-gray-300'}`}>DE</span>
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${product.name_en ? 'bg-[#C9A24D] text-white' : 'bg-gray-100 text-gray-300'}`}>EN</span>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${product.name_en ? 'bg-[#D4C29A] text-white' : 'bg-gray-100 text-gray-300'}`}>EN</span>
                       </div>
                     </td>
 
@@ -177,7 +177,7 @@ export default function AdminProducts() {
                       {/* ✨ Ribbon Status Indicator */}
                       <div className="flex items-center gap-2">
                         {product.needs_ribbon ? (
-                          <span className="flex items-center gap-1 text-[10px] font-black uppercase text-[#C9A24D] bg-[#C9A24D]/10 px-2 py-1 rounded">
+                          <span className="flex items-center gap-1 text-[10px] font-black uppercase text-[#D4C29A] bg-[#D4C29A]/10 px-2 py-1 rounded">
                              <Bookmark size={10} fill="currentColor" /> Active
                           </span>
                         ) : (
@@ -187,7 +187,7 @@ export default function AdminProducts() {
                     </td>
 
                     <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">{product.category}</td>
-                    <td className="px-6 py-4 text-sm font-mono font-bold text-[#C9A24D]">€{product.price}</td>
+                    <td className="px-6 py-4 text-sm font-mono font-bold text-[#D4C29A]">€{product.price}</td>
                     
                     <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">
                       {/* ✨ UPDATED: Shows Total Capacity (product.stock) first */}
@@ -208,7 +208,7 @@ export default function AdminProducts() {
                       <div className="flex items-center justify-end gap-2">
                         
                         <Link href={`/admin/products/edit/${product.id}`}>
-                          <button className="p-2 hover:bg-black/5 rounded-lg text-[#1F1F1F]/40 hover:text-[#C9A24D] transition-colors">
+                          <button className="p-2 hover:bg-black/5 rounded-lg text-[#1F1F1F]/40 hover:text-[#D4C29A] transition-colors">
                             <Edit size={16} />
                           </button>
                         </Link>

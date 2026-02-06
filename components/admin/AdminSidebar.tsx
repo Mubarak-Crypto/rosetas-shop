@@ -25,7 +25,8 @@ export default function AdminSidebar() {
       {/* 🔴 MOBILE MENU BUTTON (Only visible on small screens) */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-4 right-4 z-50 bg-[#C9A24D] text-white p-2 rounded-lg shadow-lg hover:bg-[#C9A24D]/80 transition-colors"
+        // ✨ UPDATED: Changed from Gold Yellow (#C9A24D) to Luxury Beige (#D4C29A)
+        className="md:hidden fixed top-4 right-4 z-50 bg-[#D4C29A] text-white p-2 rounded-lg shadow-lg hover:bg-[#D4C29A]/80 transition-colors"
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -51,7 +52,8 @@ export default function AdminSidebar() {
         {/* HEADER */}
         <div className="p-8 border-b border-white/5 pt-12 md:pt-8">
           <h2 className="text-2xl font-bold tracking-tighter text-white">
-            ROSETAS <span className="text-[#C9A24D] text-[10px] tracking-[0.2em] block font-black uppercase mt-1">Admin Panel</span>
+            {/* ✨ UPDATED: Changed text color to Luxury Beige (#D4C29A) */}
+            ROSETAS <span className="text-[#D4C29A] text-[10px] tracking-[0.2em] block font-black uppercase mt-1">Admin Panel</span>
           </h2>
         </div>
 
@@ -64,7 +66,8 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/dashboard") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                // ✨ UPDATED: Active state uses Luxury Beige (#D4C29A)
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -78,7 +81,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/orders") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -92,7 +95,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/products") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -106,7 +109,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/sales") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -120,7 +123,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/discounts") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -134,7 +137,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/settings") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -148,7 +151,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/reviews") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -162,7 +165,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/florists") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >
@@ -176,7 +179,7 @@ export default function AdminSidebar() {
             onClick={() => setIsOpen(false)}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               isActive("/admin/charity") 
-                ? "bg-[#C9A24D] text-white shadow-lg shadow-[#C9A24D]/20" 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
                 : "text-white/40 hover:text-white hover:bg-white/5"
             }`}
           >

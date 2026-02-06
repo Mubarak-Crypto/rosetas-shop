@@ -540,7 +540,7 @@ export default function EditProductPage() {
               <button 
                 type="submit" 
                 disabled={isSaving}
-                className="px-6 py-3 rounded-xl bg-[#1F1F1F] text-white text-sm font-bold hover:bg-[#C9A24D] transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+                className="px-6 py-3 rounded-xl bg-[#1F1F1F] text-white text-sm font-bold hover:bg-[#D4C29A] transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
               >
                 <Save size={18} style={{ color: 'white' }} />
                 <span style={{ color: 'white !important' }} className="!text-white">

@@ -449,7 +449,7 @@ export default function AddProductPage() {
               <Link href="/admin/products" className="p-2 hover:bg-black/5 rounded-lg transition-colors text-gray-400 hover:text-[#1F1F1F]"><ArrowLeft size={20} /></Link>
               <h1 className="text-2xl font-bold">Add New Product</h1>
             </div>
-            <button type="submit" disabled={isLoading || isUploading || isUploadingVideo} className="px-6 py-3 rounded-xl bg-[#1F1F1F] text-white text-sm font-bold hover:bg-[#C9A24D] transition-all flex items-center gap-2 shadow-lg disabled:opacity-50">
+            <button type="submit" disabled={isLoading || isUploading || isUploadingVideo} className="px-6 py-3 rounded-xl bg-[#1F1F1F] text-white text-sm font-bold hover:bg-[#D4C29A] transition-all flex items-center gap-2 shadow-lg disabled:opacity-50">
               <Save size={18} /> {isLoading ? "Saving..." : "Publish Product"}
             </button>
           </div>
