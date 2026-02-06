@@ -127,7 +127,7 @@ export async function POST(req: Request) {
 
       // 5. Send the "Luxury Order Confirmation" Email via Resend
       await resend.emails.send({
-        from: 'Rosetas <orders@rosetasbouquets.com>',
+        from: 'Rosetas <Kontakt@rosetasbouquets.info>',
         to: [email],
         subject: `Your Order ${orderId} is confirmed! ✨`, 
         html: `
