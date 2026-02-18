@@ -89,12 +89,8 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
 
 export async function POST(request: Request) {
 
-  // 🛑 BLOCK ALL PAYMENTS (Valentine's Pause)
-  const isPaused = true;
-  if (isPaused) {
-    return NextResponse.json({ error: "We are currently not accepting orders for Valentine's Day." }, { status: 400 });
-  }
-
+  // ✅ UNBLOCKED: Removed the Valentine's Day Pause Logic
+  // The payment flow is now open again.
 
   try {
     // ✨ SECURE: Get all details needed to reconstruct the price

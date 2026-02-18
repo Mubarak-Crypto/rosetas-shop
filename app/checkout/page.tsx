@@ -832,16 +832,16 @@ export default function CheckoutPage() {
                       {isDonationActive && (
                           <div className={`transition-all duration-300 border rounded-2xl p-6 shadow-sm ${showDonation ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-black/5'}`}>
                               <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowDonation(!showDonation)}>
-                                  <div className="flex items-center gap-2">
-                                      <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Droplets size={18}/></div>
-                                      <div>
-                                          <h3 className="font-bold text-sm text-[#1F1F1F]">{language === 'EN' ? "Water Well Project" : "Brunnenbau-Projekt"}</h3>
-                                          <p className="text-[10px] text-[#1F1F1F]/50 font-medium">Build a well, change lives.</p>
-                                      </div>
-                                  </div>
-                                  <div className={`w-5 h-5 rounded-full border border-black/10 flex items-center justify-center transition-all ${showDonation ? 'bg-blue-600 border-blue-600' : 'bg-white'}`}>
-                                      {showDonation && <Check size={12} className="text-white" />}
-                                  </div>
+                                 <div className="flex items-center gap-2">
+                                     <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Droplets size={18}/></div>
+                                     <div>
+                                         <h3 className="font-bold text-sm text-[#1F1F1F]">{language === 'EN' ? "Water Well Project" : "Brunnenbau-Projekt"}</h3>
+                                         <p className="text-[10px] text-[#1F1F1F]/50 font-medium">Build a well, change lives.</p>
+                                     </div>
+                                 </div>
+                                 <div className={`w-5 h-5 rounded-full border border-black/10 flex items-center justify-center transition-all ${showDonation ? 'bg-blue-600 border-blue-600' : 'bg-white'}`}>
+                                     {showDonation && <Check size={12} className="text-white" />}
+                                 </div>
                               </div>
 
                               {showDonation && (
@@ -934,14 +934,7 @@ export default function CheckoutPage() {
                     />
                   </Elements>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center p-12 bg-white rounded-2xl border border-black/5">
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="animate-spin text-[#C9A24D]" size={32} />
-                    <p className="text-sm font-bold text-[#1F1F1F]/40 uppercase tracking-widest">{t('checkout_loading_payment')}</p>
-                  </div>
-                </div>
-              )}
+              ) : <div className="p-8 text-center text-[#1F1F1F]/40 font-medium">{t('checkout_loading_payment')}</div>}
             </div>
           )}
         </div>
