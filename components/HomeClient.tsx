@@ -142,6 +142,7 @@ export default function HomeClient({ products = [], settings = null }: { product
                       fill
                       priority
                       sizes="(max-width: 768px) 100vw, 50vw"
+                      unoptimized
                       className="object-cover transition-transform duration-700" 
                       style={{ 
                         transform: `scale(${parseInt(settings.hero_zoom || '100') / 100}) translateY(${(parseInt(settings.hero_vertical_shift || '50') - 50) * 0.5}%)`
@@ -345,6 +346,7 @@ export default function HomeClient({ products = [], settings = null }: { product
                             src={settings?.impact_card1_image || "/impact/water-well.jpg"} 
                             alt="Water Well Project" 
                             fill 
+                            unoptimized
                             className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -373,6 +375,7 @@ export default function HomeClient({ products = [], settings = null }: { product
                             src={settings?.impact_card2_image || "/impact/community.jpg"} 
                             alt="Community Support" 
                             fill 
+                            unoptimized
                             className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
