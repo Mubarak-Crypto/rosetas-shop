@@ -168,7 +168,14 @@ export const metadata: Metadata = {
     siteName: 'Rosetas Bouquets',
     type: 'website',
     locale: 'en_US', 
-    // ✨ I REMOVED the "images" list here so it uses your new opengraph-image.png automatically!
+    images: [
+      {
+        url: '/opengraph-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Rosetas Bouquets Luxury Collection',
+      },
+    ],
   },
 };
 
