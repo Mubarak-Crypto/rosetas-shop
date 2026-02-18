@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"; 
 import { motion, AnimatePresence } from "framer-motion";
-import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash, ArrowLeft, ShieldAlert, ChevronDown, ChevronUp, Image as ImageIcon, Upload } from "lucide-react"; // ✨ Added Image/Upload icons
+import { Star, Minus, Plus, ShoppingBag, Check, ChevronLeft, Loader2, AlertCircle, Maximize2, X, ZoomIn, Play, ShieldCheck, Tag, Truck, Sparkles, PenTool, Heart, FileText, Type, MessageSquare, Hash, ArrowLeft, ShieldAlert, ChevronDown, ChevronUp, Image as ImageIcon, Upload, Moon } from "lucide-react"; // ✨ Added Moon icon for Ramadan
 import Image from "next/image"; 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation"; 
@@ -592,6 +592,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                                 className="object-cover"
                                 sizes="(max-width: 768px) 100vw, 50vw" 
                                 priority
+                                unoptimized
                             />
                         </motion.div>
                     </div>
@@ -642,6 +643,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             fill
                             className="object-cover rounded-md" 
                             sizes="80px"
+                            unoptimized
                         />
                     </div>
                 </button>
@@ -820,7 +822,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                                             setZoomImage(extra.image);
                                         }}
                                     >
-                                        <Image src={extra.image} alt={extra.name} width={64} height={64} className="w-full h-full object-cover" />
+                                        <Image src={extra.image} alt={extra.name} width={64} height={64} className="w-full h-full object-cover" unoptimized />
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/zoom:opacity-100 flex items-center justify-center transition-all">
                                             <ZoomIn size={14} className="text-white" />
                                         </div>
@@ -981,7 +983,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                         </label>
                         <input 
                             type="text"
-                            placeholder={language === 'EN' ? "e.g., I Love You, Sarah" : "z.B. Ich liebe dich, Sarah"}
+                            placeholder={language === 'EN' ? "z.B. I Love You, Sarah" : "z.B. Ich liebe dich, Sarah"}
                             value={shortNoteText}
                             onChange={handleShortNoteChange}
                             className="w-full bg-white border border-black/5 rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none focus:border-[#D4C29A] transition-all placeholder:text-gray-300"
@@ -1016,6 +1018,24 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                     </div>
                 </div>
             )}
+
+            {/* --- RAMADAN PROMO: START (Remove this block after Ramadan) --- */}
+            <div className="flex items-center gap-3 bg-[#F5F1E8] border border-[#D4AF37]/30 rounded-2xl p-4 mt-6 shadow-sm animate-in fade-in slide-in-from-top-4">
+              <div className="w-10 h-10 bg-[#D4AF37]/10 rounded-full flex items-center justify-center text-[#D4AF37]">
+                <Moon size={20} fill="currentColor" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[#1F1F1F]">
+                  {language === 'EN' ? "Ramadan Special Offer" : "Ramadan Spezialangebot"}
+                </p>
+                <p className="text-xs font-medium text-[#1F1F1F]/60">
+                  {language === 'EN' 
+                    ? "Order now and receive a +free gift with your checkout." 
+                    : "Bestellen Sie jetzt und erhalten Sie ein +Gratisgeschenk zu Ihrer Bestellung."}
+                </p>
+              </div>
+            </div>
+            {/* --- RAMADAN PROMO: END --- */}
 
             <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-black/5 mt-4">
                 {/* Quantity and Add to Cart Section */}
@@ -1122,7 +1142,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                         </label>
                         {newReview.image_url && (
                             <div className="relative w-10 h-10 rounded-lg overflow-hidden border border-black/10 group">
-                                <Image src={newReview.image_url} alt="Preview" fill className="object-cover" />
+                                <Image src={newReview.image_url} alt="Preview" fill className="object-cover" unoptimized />
                                 <button 
                                     type="button" 
                                     onClick={() => setNewReview(prev => ({ ...prev, image_url: "" }))}
@@ -1172,7 +1192,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                                     className="w-16 h-16 rounded-xl overflow-hidden border border-black/5 flex-shrink-0 cursor-zoom-in"
                                     onClick={() => setZoomImage(review.image_url)}
                                 >
-                                    <Image src={review.image_url} alt="Review" width={64} height={64} className="w-full h-full object-cover" />
+                                    <Image src={review.image_url} alt="Review" width={64} height={64} className="w-full h-full object-cover" unoptimized />
                                 </div>
                             )}
                             <div>

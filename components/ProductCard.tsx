@@ -139,7 +139,7 @@ export default function ProductCard({
           >
             <Heart 
               size={16} 
-              className={`transition-colors ${isLiked ? "fill-[#E76A8D] text-[#E76A8D]" : "text-[#1F1F1F] group-hover/heart:text-[#E76A8D]"}`} 
+              className={`transition-colors ${isLiked ? "fill-[#E76A8D] text-[#E76A8D]" : "text-[#1F1F1F] group-heart:text-[#E76A8D]"}`} 
             />
           </button>
 
@@ -162,6 +162,7 @@ export default function ProductCard({
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  unoptimized
                 />
             </div>
           )}

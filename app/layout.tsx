@@ -10,6 +10,7 @@ import Script from "next/script"; // ✨ Added for Tidio Integration
 import VacationBanner from "../components/VacationBanner"; // ✨ NEW: Import Vacation Banner
 import CookieConsent from "../components/CookieConsent"; // ✨ NEW: Import Cookie Consent Banner
 import ExitIntentPopup from "../components/ExitIntentPopup"; // ✨ NEW: Import Exit Intent Popup
+import RamadanBanner from "../components/RamadanBanner"; // ✨ NEW: Import Ramadan Banner
 
 // 🗑️ Removed unused SocialProof import
 
@@ -187,6 +188,9 @@ export default function RootLayout({
             {/* ✨ NEW: Wrapped with WishlistProvider for Saved Items */}
             <WishlistProvider>
               
+              {/* ✨ NEW: Ramadan Banner (Always Top) */}
+              <RamadanBanner />
+
               {/* ✨ NEW: Vacation Banner (Shows only if active) */}
               <VacationBanner />
 

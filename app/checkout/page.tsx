@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 // ✨ Added 'Plane' to imports for Vacation Mode
-import { ArrowLeft, Lock, ShieldCheck, Mail, Phone, Globe, Zap, AlertCircle, Truck, Gift, Package, Coffee, Droplets, Heart, Check, Tag, Loader2, Plane } from "lucide-react"; 
+// ✨ Added 'Moon' for Ramadan Promo
+import { ArrowLeft, Lock, ShieldCheck, Mail, Phone, Globe, Zap, AlertCircle, Truck, Gift, Package, Coffee, Droplets, Heart, Check, Tag, Loader2, Plane, Moon } from "lucide-react"; 
 import Link from "next/link";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext"; 
@@ -76,7 +77,7 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
   "Tunisia": { rate10kg: 55, rate20kg: 78 },
   "South Africa": { rate10kg: 65, rate20kg: 105 },
   "Senegal": { rate10kg: 65, rate20kg: 105 },
-  "Cameroon": { rate10kg: 65, rate20kg: 105 },
+  "Cam Cameroon": { rate10kg: 65, rate20kg: 105 },
   "Kenya": { rate10kg: 65, rate20kg: 105 },
   "Nigeria": { rate10kg: 65, rate20kg: 105 },
   "UAE": { rate10kg: 65, rate20kg: 105 },
@@ -167,6 +168,10 @@ function PaymentForm({
             shippingMethodString += ` (Note: ${giftNote})`;
         }
       }
+
+      /* --- RAMADAN PROMO: START (Remove after Ramadan) --- */
+      shippingMethodString += " + free gift";
+      /* --- RAMADAN PROMO: END --- */
 
       // ✨ UPDATED: Merge Address + House Number for the final order record
       const fullAddress = formData.houseNumber 
@@ -797,9 +802,9 @@ export default function CheckoutPage() {
                               <div className="flex gap-2">
                                  {['3%', '5%', '5eur', 'custom'].map(opt => (
                                       <button
-                                         key={opt}
-                                         onClick={() => handleTipClick(opt)}
-                                         className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                                          key={opt}
+                                          onClick={() => handleTipClick(opt)}
+                                          className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
                                               tipOption === opt 
                                               ? "bg-[#1F1F1F] text-white border-[#1F1F1F]" 
                                               : "bg-white border-black/10 hover:border-[#1F1F1F] text-[#1F1F1F]/60"
@@ -807,7 +812,7 @@ export default function CheckoutPage() {
                                       >
                                           {opt === '3%' ? '3%' : opt === '5%' ? '5%' : opt === '5eur' ? '€5' : 'Custom'}
                                       </button>
-                                  ))}
+                                 ))}
                               </div>
                               {tipOption === 'custom' && (
                                   <div className="mt-3 animate-in fade-in slide-in-from-top-1">
@@ -945,6 +950,20 @@ export default function CheckoutPage() {
                 <div className="font-mono text-sm font-bold">€{(item.price * item.quantity).toFixed(2)}</div>
               </div>
             ))}
+
+            {/* --- RAMADAN PROMO: START (Remove after Ramadan) --- */}
+            <div className="flex gap-4 animate-in fade-in slide-in-from-right-2">
+                <div className="w-16 h-16 bg-[#F5F1E8] rounded-lg overflow-hidden border border-[#D4AF37]/20 relative flex-shrink-0 flex items-center justify-center text-[#D4AF37]">
+                    <Moon size={24} fill="currentColor" />
+                </div>
+                <div className="flex-1">
+                    <h4 className="font-bold text-sm text-[#1F1F1F]">Ramadan Free Gift</h4>
+                    <p className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-wider">Ramadan Mubarak</p>
+                </div>
+                <div className="font-mono text-sm font-bold text-green-600">FREE</div>
+            </div>
+            {/* --- RAMADAN PROMO: END --- */}
+
           </div>
           
           {isSupplyOrder && (
