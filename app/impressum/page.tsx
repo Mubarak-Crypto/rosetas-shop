@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Language Import
+import { useLanguage } from "../../context/LanguageContext";
 
 export default function Impressum() {
-  const { language, t } = useLanguage(); // ✨ Access current language and translation function
+  const { language, t } = useLanguage();
 
   return (
-    /* ✅ FIXED: Theme Colors Updated to Cream & Ink to match the rest of the shop */
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#C9A24D] selection:text-white">
       <div className="max-w-3xl mx-auto px-6 py-20">
         
@@ -18,84 +17,121 @@ export default function Impressum() {
           className="inline-flex items-center gap-2 text-sm text-[#1F1F1F]/40 hover:text-[#C9A24D] transition-colors mb-12 group font-bold uppercase tracking-wider"
         >
           <ChevronLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          {t('back_to_shop')}
+          {language === 'EN' ? "Back to Shop" : "Zurück zum Shop"}
         </Link>
 
-        {/* ✅ FIXED: Title color updated for visibility on light background */}
         <h1 className="text-4xl md:text-5xl font-bold tracking-tighter mb-12 text-[#1F1F1F]">
-          Impressum<span className="text-[#C9A24D]">.</span>
+          {language === 'EN' ? "Imprint" : "Impressum"}<span className="text-[#C9A24D]">.</span>
         </h1>
         
         <div className="space-y-12 text-base md:text-lg">
-          {/* Section 1: Legal Owner */}
-          <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
-              {language === 'EN' ? "Information according to § 5 TMG" : "Angaben gemäß § 5 TMG"}
-            </h2>
-            <p className="leading-relaxed text-[#1F1F1F]/70">
-              {/* ✅ FIXED: Uses t('legal_business_type') to correctly show Einzelunternehmen in German */}
-              <span className="text-[#1F1F1F] font-bold block mb-1">{t('legal_business_type')}</span>
-              Ashkab Albukaev<br />
-              Albert-Schweitzer-Str. 5<br />
-              45279 Essen<br />
-              Deutschland
-            </p>
-          </section>
+          {language === 'EN' ? (
+            /* ================= ENGLISH VERSION ================= */
+            <>
+              {/* Section 1: Legal Owner */}
+              <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+                  Responsible for the content of the websites in accordance with the DDG:
+                </h2>
+                <p className="leading-relaxed text-[#1F1F1F]/70">
+                  <strong className="text-[#1F1F1F] block mb-1">Askhab Albukaev</strong>
+                  trading under the name Rosetas Bouquets<br />
+                  Albert-Schweitzer-Str. 5<br />
+                  45279 Essen<br />
+                  Germany
+                </p>
+              </section>
 
-          {/* Section 2: Contact */}
-          <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
-              {language === 'EN' ? "Contact" : "Kontakt"}
-            </h2>
-            <div className="space-y-2 text-[#1F1F1F]/70">
-              <p>{language === 'EN' ? "Phone" : "Telefon"}: <span className="text-[#1F1F1F] font-bold">0155 65956604</span></p>
-              <p>E-Mail: <span className="text-[#1F1F1F] font-bold">kontakt@rosetasbouquets.info</span></p>
-            </div>
-          </section>
+              {/* Section 2: Contact */}
+              <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+                  Contact
+                </h2>
+                <div className="space-y-2 text-[#1F1F1F]/70">
+                  <p>Phone: <span className="text-[#1F1F1F] font-bold">+49 155 65956604</span></p>
+                  <p>Email: <a href="mailto:kontakt@rosetasbouquets.info" className="text-[#1F1F1F] font-bold hover:text-[#C9A24D] transition-colors">kontakt@rosetasbouquets.info</a></p>
+                </div>
+              </section>
 
-          {/* Section 3: VAT ID */}
-          <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
-              {language === 'EN' ? "VAT ID" : "Umsatzsteuer-ID"}
-            </h2>
-            <p className="leading-relaxed text-[#1F1F1F]/70">
-              {language === 'EN' 
-                ? "VAT identification number according to § 27 a Value Added Tax Act:" 
-                : "Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:"}
-              <br />
-              <strong className="text-[#1F1F1F]">UST-IdNr: DE451442586</strong>
-            </p>
-          </section>
+              {/* Section 3: VAT ID & Note */}
+              <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+                  VAT Information
+                </h2>
+                <p className="leading-relaxed text-[#1F1F1F]/70 mb-4">
+                  VAT identification number according to § 27a UStG:<br />
+                  <strong className="text-[#1F1F1F]">DE451442586</strong>
+                </p>
+                <div className="bg-white p-4 rounded-lg border border-black/5 text-sm">
+                  <strong className="text-[#1F1F1F] block mb-1">Note on VAT:</strong>
+                  If no VAT is shown, this is done on the basis of the application of the small business regulation according to sec. 19 of the German VAT Act.
+                </div>
+              </section>
 
-          {/* Section 4: Dispute Resolution */}
-          <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
-              {language === 'EN' ? "Dispute Resolution" : "Streitschlichtung"}
-            </h2>
-            <p className="leading-relaxed text-[#1F1F1F]/70">
-              {language === 'EN' 
-                ? "The European Commission provides a platform for online dispute resolution (OS):" 
-                : "Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit:"}
-              <a 
-                href="https://ec.europa.eu/consumers/odr/" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-[#1F1F1F] font-bold underline decoration-[#C9A24D] underline-offset-4 hover:text-[#C9A24D] transition-colors ml-1"
-              >
-                https://ec.europa.eu/consumers/odr/
-              </a>.<br />
-              {language === 'EN' 
-                ? "Our e-mail address can be found above in the impressum." 
-                : "Unsere E-Mail-Adresse finden Sie oben im Impressum."}
-            </p>
-          </section>
-        </div>
-        
-        {/* Simple Footer Note */}
-        <div className="mt-20 pt-8 border-t border-black/5 text-[#1F1F1F]/40 text-xs italic font-medium">
-          {language === 'EN' 
-            ? "Responsible for content according to § 55 Abs. 2 RStV: Ashkab Albukaev" 
-            : "Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV: Ashkab Albukaev"}
+              {/* Section 4: Disclaimer */}
+              <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+                  Disclaimer
+                </h2>
+                <p className="leading-relaxed text-[#1F1F1F]/70 text-sm">
+                  We cannot assume any liability for links on our websites. At the time the links were created, all websites were free of illegal content. Nevertheless, we distance ourselves completely from the linked pages, as we cannot influence the creation, design and content representations on our part. If a linked website violates applicable jurisdiction, we ask you to notify us immediately.
+                </p>
+              </section>
+            </>
+          ) : (
+            /* ================= GERMAN VERSION ================= */
+            <>
+              {/* Section 1: Legal Owner */}
+              <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+                  Verantwortlich für den Inhalt der Webseiten gemäß DDG:
+                </h2>
+                <p className="leading-relaxed text-[#1F1F1F]/70">
+                  <strong className="text-[#1F1F1F] block mb-1">Askhab Albukaev</strong>
+                  handelnd unter der Firma Rosetas Bouquets<br />
+                  Albert-Schweitzer-Str. 5<br />
+                  45279 Essen<br />
+                  Deutschland
+                </p>
+              </section>
+
+              {/* Section 2: Contact */}
+              <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+                  Kontakt
+                </h2>
+                <div className="space-y-2 text-[#1F1F1F]/70">
+                  <p>Telefon: <span className="text-[#1F1F1F] font-bold">+49 155 65956604</span></p>
+                  <p>E-Mail: <a href="mailto:kontakt@rosetasbouquets.info" className="text-[#1F1F1F] font-bold hover:text-[#C9A24D] transition-colors">kontakt@rosetasbouquets.info</a></p>
+                </div>
+              </section>
+
+              {/* Section 3: VAT ID & Note */}
+              <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+                  Umsatzsteuer-Informationen
+                </h2>
+                <p className="leading-relaxed text-[#1F1F1F]/70 mb-4">
+                  Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG:<br />
+                  <strong className="text-[#1F1F1F]">DE451442586</strong>
+                </p>
+                <div className="bg-white p-4 rounded-lg border border-black/5 text-sm">
+                  <strong className="text-[#1F1F1F] block mb-1">Hinweis zur Umsatzsteuer:</strong>
+                  Sofern keine Umsatzsteuer ausgewiesen ist, erfolgt dies aufgrund der Anwendung der Kleinunternehmerregelung gemäß § 19 UStG.
+                </div>
+              </section>
+
+              {/* Section 4: Disclaimer */}
+              <section className="border-l border-black/10 pl-6 hover:border-[#C9A24D] transition-colors">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#C9A24D] mb-4">
+                  Haftungsausschluss
+                </h2>
+                <p className="leading-relaxed text-[#1F1F1F]/70 text-sm">
+                  Für Links auf unseren Webseiten können wir keine Haftung übernehmen. Zum Zeitpunkt der Linksetzung waren sämtliche Webseiten frei von illegalen Inhalten. Trotzdem distanzieren wir uns in vollem Maße von den verlinkten Seiten, da auf Erstellung, Gestaltung und inhaltliche Darstellungen unsererseits kein Einfluss genommen werden kann. Sollte eine verlinkte Webseite gegen geltende Rechtsprechung verstoßen, bitten wir um unverzügliche Benachrichtigung.
+                </p>
+              </section>
+            </>
+          )}
         </div>
       </div>
     </div>

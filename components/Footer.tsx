@@ -226,10 +226,18 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center gap-6">
           <p className="font-bold" style={forceWhite}>&copy; 2026 Rosetas Bouquets. {t('footer_rights')}</p>
           
-          <div className="flex gap-6 font-bold">
+          <div className="flex flex-wrap gap-4 md:gap-6 font-bold">
             <Link href="/impressum" className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>{t('footer_impressum')}</Link>
             <Link href="/terms" className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>{t('footer_terms')}</Link>
             <Link href="/privacy" className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>{t('footer_policy')}</Link>
+            
+            {/* ✨ NEW: Returns and Shipping Pages */}
+            <Link href="/returns" className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>
+              {language === 'EN' ? "Return Policy" : "Widerrufsbelehrung"}
+            </Link>
+            <Link href="/shipping" className="hover:text-[#D4C29A] transition-colors" style={forceWhite}>
+              {language === 'EN' ? "Shipping & Payment" : "Versand & Zahlung"}
+            </Link>
             
             {/* ✨ NEW: Cookie Settings Button (Re-opens banner) */}
             <button 
