@@ -235,5 +235,5 @@ export default function ProductCard({
         </div>
       </motion.div>
     </Link>
-  );
+  ); 
 }
