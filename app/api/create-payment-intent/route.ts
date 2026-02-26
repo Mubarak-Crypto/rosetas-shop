@@ -210,7 +210,7 @@ export async function POST(request: Request) {
       .from('orders')
       .insert([
         { 
-          total_price: finalTotal,
+          total: finalTotal,
           items: cart, // The raw cart JSON is now safely stored
           email: email,
           status: 'pending' // 🔥 Mark it as pending so it doesn't look like a paid order yet
