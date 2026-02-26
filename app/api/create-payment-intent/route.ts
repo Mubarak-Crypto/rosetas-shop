@@ -204,6 +204,29 @@ export async function POST(request: Request) {
     // Ensure total never drops below €0.50 (Stripe Minimum)
     if (finalTotal < 0.50) finalTotal = 0.50;
 
+    // 🛡️ STEP 6: CREATE PENDING ORDER IN SUPABASE (THE NEW BULLETPROOF LOGIC)
+    // We create the order BEFORE sending to Stripe to guarantee we never lose the cart data!
+    const { data: newOrder, error: orderError } = await supabase
+      .from('orders')
+      .insert([
+        { 
+          total_price: finalTotal,
+          items: cart, // The raw cart JSON is now safely stored
+          email: email,
+          status: 'pending' // 🔥 Mark it as pending so it doesn't look like a paid order yet
+        }
+      ])
+      .select('id')
+      .single();
+
+    if (orderError) {
+      console.error("Failed to create pending order in Supabase:", orderError);
+      throw new Error("Could not initialize the order. Please try again.");
+    }
+
+    // Capture the exact database ID for this specific order
+    const supabaseOrderId = newOrder.id;
+
     // Create a PaymentIntent with the SERVER-CALCULATED amount
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(finalTotal * 100), // Convert to cents
@@ -214,7 +237,9 @@ export async function POST(request: Request) {
           discountCode: discountCode || 'NONE',
           tip: safeTip.toString(),
           donation: safeDonation.toString(),
-          email: email || 'NONE' // ✅ THE FIX: Adds email to metadata for extra search safety
+          email: email || 'NONE', // ✅ THE FIX: Adds email to metadata for extra search safety
+          supabase_order_id: supabaseOrderId.toString(), // 🔥 THE FIX: Attaches the database ID to the Stripe receipt
+          cart_backup: JSON.stringify(cart).substring(0, 400) // 🔥 THE FIX: Saves a quick text backup of the cart to Stripe just in case
       }, 
     });
 

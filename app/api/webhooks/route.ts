@@ -13,7 +13,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // ✅ Initialize Supabase to fetch the branded Order ID
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! // Note: If your RLS blocks updates, swap this for SUPABASE_SERVICE_ROLE_KEY
 );
 
 // 2. This Secret comes from the Stripe Dashboard
@@ -91,28 +91,53 @@ export async function POST(req: Request) {
     let orderId = paymentIntent.metadata?.orderId || paymentIntent.id.slice(-6).toUpperCase();
     let dbCustomerName = null; // ✨ NEW: Holder for the name from database
     
+    // 🔥 NEW: Extract the exact database ID we injected in the previous step!
+    const supabaseOrderId = paymentIntent.metadata?.supabase_order_id;
+    
     try {
         // Wait 2 seconds to ensure the checkout page has finished saving the order to Supabase
         await new Promise((resolve) => setTimeout(resolve, 2000)); 
 
-        const { data: dbOrder } = await supabase
-            .from('orders')
-            .select('id, customer_name') // ✨ UPDATED: Fetch 'customer_name' too
-            .eq('payment_id', paymentIntent.id)
-            .single();
+        if (supabaseOrderId) {
+            // 🔥 UPDATE THE PENDING ORDER TO PAID
+            // This is the bulletproof logic. We find the exact order and flip the status!
+            const { data: updatedOrder, error: updateError } = await supabase
+                .from('orders')
+                .update({ 
+                    status: 'paid', // Mark it as successfully paid!
+                    payment_id: paymentIntent.id // Attach the Stripe ID so the admin panel can link it
+                })
+                .eq('id', supabaseOrderId)
+                .select('id, customer_name')
+                .single();
+                
+            if (updatedOrder) {
+                // This builds the ROSETAS-000XX format to match your success page
+                orderId = `ROSETAS-${String(updatedOrder.id).padStart(5, '0')}`;
+                if (updatedOrder.customer_name) {
+                    dbCustomerName = updatedOrder.customer_name;
+                }
+            } else if (updateError) {
+                console.error('Failed to update order to paid:', updateError);
+            }
+        } else {
+            // 🛡️ Fallback: For older orders that didn't have the ID in metadata
+            const { data: dbOrder } = await supabase
+                .from('orders')
+                .select('id, customer_name') // ✨ UPDATED: Fetch 'customer_name' too
+                .eq('payment_id', paymentIntent.id)
+                .single();
 
-        if (dbOrder?.id) {
-            // This builds the ROSETAS-000XX format to match your success page
-            orderId = `ROSETAS-${String(dbOrder.id).padStart(5, '0')}`;
-        }
-        
-        // ✨ NEW: If we found the order, grab the name exactly as they typed it
-        if (dbOrder?.customer_name) {
-            dbCustomerName = dbOrder.customer_name;
+            if (dbOrder?.id) {
+                orderId = `ROSETAS-${String(dbOrder.id).padStart(5, '0')}`;
+                if (dbOrder.customer_name) {
+                    dbCustomerName = dbOrder.customer_name;
+                }
+            }
         }
 
     } catch (e) {
-        console.log('Supabase check failed, using fallback ID');
+        console.log('Supabase check/update failed, using fallback ID', e);
     }
     // ------------------------------------------------------------
 
