@@ -11,7 +11,7 @@ import VacationBanner from "../components/VacationBanner"; // ✨ NEW: Import Va
 import CookieConsent from "../components/CookieConsent"; // ✨ NEW: Import Cookie Consent Banner
 import ExitIntentPopup from "../components/ExitIntentPopup"; // ✨ NEW: Import Exit Intent Popup
 import RamadanBanner from "../components/RamadanBanner"; // ✨ NEW: Import Ramadan Banner
-
+import { GoogleAnalytics } from '@next/third-parties/google';
 // 🗑️ Removed unused SocialProof import
 
 const inter = Inter({ subsets: ["latin"] });
@@ -26,6 +26,15 @@ export const viewport: Viewport = {
 
 // 🚀 GOOGLE SEO UPGRADE: Full Metadata for Search Engines
 export const metadata: Metadata = {
+  // 🔗 1. THE CANONICAL FIX (The "Master Copy" Rule)
+  metadataBase: new URL('https://www.rosetasbouquets.com'),
+  alternates: {
+    canonical: '/',
+  },
+
+
+
+
   title: 'Rosetas Bouquets | Luxury Glitter Roses & Eternal Flowers',
   description: 'Shop the most beautiful glitter roses, eternal bouquets, and luxury floral arrangements. The perfect gift for any occasion. Shipping worldwide.',
   keywords: [
@@ -225,6 +234,9 @@ export default function RootLayout({
           src="//code.tidio.co/9omzpnf35weioflov9qjkg9cgo7rt2x6.js" 
           strategy="afterInteractive" 
         />
+
+        {/* 📊 Google Analytics Tracking */}
+        <GoogleAnalytics gaId="G-J8YRZJB2JK" />
       </body>
     </html>
   );
