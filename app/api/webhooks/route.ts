@@ -10,10 +10,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ✅ Initialize Supabase to fetch the branded Order ID
+// ✅ Initialize Supabase with the VIP Admin Key to bypass RLS blocks
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! // Note: If your RLS blocks updates, swap this for SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY! // 🔥 FIX 1: Using the Service Role Key!
 );
 
 // 2. This Secret comes from the Stripe Dashboard
@@ -109,7 +109,7 @@ export async function POST(req: Request) {
                 })
                 .eq('id', supabaseOrderId)
                 .select('id, customer_name')
-                .single();
+                .maybeSingle(); // 🔥 FIX 2: Changed from .single() to .maybeSingle() to prevent crashes!
                 
             if (updatedOrder) {
                 // This builds the ROSETAS-000XX format to match your success page
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
                 .from('orders')
                 .select('id, customer_name') // ✨ UPDATED: Fetch 'customer_name' too
                 .eq('payment_id', paymentIntent.id)
-                .single();
+                .maybeSingle(); // 🔥 FIX 2: Changed from .single() to .maybeSingle() here too!
 
             if (dbOrder?.id) {
                 orderId = `ROSETAS-${String(dbOrder.id).padStart(5, '0')}`;
