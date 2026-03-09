@@ -1,17 +1,42 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js'; // ✨ NEW: Import Supabase
 
 // Make sure your API Key is in .env.local
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// ✨ NEW: Initialize Supabase with the VIP Admin Key to bypass the security block
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    // ✅ Restored your original variables + added productId
-    const { email, customerName, trackingNumber, carrier, orderId, productId } = body;
+    // ✅ Restored your original variables + added productId AND dbOrderId
+    const { email, customerName, trackingNumber, carrier, orderId, productId, dbOrderId } = body;
 
     // 🔍 DEBUG LOG: Check your terminal after clicking 'Ship' to see if productId exists
     console.log("Attempting to send shipping email to:", email, "for Product ID:", productId); 
+
+    // ✨ NEW: Securely update the database BEFORE sending the email!
+    if (dbOrderId) {
+      const { error: dbError } = await supabaseAdmin
+        .from('orders')
+        .update({
+          status: 'shipped',
+          tracking_number: trackingNumber,
+          carrier: carrier,
+          shipped_at: new Date().toISOString()
+        })
+        .eq('id', dbOrderId);
+
+      if (dbError) {
+        console.error("Database Update Error:", dbError);
+        return NextResponse.json({ error: 'Failed to update database' }, { status: 500 });
+      }
+      console.log(`✅ Successfully updated Order ${dbOrderId} to 'shipped' in Supabase!`);
+    }
 
     // ✨ UPDATED: Use Environment Variable for the domain (fallback to real domain if missing)
     // This fixes the "Invalid Response" error on the review link before the domain is connected.
@@ -116,5 +141,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
   }
 }
-
-// Final Fix

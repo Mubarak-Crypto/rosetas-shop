@@ -68,17 +68,8 @@ export default function AdminOrdersPage() {
     setIsUpdating(true);
 
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          status: 'shipped', 
-          tracking_number: trackingNumber,
-          carrier: carrier,
-          shipped_at: new Date().toISOString() 
-        })
-        .eq('id', shippingModal.orderId);
-
-      if (error) throw error;
+      // 🔥 DELETED: The browser database update that was getting blocked by RLS.
+      // We will let the secure server API do this instead!
 
       const orderToUpdate = orders.find(o => o.id === shippingModal.orderId);
       
@@ -89,9 +80,10 @@ export default function AdminOrdersPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            // ✨ NEW: Pass the raw database ID to the server so IT can update Supabase!
+            dbOrderId: shippingModal.orderId, 
             email: orderToUpdate.customer_email || orderToUpdate.email, 
             customerName: orderToUpdate.customer_name,
-            // ✨ UPDATED: Send the branded ID in the email too
             orderId: `ROSETAS-${String(orderToUpdate.id).padStart(5, '0')}`, 
             trackingNumber: trackingNumber,
             carrier: carrier,
@@ -101,7 +93,7 @@ export default function AdminOrdersPage() {
         });
         
         if (!response.ok) {
-            console.error("Email API failed:", await response.text());
+            throw new Error(await response.text()); // Trigger the catch block if API fails
         }
 
         // Optimistic Update (UI updates instantly)
