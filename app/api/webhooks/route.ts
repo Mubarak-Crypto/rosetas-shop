@@ -168,7 +168,7 @@ export async function POST(req: Request) {
     if (email) {
       console.log(`✅ FOUND IT! Sending confirmation email to: ${email}`);
 
-      // 5. Send the "Luxury Order Confirmation" Email via Resend
+      // 5. Send the "Luxury Order Confirmation" Email to CUSTOMER
       await resend.emails.send({
         from: 'Rosetas <Kontakt@rosetasbouquets.info>',
         to: [email],
@@ -247,6 +247,34 @@ export async function POST(req: Request) {
         </html>
         `
       });
+
+      // ✨ NEW: Send Detailed Work Order Alert to OWNER (Rosetasbouquetsde@gmail.com)
+      await resend.emails.send({
+        from: 'Rosetas Orders <orders@rosetasbouquets.com>',
+        to: ['Rosetasbouquetsde@gmail.com'], 
+        subject: `🚨 NEW PAID ORDER: ${orderId} - ${customerName}`,
+        html: `
+          <div style="font-family: sans-serif; color: #1F1F1F; max-width: 600px; border: 2px solid #C9A24D; padding: 20px; border-radius: 15px;">
+            <h2 style="color: #C9A24D; text-transform: uppercase; letter-spacing: 1px;">New Paid Order Details</h2>
+            <p><strong>Order ID:</strong> ${orderId}</p>
+            <p><strong>Customer:</strong> ${customerName} (${email})</p>
+            <hr />
+            <h3 style="text-transform: uppercase; font-size: 14px; color: #666;">Items to Prepare:</h3>
+            ${orderItems.map((item: any) => `
+              <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                <p style="font-size: 16px; font-weight: bold; margin: 0;">${item.quantity}x ${item.name}</p>
+                <p style="margin: 5px 0; font-size: 13px; color: #555;">Options: ${Object.values(item.options || {}).join(", ")}</p>
+                ${item.extras && item.extras.length > 0 ? `<p style="margin: 5px 0; font-size: 13px; color: #C9A24D;">✨ Extras: ${item.extras.join(" + ")}</p>` : ''}
+                ${item.customText ? `<p style="margin: 5px 0; font-size: 13px; padding: 5px; background: #F6EFE6; border-radius: 4px;">🎀 Ribbon: "${item.customText}"</p>` : ''}
+              </div>
+            `).join('')}
+            <div style="margin-top: 20px; font-weight: bold;">
+              Total Revenue: €${amountTotal}
+            </div>
+          </div>
+        `
+      });
+
     } else {
         console.log('⚠️ Payment Succeeded but NO Email found in any pocket.');
     }
