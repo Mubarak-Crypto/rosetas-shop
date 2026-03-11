@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw } from "lucide-react"; 
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink } from "lucide-react"; 
+import Link from "next/link"; // ✨ Added Link for clickable products
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -129,10 +130,10 @@ export default function AdminOrdersPage() {
     
     if (activeCategory === 'supplies') {
         // Show if order has ANY supply item
-        matchesCategory = order.items?.some((i: any) => i.category === 'supplies');
+        matchesCategory = order.items?.some((i: any) => i.category === 'supplies' || i.category === 'Floristenbedarf');
     } else if (activeCategory === 'bouquets') {
         // Show if order has ANY item that is NOT supplies (bouquets, gifts, etc.)
-        matchesCategory = order.items?.some((i: any) => i.category !== 'supplies');
+        matchesCategory = order.items?.some((i: any) => i.category !== 'supplies' && i.category !== 'Floristenbedarf');
     }
 
     // 3. SEARCH FILTER
@@ -388,22 +389,44 @@ export default function AdminOrdersPage() {
                         <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-3">Order Items</h4>
                         <div className="space-y-3">
                           {order.items && order.items.map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-black/5">
-                              <div className="w-12 h-12 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-black/5 shadow-sm">
-                                <img src={item.image} className="w-full h-full object-cover" alt={item.name} />
-                              </div>
+                            <div key={idx} className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-black/5 hover:bg-white transition-colors group/item">
+                              {/* ✨ UPDATED: IMAGE IS NOW A CLICKABLE LINK TO LIVE SITE */}
+                              <Link href={`/product/${item.productId}`} target="_blank" className="w-12 h-12 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-black/5 shadow-sm relative block">
+                                <img src={item.image} className="w-full h-full object-cover group-hover/item:scale-110 transition-transform" alt={item.name} />
+                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/item:opacity-100 flex items-center justify-center text-white transition-opacity">
+                                  <ExternalLink size={14} />
+                                </div>
+                              </Link>
+
                               <div className="flex-1">
-                                <p className="text-sm font-bold text-[#1F1F1F]">
+                                {/* ✨ UPDATED: PRODUCT NAME IS NOW A CLICKABLE LINK TO LIVE SITE */}
+                                <Link 
+                                  href={`/product/${item.productId}`} 
+                                  target="_blank" 
+                                  className="text-sm font-bold text-[#1F1F1F] hover:text-[#C9A24D] transition-colors flex items-center gap-1"
+                                >
                                   <span className="text-[#C9A24D]">{item.quantity}x</span> {item.name}
-                                </p>
+                                </Link>
+
                                 {item.customText && (
                                   <p className="text-[10px] text-[#C9A24D] mt-0.5 font-black uppercase tracking-tight flex items-center gap-1">
                                     🎀 Ribbon: "{item.customText}"
                                   </p>
                                 )}
-                                <p className="text-[10px] text-[#1F1F1F]/40 mt-0.5 font-bold uppercase tracking-tighter">
-                                  {item.options && Object.values(item.options).join(", ")} 
-                                </p>
+                                
+                                {/* ✨ UPDATED: ENHANCED VISIBILITY FOR CROWN / EXTRAS (Fixes Issue #1) */}
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {item.options && Object.entries(item.options).map(([key, val]) => (
+                                    <span key={key} className="text-[9px] bg-white border border-black/5 px-1.5 py-0.5 rounded text-[#1F1F1F]/60 font-bold uppercase tracking-tighter">
+                                      {key}: {val as string}
+                                    </span>
+                                  ))}
+                                  {item.extras?.map((extra: string) => (
+                                    <span key={extra} className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter border ${extra.includes('WITHOUT') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-[#C9A24D]/10 text-[#C9A24D] border-[#C9A24D]/20'}`}>
+                                      {extra}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                               <div className="text-sm font-mono text-[#1F1F1F] font-bold">
                                 €{(item.price * item.quantity).toFixed(2)}

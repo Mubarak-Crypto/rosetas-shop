@@ -116,7 +116,8 @@ function PaymentForm({
   donorName, 
   isPublicDonor,
   discountCode, 
-  discountAmount 
+  discountAmount,
+  brandedId // ✨ NEW: Receive brandedId from parent
 }: { 
   amount: number, 
   formData: any, 
@@ -129,7 +130,8 @@ function PaymentForm({
   donorName: string,
   isPublicDonor: boolean,
   discountCode: string | null,
-  discountAmount: number
+  discountAmount: number,
+  brandedId: string // ✨ NEW
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -145,8 +147,8 @@ function PaymentForm({
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.origin}/success`,
-        receipt_email: formData.email, // <--- THIS IS THE CRITICAL MISSING LINE
+        return_url: `${window.location.origin}/success?order_id=${brandedId}`, // ✅ Use Branded ID here
+        receipt_email: formData.email,
       },
       redirect: "if_required", 
     });
@@ -154,81 +156,10 @@ function PaymentForm({
     if (error) {
       setMessage(error.message || "An unexpected error occurred.");
       setIsLoading(false);
-    } else if (paymentIntent && paymentIntent.status === "succeeded") {
-      
-      let shippingMethodString = isExpress ? "Express" : "Standard";
-      // ✨ FORCE EXPRESS LABEL FOR USA
-      if (formData.country === "United States") {
-          shippingMethodString = "Express (USA)";
-      }
-
-      if (packagingType === 'gift') {
-        shippingMethodString += " + Gift Packaging";
-        if (giftNote && giftNote.trim() !== "") {
-            shippingMethodString += ` (Note: ${giftNote})`;
-        }
-      }
-
-      /* --- RAMADAN PROMO: START (Remove after Ramadan) --- */
-      shippingMethodString += " + free gift";
-      /* --- RAMADAN PROMO: END --- */
-
-      // ✨ UPDATED: Merge Address + House Number for the final order record
-      const fullAddress = formData.houseNumber 
-        ? `${formData.address} ${formData.houseNumber}` 
-        : formData.address;
-
-      // ✨ UPDATED: Select 'id' back from Supabase to generate the Branded Order Number ROSETAS-00037
-      const { data: orderData, error: dbError } = await supabase.from('orders').insert([{
-          customer_name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          phone: formData.phone,
-          address: fullAddress, // ✅ Use the merged address here
-          city: formData.city,
-          zip: formData.zip,
-          country: formData.country,
-          shipping_method: shippingMethodString, 
-          items: cart, 
-          total: amount,
-          status: 'paid',
-          payment_id: paymentIntent.id,
-          tip_amount: tipAmount,
-          donation_amount: donationAmount,
-          donor_name: donorName,
-          donor_is_public: isPublicDonor,
-          discount_code: discountCode, 
-          discount_amount: discountAmount 
-      }]).select('id').single();
-
-      if (dbError) console.error("Error saving order:", dbError);
-
-      // ✨ Update Discount Usage Count
-      if (discountCode) {
-          const { data: codeData } = await supabase.from('discount_codes').select('id, current_uses').eq('code', discountCode).single();
-          if (codeData) {
-              await supabase.from('discount_codes').update({ current_uses: (codeData.current_uses || 0) + 1 }).eq('id', codeData.id);
-          }
-      }
-
-      await fetch("/api/send-order-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerName: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          address: `${fullAddress}, ${formData.city}, ${formData.country}`, // ✅ Use merged address for email too
-          items: cart,
-          total: amount,
-          shippingMethod: `${shippingMethodString}${tipAmount > 0 ? ` + Tip: €${tipAmount.toFixed(2)}` : ""}${donationAmount > 0 ? ` + Donation: €${donationAmount.toFixed(2)}` : ""}${discountCode ? ` + Code: ${discountCode}` : ""}`
-        }),
-      });
-
-      // ✨ UPDATED: Format the ID as ROSETAS-00037 and redirect
-      // We take the database ID, pad it with zeros to 5 digits, and add the prefix
-      const rawId = orderData?.id ? String(orderData.id).padStart(5, '0') : "00000";
-      const brandedOrderId = `ROSETAS-${rawId}`;
-
-      window.location.href = `/success?order_id=${brandedOrderId}`;
+    } else if (paymentIntent && (paymentIntent.status === "succeeded" || paymentIntent.status === "processing")) {
+      // ✅ SUCCESS: The order was already created in the API step as 'pending'.
+      // The Webhook will update it to 'paid'.
+      window.location.href = `/success?order_id=${brandedId}`;
     }
     setIsLoading(false);
   };
@@ -250,6 +181,7 @@ export default function CheckoutPage() {
   const { t, language } = useLanguage(); 
   const [step, setStep] = useState(1);
   const [clientSecret, setClientSecret] = useState("");
+  const [serverBrandedId, setServerBrandedId] = useState(""); // ✨ NEW
   const [isExpress, setIsExpress] = useState(false); 
   const [packagingType, setPackagingType] = useState<'standard' | 'gift'>('standard'); 
   const [giftNote, setGiftNote] = useState(""); 
@@ -544,10 +476,10 @@ export default function CheckoutPage() {
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // ✨ SECURE: We send the cart details + extras so the server can verify
-        // Note: You must update your backend to use 'cart' to recalculate price if you want 100% security
+        // ✨ SECURE: Updated body to include all data for the server to process
         body: JSON.stringify({ 
-            amount: Math.round(finalTotal * 100),
+            email: formData.email, 
+            formData: formData, // ✨ Pass all address info
             discountCode: appliedCode,
             cart: cart, 
             country: formData.country,
@@ -556,7 +488,12 @@ export default function CheckoutPage() {
             tipAmount: tipAmount,
             donationAmount: donationAmount
         }),
-      }).then((res) => res.json()).then((data) => setClientSecret(data.clientSecret));
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        setClientSecret(data.clientSecret);
+        setServerBrandedId(data.brandedId); // ✨ Store pretty ID
+      });
     }
   }, [step, finalTotal, appliedCode, cart, formData.country, isExpress, packagingType, tipAmount, donationAmount]);
 
@@ -782,9 +719,7 @@ export default function CheckoutPage() {
             </form>
           ) : (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-              {/* ... Step 2 content remains same ... */}
               <div className="bg-white/40 border border-black/5 p-6 rounded-2xl flex justify-between items-center shadow-sm">
-                {/* ✨ UPDATED: Display merged address */}
                 <div><p className="text-[#1F1F1F]/50 text-sm font-medium">Shipping {isExpress ? "(Express)" : "(Standard)"} to:</p><p className="font-bold">{formData.address} {formData.houseNumber}, {formData.city}, {formData.country}</p></div>
                 <button onClick={() => setStep(1)} className="text-[#C9A24D] text-sm font-bold hover:underline">{t('checkout_change')}</button>
               </div>
@@ -931,6 +866,7 @@ export default function CheckoutPage() {
                         isPublicDonor={isPublicDonor}
                         discountCode={appliedCode}
                         discountAmount={discountAmount}
+                        brandedId={serverBrandedId} // ✨ Pass the ID from Step 2
                     />
                   </Elements>
                 </div>
@@ -940,7 +876,6 @@ export default function CheckoutPage() {
         </div>
 
         <div className="bg-white/40 border border-black/5 rounded-3xl p-8 h-fit shadow-sm backdrop-blur-md">
-          {/* ... Cart Summary code ... */}
           <h3 className="font-bold text-xl mb-6">{t('checkout_summary')}</h3>
           <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             {cart.map((item) => (
@@ -987,9 +922,7 @@ export default function CheckoutPage() {
           <div className="space-y-3 border-t border-black/10 pt-6">
             <div className="flex justify-between text-[#1F1F1F]/60 font-medium"><span>Subtotal</span><span>€{cartTotal.toFixed(2)}</span></div>
             <div className="flex justify-between text-[#1F1F1F]/60 font-medium">
-              {/* ✨ UPDATED: Show Express label for USA automatically */}
               <span>Shipping ({formData.country} - {isExpress || formData.country === "United States" ? "Express" : "Standard"})</span>
-              {/* ✨ UPDATED: Show multiplier if > 1 box */}
               <span>
                   {boxCount > 1 ? `(${boxCount}x) ` : ""}
                   €{shippingCost.toFixed(2)}
@@ -1002,14 +935,12 @@ export default function CheckoutPage() {
               </div>
             )}
             
-            {/* ✨ UPDATED: Only show Tip line if tips are active and amount > 0 */}
             {isTipActive && tipAmount > 0 && (
                 <div className="flex justify-between text-[#1F1F1F] font-bold text-sm">
                     <span>Tip (Team Support)</span>
                     <span>+€{tipAmount.toFixed(2)}</span>
                 </div>
             )}
-            {/* ✨ UPDATED: Only show Donation line if donations are active and amount > 0 */}
             {isDonationActive && donationAmount > 0 && (
                 <div className="flex justify-between text-blue-600 font-bold text-sm">
                     <span>Water Well Donation</span>
@@ -1017,7 +948,6 @@ export default function CheckoutPage() {
                 </div>
             )}
 
-            {/* Promo Code Display */}
             {discountAmount > 0 && (
                 <div className="flex justify-between text-green-600 font-bold text-sm animate-in slide-in-from-right-2">
                     <span className="flex items-center gap-1"><Tag size={12}/> Discount ({appliedCode})</span>
@@ -1028,7 +958,6 @@ export default function CheckoutPage() {
             <div className="flex justify-between text-xl font-bold text-[#1F1F1F] pt-4 border-t border-black/10"><span>{t('checkout_total')}</span><span className="text-[#C9A24D]">€{finalTotal.toFixed(2)}</span></div>
           </div>
 
-          {/* Promo Code Input Field */}
           <div className="mt-6 pt-4 border-t border-black/5">
               {!appliedCode ? (
                   <div className="space-y-2">

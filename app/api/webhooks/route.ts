@@ -66,18 +66,15 @@ export async function POST(req: Request) {
     }
 
     // Pocket 4: The Customer Profile (NEW! 🛠️)
-    // If we still don't have an email, but we have a Customer ID, go get it!
     if (!email && paymentIntent.customer) {
         try {
             console.log('👤 Fetching Customer Profile...');
-            // Ensure we have the ID as a string
             const customerId = typeof paymentIntent.customer === 'string' 
                 ? paymentIntent.customer 
                 : paymentIntent.customer.id;
                 
             const customer = await stripe.customers.retrieve(customerId);
             
-            // Check if it's a valid customer object (not deleted)
             if ((customer as any).email) {
                 email = (customer as any).email;
             }
@@ -89,62 +86,83 @@ export async function POST(req: Request) {
 
     // --- 🆔 BRANDED ORDER ID & NAME SEARCH (MATCHING ROSETAS-000XX) ---
     let orderId = paymentIntent.metadata?.orderId || paymentIntent.id.slice(-6).toUpperCase();
-    let dbCustomerName = null; // ✨ NEW: Holder for the name from database
+    let dbCustomerName = null; 
+    let orderItems: any[] = []; // ✨ NEW: Holder for stock deduction
     
-    // 🔥 NEW: Extract the exact database ID we injected in the previous step!
+    // 🔥 Extract the exact database ID from metadata
     const supabaseOrderId = paymentIntent.metadata?.supabase_order_id;
     
     try {
-        // Wait 2 seconds to ensure the checkout page has finished saving the order to Supabase
+        // Wait 2 seconds to ensure DB consistency
         await new Promise((resolve) => setTimeout(resolve, 2000)); 
 
         if (supabaseOrderId) {
             // 🔥 UPDATE THE PENDING ORDER TO PAID
-            // This is the bulletproof logic. We find the exact order and flip the status!
             const { data: updatedOrder, error: updateError } = await supabase
                 .from('orders')
                 .update({ 
-                    status: 'paid', // Mark it as successfully paid!
-                    payment_id: paymentIntent.id // Attach the Stripe ID so the admin panel can link it
+                    status: 'paid', 
+                    payment_id: paymentIntent.id 
                 })
                 .eq('id', supabaseOrderId)
-                .select('id, customer_name')
-                .maybeSingle(); // 🔥 FIX 2: Changed from .single() to .maybeSingle() to prevent crashes!
+                .select('id, customer_name, items') // ✨ NEW: Fetch items for stock deduction
+                .maybeSingle(); 
                 
             if (updatedOrder) {
-                // This builds the ROSETAS-000XX format to match your success page
                 orderId = `ROSETAS-${String(updatedOrder.id).padStart(5, '0')}`;
-                if (updatedOrder.customer_name) {
-                    dbCustomerName = updatedOrder.customer_name;
+                dbCustomerName = updatedOrder.customer_name;
+                orderItems = updatedOrder.items || [];
+
+                // --- 🌹 NEW: INVENTORY DEDUCTION LOGIC (Issue #2 & #6) ---
+                // Automatically subtracts roses from stock only AFTER payment
+                if (Array.isArray(orderItems)) {
+                  for (const item of orderItems) {
+                    try {
+                      const qtyBought = item.quantity || 1;
+                      const optionString = JSON.stringify(item.options || {});
+                      const roseMatch = optionString.match(/(\d+)\s*(?:Roses|Rosen)/i);
+                      const totalRosesToSubtract = roseMatch ? parseInt(roseMatch[1]) * qtyBought : qtyBought;
+
+                      console.log(`📉 Reducing stock for Product ${item.productId} by ${totalRosesToSubtract}`);
+
+                      // Calls the SQL RPC function we created
+                      const { error: stockError } = await supabase.rpc('decrement_stock', {
+                        product_id_input: item.productId,
+                        amount_to_subtract: totalRosesToSubtract
+                      });
+
+                      if (stockError) {
+                        const { data: currentProd } = await supabase.from('products').select('stock').eq('id', item.productId).single();
+                        if (currentProd) {
+                          await supabase.from('products').update({ stock: Math.max(0, (currentProd.stock || 0) - totalRosesToSubtract) }).eq('id', item.productId);
+                        }
+                      }
+                    } catch (stockErr) {
+                      console.error('Stock reduction error:', stockErr);
+                    }
+                  }
                 }
             } else if (updateError) {
                 console.error('Failed to update order to paid:', updateError);
             }
         } else {
-            // 🛡️ Fallback: For older orders that didn't have the ID in metadata
             const { data: dbOrder } = await supabase
                 .from('orders')
-                .select('id, customer_name') // ✨ UPDATED: Fetch 'customer_name' too
+                .select('id, customer_name, items') 
                 .eq('payment_id', paymentIntent.id)
-                .maybeSingle(); // 🔥 FIX 2: Changed from .single() to .maybeSingle() here too!
+                .maybeSingle(); 
 
             if (dbOrder?.id) {
                 orderId = `ROSETAS-${String(dbOrder.id).padStart(5, '0')}`;
-                if (dbOrder.customer_name) {
-                    dbCustomerName = dbOrder.customer_name;
-                }
+                dbCustomerName = dbOrder.customer_name;
+                orderItems = dbOrder.items || [];
             }
         }
-
     } catch (e) {
-        console.log('Supabase check/update failed, using fallback ID', e);
+        console.log('Supabase check/update failed', e);
     }
-    // ------------------------------------------------------------
 
-    // Calculate Amount (Stripe sends cents, so we divide by 100)
     const amountTotal = (paymentIntent.amount / 100).toFixed(2);
-    
-    // ✨ UPDATED: Get Name (Prioritize Database Name, then Shipping Name, then Default)
     const customerName = dbCustomerName || paymentIntent.shipping?.name || 'Valued Customer';
 
     if (email) {
@@ -160,19 +178,23 @@ export async function POST(req: Request) {
         <html>
           <head>
             <style>
+              /* ✨ THEME: Soft Beige (#F6EFE6), Gold (#C9A24D), Deep Black (#1F1F1F) */
               body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #F6EFE6; margin: 0; padding: 0; }
-              .wrapper { width: 100%; background-color: #F6EFE6; padding-bottom: 40px; }
-              .main { background-color: #ffffff; max-width: 600px; margin: 0 auto; border-radius: 0px; overflow: hidden; margin-top: 40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-              .header { padding: 40px; text-align: center; background-color: #1F1F1F; border-radius: 0px; }
-              .logo-img { height: 70px; width: auto; display: block; margin: 0 auto; border: none; outline: none; }
+              .wrapper { width: 100%; background-color: #F6EFE6; padding: 40px 0; }
+              .main { background-color: #ffffff; max-width: 600px; margin: 0 auto; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+              .header { padding: 40px; text-align: center; background-color: #1F1F1F; }
+              .logo-img { height: 65px; width: auto; display: block; margin: 0 auto; }
               .content { padding: 40px; text-align: center; color: #1F1F1F; }
-              .stars { color: #D4C29A; font-size: 24px; margin-bottom: 10px; }
-              h1 { font-size: 26px; font-weight: 300; margin-bottom: 20px; color: #1F1F1F; }
+              .stars { color: #C9A24D; font-size: 24px; margin-bottom: 10px; }
+              h1 { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #1F1F1F; }
               p { font-size: 15px; line-height: 1.6; color: #666; margin-bottom: 25px; }
-              .tracking-card { background-color: #F9F9F9; border: 1px solid #F0F0F0; border-radius: 0px; padding: 25px; margin: 25px 0; text-align: left; }
+              .tracking-card { background-color: #FBF9F6; border: 1px solid #F0E6D8; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: left; }
               .label { font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 5px; display: block; }
               .value { font-size: 16px; font-weight: bold; color: #1F1F1F; margin-bottom: 15px; display: block; }
-              .btn { display: inline-block; padding: 18px 40px; background-color: #D4C29A; color: #ffffff !important; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; border: 2px solid #ffffff; box-shadow: 0 0 15px rgba(255, 255, 255, 0.8); }
+              .item-row { text-align: left; border-top: 1px solid #F6EFE6; padding: 15px 0; }
+              .item-name { font-weight: bold; font-size: 14px; color: #1F1F1F; }
+              .item-meta { font-size: 11px; color: #C9A24D; font-weight: bold; text-transform: uppercase; }
+              .btn { display: inline-block; padding: 18px 40px; background-color: #1F1F1F; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
               .footer { padding: 30px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #F6EFE6; }
             </style>
           </head>
@@ -181,32 +203,43 @@ export async function POST(req: Request) {
               <div class="main">
                 <div class="header">
                   <img src="https://czwrfqdaqgvhvfzknneo.supabase.co/storage/v1/object/public/product-images/logo-email.png" alt="Rosetas Logo" class="logo-img">
-                  <div style="font-size: 9px; color: #D4C29A; margin-top: 10px; letter-spacing: 2px; font-weight: bold;">LUXURY COLLECTION</div>
+                  <div style="font-size: 9px; color: #C9A24D; margin-top: 10px; letter-spacing: 2px; font-weight: bold;">LUXURY COLLECTION</div>
                 </div>
                 <div class="content">
                   <div class="stars">★★★★★</div>
                   <h1>Order Confirmed! ✨</h1>
-                  <p>Thank you, <strong>${customerName}</strong>. We have received your order and are preparing your luxury roses with love.</p>
+                  <p>Thank you, <strong>${customerName}</strong>. We have received your payment and are preparing your handcrafted roses with love.</p>
                   
                   <div class="tracking-card">
-                    <span class="label">Order Number</span>
-                    <span class="value">${orderId}</span>
+                    <span class="label">Branded Order Number</span>
+                    <span class="value" style="color: #C9A24D;">${orderId}</span>
                     
-                    <span class="label">Total Amount</span>
+                    <span class="label">Total Paid</span>
                     <span class="value">€${amountTotal}</span>
                     
-                    <span class="label">Status</span>
-                    <span class="value" style="color: #D4C29A;">Paid & Processing</span>
+                    <span class="label">Current Status</span>
+                    <span class="value">Paid & Handcrafting</span>
                   </div>
 
-                  <p>You will receive another email with your tracking number as soon as your bouquet ships.</p>
+                  <div style="margin-bottom: 30px;">
+                    <h4 style="text-align: left; text-transform: uppercase; font-size: 10px; color: #999;">Your Selection:</h4>
+                    ${orderItems.map((item: any) => `
+                      <div class="item-row">
+                        <span class="item-name">${item.quantity}x ${item.name}</span><br/>
+                        <span class="item-meta">
+                          ${Object.values(item.options || {}).join(", ")}
+                          ${item.extras && item.extras.length > 0 ? ` • ${item.extras.join(", ")}` : ''}
+                        </span>
+                      </div>
+                    `).join('')}
+                  </div>
                   
-                  <a href="https://rosetasbouquets.com" class="btn">Visit Our Shop</a>
+                  <a href="https://rosetasbouquets.com" class="btn">View Our Shop</a>
                   
                   <p style="margin-top: 30px; font-size: 11px; font-style: italic; color: #999;">Thank you for choosing Rosetas.</p>
                 </div>
                 <div class="footer">
-                  &copy; 2026 Roseta's Bouquets. All rights reserved.
+                  &copy; 2026 Roseta's Bouquets. Handcrafted with elegance.
                 </div>
               </div>
             </div>

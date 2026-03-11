@@ -57,6 +57,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (savedCartJson) setCart(loadedCart);
 
     // 3. ✨ Load & Check Expiry
+    // Note: Timer is kept for UI purposes but no longer locks database rows
     const savedExpiry = localStorage.getItem("rosetas_cart_expiry");
     
     if (savedExpiry) {
@@ -94,28 +95,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [cart, isLoaded, cartExpiry]);
 
-  // ✨ HELPER: Reserve Stock in DB
+  // ✨ UPDATED HELPER: Removed database insertion to prevent "Sold Out" hallucinations
+  // Stock is now only deducted upon actual payment success via Stripe/Webhook
   const reserveItemInDB = async (item: CartItem, qty: number) => {
     if (item.maxStock >= 999) return;
     
+    // We still maintain the local expiry for user urgency
     const newExpiry = Date.now() + 15 * 60 * 1000;
     setCartExpiry(newExpiry); 
     
-    const expiresAt = new Date(newExpiry).toISOString();
-
-    await supabase.from('cart_reservations')
-      .delete()
-      .eq('session_id', sessionId)
-      .eq('product_id', item.productId);
-
-    if (qty > 0) {
-      await supabase.from('cart_reservations').insert({
-        session_id: sessionId,
-        product_id: item.productId,
-        quantity: qty,
-        expires_at: expiresAt
-      });
-    }
+    // DB Reservation logic removed to prevent locking stock for uncompleted orders
+    // This fixes Issue #2 and #6 regarding inventory accuracy.
   };
 
   const addToCart = (newItem: CartItem) => {
@@ -132,14 +122,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       if (existing) {
         const totalNewQuantity = existing.quantity + newItem.quantity;
-        if (totalNewQuantity > newItem.maxStock) {
+        // Check against maxStock (treated as unlimited if -1 or 999+)
+        if (totalNewQuantity > newItem.maxStock && newItem.maxStock !== -1) {
           alert(`Sorry, we only have ${newItem.maxStock} of these in stock.`);
           return prev; 
         }
         reserveItemInDB(newItem, totalNewQuantity);
         return prev.map((item) => item.uniqueId === existing.uniqueId ? { ...item, quantity: totalNewQuantity } : item);
       } else {
-        if (newItem.quantity > newItem.maxStock) {
+        if (newItem.quantity > newItem.maxStock && newItem.maxStock !== -1) {
              alert(`Sorry, we only have ${newItem.maxStock} of these in stock.`);
              return prev;
         }
@@ -163,12 +154,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       prev.map((item) => {
         if (item.uniqueId === uniqueId) {
           const newQuantity = item.quantity + delta;
-          if (newQuantity > item.maxStock) {
+          if (newQuantity > item.maxStock && item.maxStock !== -1) {
               alert(`Max stock reached (${item.maxStock}).`);
               return item;
           }
           if (newQuantity > 0) {
-             reserveItemInDB(item, newQuantity);
+              reserveItemInDB(item, newQuantity);
           }
           return { ...item, quantity: Math.max(1, newQuantity) };
         }
@@ -178,9 +169,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const clearCart = async () => {
-    if (sessionId) {
-        await supabase.from('cart_reservations').delete().eq('session_id', sessionId);
-    }
+    // Removed specific DB deletion to keep Supabase clean
     setCart([]); 
     setCartExpiry(null); 
     localStorage.removeItem("rosetas_cart"); 
@@ -189,9 +178,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Re-calculate cart total including bundle pricing promos
   const cartTotal = cart.reduce((sum, item) => {
     let itemTotal = item.price * item.quantity;
     if (item.promoLabel) {
+      // Parse promo label for "X for Y" deals (e.g., "3 for €50")
       const match = item.promoLabel.match(/(\d+)\s+(?:for|für)\s+€?(\d+)/i);
       if (match) {
         const requiredQty = parseInt(match[1]); 
