@@ -887,7 +887,7 @@ export default function CheckoutPage() {
             ))}
 
             {/* --- RAMADAN PROMO: START (Remove after Ramadan) --- */}
-            <div className="flex gap-4 animate-in fade-in slide-in-from-right-2">
+            {/*<div className="flex gap-4 animate-in fade-in slide-in-from-right-2">
                 <div className="w-16 h-16 bg-[#F5F1E8] rounded-lg overflow-hidden border border-[#D4AF37]/20 relative flex-shrink-0 flex items-center justify-center text-[#D4AF37]">
                     <Moon size={24} fill="currentColor" />
                 </div>
@@ -896,7 +896,7 @@ export default function CheckoutPage() {
                     <p className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-wider">Ramadan Mubarak</p>
                 </div>
                 <div className="font-mono text-sm font-bold text-green-600">FREE</div>
-            </div>
+            </div>*/}
             {/* --- RAMADAN PROMO: END --- */}
 
           </div>

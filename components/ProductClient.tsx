@@ -1020,7 +1020,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
             )}
 
             {/* --- RAMADAN PROMO: START (Remove this block after Ramadan) --- */}
-            <div className="flex items-center gap-3 bg-[#F5F1E8] border border-[#D4AF37]/30 rounded-2xl p-4 mt-6 shadow-sm animate-in fade-in slide-in-from-top-4">
+            {/*<div className="flex items-center gap-3 bg-[#F5F1E8] border border-[#D4AF37]/30 rounded-2xl p-4 mt-6 shadow-sm animate-in fade-in slide-in-from-top-4">
               <div className="w-10 h-10 bg-[#D4AF37]/10 rounded-full flex items-center justify-center text-[#D4AF37]">
                 <Moon size={20} fill="currentColor" />
               </div>
@@ -1034,7 +1034,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                     : "Bestellen Sie jetzt und erhalten Sie ein +Gratisgeschenk zu Ihrer Bestellung."}
                 </p>
               </div>
-            </div>
+            </div>*/}
             {/* --- RAMADAN PROMO: END --- */}
 
             <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t border-black/5 mt-4">

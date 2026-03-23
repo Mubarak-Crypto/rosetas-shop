@@ -5,7 +5,7 @@ import Image from "next/image";
 import { X } from "lucide-react";
 
 export default function RamadanBanner() {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
