@@ -41,6 +41,9 @@ export async function POST(req: Request) {
 
     console.log(`💰 Payment Succeeded: ${paymentIntent.id}`);
 
+    // ✨ NEW: THE ULTIMATE TRUTH - Get the exact amount charged by Stripe
+    const exactAmountCharged = paymentIntent.amount / 100;
+
     // --- 🕵️‍♂️ THE ULTIMATE EMAIL SEARCH (4 POCKETS) ---
     
     // Pocket 1: Receipt Email
@@ -97,15 +100,17 @@ export async function POST(req: Request) {
         await new Promise((resolve) => setTimeout(resolve, 2000)); 
 
         if (supabaseOrderId) {
-            // 🔥 UPDATE THE PENDING ORDER TO PAID
+            // 🔥 UPDATE THE PENDING ORDER TO PAID 
+            // ✨ CHANGE: We now update the 'total' field to match exactly what was paid in Stripe
             const { data: updatedOrder, error: updateError } = await supabase
                 .from('orders')
                 .update({ 
                     status: 'paid', 
-                    payment_id: paymentIntent.id 
+                    payment_id: paymentIntent.id,
+                    total: exactAmountCharged // ✅ FORCE SYNC: Overwrite DB total with Stripe Truth
                 })
                 .eq('id', supabaseOrderId)
-                .select('id, customer_name, items') // ✨ NEW: Fetch items for stock deduction
+                .select('id, customer_name, items, total') // ✨ NEW: Fetch items for stock deduction
                 .maybeSingle(); 
                 
             if (updatedOrder) {
@@ -148,7 +153,7 @@ export async function POST(req: Request) {
         } else {
             const { data: dbOrder } = await supabase
                 .from('orders')
-                .select('id, customer_name, items') 
+                .select('id, customer_name, items, total') 
                 .eq('payment_id', paymentIntent.id)
                 .maybeSingle(); 
 
@@ -162,7 +167,7 @@ export async function POST(req: Request) {
         console.log('Supabase check/update failed', e);
     }
 
-    const amountTotal = (paymentIntent.amount / 100).toFixed(2);
+    const amountTotal = exactAmountCharged.toFixed(2);
     const customerName = dbCustomerName || paymentIntent.shipping?.name || 'Valued Customer';
 
     if (email) {

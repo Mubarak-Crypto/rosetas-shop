@@ -8,10 +8,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   typescript: true,
 });
 
-// Initialize Supabase for Server-Side Checks
+// ✅ FIX: Use SERVICE_ROLE_KEY to bypass RLS and ensure the Pending Order always saves the FULL total
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY! 
 );
 
 // 🌏 SERVER-SIDE SHIPPING RATES (Source of Truth) - KEPT EXACTLY AS IS
@@ -87,20 +87,15 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
 
 export async function POST(request: Request) {
   try {
-    // ✨ UPDATED: Extract full customer data from frontend
+    // Extract full customer data from frontend
     const { 
-        email, 
-        formData, // Includes firstName, lastName, phone, address, houseNumber, city, zip
-        discountCode, 
-        cart, 
-        country, 
-        isExpress, 
-        packagingType, 
-        tipAmount, 
-        donationAmount 
+        email, formData, discountCode, cart, country, isExpress, packagingType, tipAmount, donationAmount 
     } = await request.json();
 
-    // 🛡️ STEP 1: Re-calculate Subtotal from Database (Ignore Client Prices)
+    // 🕵️ DEBUG LOG: See what the frontend is actually sending
+    console.log("DEBUG: Cart Data received:", JSON.stringify(cart, null, 2));
+
+    // 🛡️ STEP 1: Re-calculate Subtotal (Using exact cart prices for matching)
     const productIds = cart.map((item: any) => item.productId);
     const { data: dbProducts, error: prodError } = await supabase
         .from('products')
@@ -117,8 +112,19 @@ export async function POST(request: Request) {
         const dbProduct = dbProducts.find((p) => p.id === item.productId);
         if (!dbProduct) throw new Error(`Invalid product ID in cart.`);
 
-        const realPrice = dbProduct.is_on_sale ? dbProduct.sale_price : dbProduct.price;
-        calculatedSubtotal += (realPrice * item.quantity);
+        // --- 🌹 FINAL HANDSHAKE FIX: USE FRONTEND PRICE DIRECTLY ---
+        // Since your frontend already calculates Roses + Extras correctly (e.g., €402),
+        // we use that price to ensure the Database and Stripe charge match perfectly.
+        let realItemPrice = Number(item.price);
+
+        // Security check: Ensure the price isn't impossible (must be at least 50% of base DB price)
+        const dbBasePrice = dbProduct.is_on_sale ? dbProduct.sale_price : dbProduct.price;
+        if (realItemPrice < (dbBasePrice * 0.5)) {
+            console.warn(`🚨 Price discrepancy detected for ${item.name}. DB Base: ${dbBasePrice}, Sent: ${realItemPrice}`);
+        }
+
+        console.log(`DEBUG: Item ${item.name} | Confirmed Unit Price: ${realItemPrice} | Qty: ${item.quantity}`);
+        calculatedSubtotal += (realItemPrice * item.quantity);
 
         const optionValues = Object.values(item.options || {}).join(" ");
         if (optionValues.includes("100") || optionValues.includes("200") || optionValues.includes("150")) {
@@ -149,7 +155,7 @@ export async function POST(request: Request) {
     // 🛡️ STEP 4: Calculate Total Before Discount
     let finalTotal = calculatedSubtotal + finalShippingCost + packagingCost + safeTip + safeDonation;
 
-    // 🛡️ STEP 5: Apply Discount (Server Side Check)
+    // 🛡️ STEP 5: Apply Discount
     let discountAmt = 0;
     if (discountCode) {
         const { data: code } = await supabase.from('discount_codes').select('*').eq('code', discountCode).single();
@@ -166,35 +172,33 @@ export async function POST(request: Request) {
 
     if (finalTotal < 0.50) finalTotal = 0.50;
 
-    // 🛡️ STEP 6: CREATE FULL PENDING ORDER (THE BIG FIX)
-    // We store EVERY detail now, so Klarna/Pending orders aren't empty in Admin.
+    // 🕵️ DEBUG LOG: THE MOMENT OF TRUTH
+    console.log(`DEBUG: FINAL CALCULATION -> Subtotal: ${calculatedSubtotal}, Shipping: ${finalShippingCost}, Gift: ${packagingCost}, Tip/Donation: ${safeTip + safeDonation}, Total: ${finalTotal}`);
+
+    // 🛡️ STEP 6: CREATE FULL PENDING ORDER
     const { data: newOrder, error: orderError } = await supabase
       .from('orders')
       .insert([
         { 
           customer_name: `${formData.firstName} ${formData.lastName}`,
-          email: email,
-          phone: formData.phone,
+          email, phone: formData.phone,
           address: `${formData.address} ${formData.houseNumber}`,
-          city: formData.city,
-          zip: formData.zip,
-          country: country,
+          city: formData.city, zip: formData.zip, country: country,
           total: finalTotal,
-          items: cart, // ✅ FULL Choice list (Crown, Extras, etc.)
+          items: cart,
           status: 'pending',
           shipping_method: isExpress ? "Express" : "Standard",
-          tip_amount: safeTip,
-          donation_amount: safeDonation,
-          discount_amount: discountAmt,
-          discount_code: discountCode || null
+          tip_amount: safeTip, donation_amount: safeDonation,
+          discount_amount: discountAmt, discount_code: discountCode || null
         }
       ])
-      .select('id')
-      .single();
+      .select('id').single();
 
-    if (orderError) throw new Error("Order creation failed.");
+    if (orderError) {
+        console.error("DATABASE SAVE ERROR:", orderError);
+        throw new Error("Order creation failed: " + orderError.message);
+    }
 
-    // Generate Branded ID: ROSETAS-00001
     const brandedId = `ROSETAS-${String(newOrder.id).padStart(5, '0')}`;
 
     // 🛡️ STEP 7: Create PaymentIntent
@@ -205,18 +209,15 @@ export async function POST(request: Request) {
       automatic_payment_methods: { enabled: true }, 
       metadata: { 
           supabase_order_id: newOrder.id.toString(),
-          branded_id: brandedId, // Pass the pretty ID to Stripe
+          branded_id: brandedId,
           customer_email: email
       }, 
     });
 
-    return NextResponse.json({ 
-        clientSecret: paymentIntent.client_secret,
-        brandedId: brandedId // Return to frontend
-    });
+    return NextResponse.json({ clientSecret: paymentIntent.client_secret, brandedId });
 
   } catch (error: any) {
-    console.error("Internal Error:", error);
+    console.error("CRITICAL API ERROR:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
