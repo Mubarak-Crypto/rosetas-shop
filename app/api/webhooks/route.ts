@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs'; // 🔥 FIX: Forces Node.js environment to prevent intermittent Webhook Signature failures
+
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
@@ -20,6 +23,7 @@ const supabase = createClient(
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: Request) {
+  // 🔥 FIX: We use req.text() and the 'nodejs' runtime above to ensure the body is RAW for the signature check
   const body = await req.text();
   
   // Get the signature
@@ -31,7 +35,7 @@ export async function POST(req: Request) {
   try {
     event = stripe.webhooks.constructEvent(body, signature, endpointSecret);
   } catch (err: any) {
-    console.error(`⚠️  Webhook Signature Verification Failed: ${err.message}`);
+    console.error(`⚠️ Webhook Signature Verification Failed: ${err.message}`);
     return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
   }
 
@@ -118,28 +122,29 @@ export async function POST(req: Request) {
                 dbCustomerName = updatedOrder.customer_name;
                 orderItems = updatedOrder.items || [];
 
-                // --- 🌹 NEW: INVENTORY DEDUCTION LOGIC (Issue #2 & #6) ---
-                // Automatically subtracts roses from stock only AFTER payment
+                // --- 🌹 FIXED: INVENTORY DEDUCTION LOGIC ---
+                // 🔥 CHANGE: We now subtract the QTY of items, not the number of roses inside.
+                // This prevents the "-47" error where the system over-subtracted individual roses.
                 if (Array.isArray(orderItems)) {
                   for (const item of orderItems) {
                     try {
                       const qtyBought = item.quantity || 1;
-                      const optionString = JSON.stringify(item.options || {});
-                      const roseMatch = optionString.match(/(\d+)\s*(?:Roses|Rosen)/i);
-                      const totalRosesToSubtract = roseMatch ? parseInt(roseMatch[1]) * qtyBought : qtyBought;
 
-                      console.log(`📉 Reducing stock for Product ${item.productId} by ${totalRosesToSubtract}`);
+                      console.log(`📉 Reducing stock for Product ${item.productId} by ${qtyBought}`);
 
                       // Calls the SQL RPC function we created
                       const { error: stockError } = await supabase.rpc('decrement_stock', {
                         product_id_input: item.productId,
-                        amount_to_subtract: totalRosesToSubtract
+                        amount_to_subtract: qtyBought // 👈 Changed from totalRosesToSubtract to qtyBought
                       });
 
                       if (stockError) {
                         const { data: currentProd } = await supabase.from('products').select('stock').eq('id', item.productId).single();
                         if (currentProd) {
-                          await supabase.from('products').update({ stock: Math.max(0, (currentProd.stock || 0) - totalRosesToSubtract) }).eq('id', item.productId);
+                          // Ensure we never go below 0 if possible
+                          await supabase.from('products').update({ 
+                            stock: Math.max(0, (currentProd.stock || 0) - qtyBought) 
+                          }).eq('id', item.productId);
                         }
                       }
                     } catch (stockErr) {
