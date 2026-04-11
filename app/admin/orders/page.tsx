@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink } from "lucide-react"; 
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink, Gift } from "lucide-react"; 
 import Link from "next/link"; // ✨ Added Link for clickable products
 
 export default function AdminOrdersPage() {
@@ -155,16 +155,18 @@ export default function AdminOrdersPage() {
   const stats = displayedOrders.reduce((acc, order) => {
     const tip = Number(order.tip_amount) || 0;
     const donation = Number(order.donation_amount) || 0;
+    const gift = Number(order.gift_total) || 0; // 🎁 NEW: Tracking Gift revenue in stats
     const total = Number(order.total) || 0;
-    const productRev = total - tip - donation;
+    const productRev = total - tip - donation - gift; // ✨ Fixed: Subtracting gift from raw product revenue
 
     return {
         products: acc.products + productRev,
         tips: acc.tips + tip,
         donations: acc.donations + donation,
+        gifts: acc.gifts + gift, // 🎁 NEW: Accumulating gift totals
         grandTotal: acc.grandTotal + total
     };
-  }, { products: 0, tips: 0, donations: 0, grandTotal: 0 });
+  }, { products: 0, tips: 0, donations: 0, gifts: 0, grandTotal: 0 }); // 🎁 Added gifts to initial state
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans selection:bg-[#C9A24D] selection:text-white">
@@ -228,12 +230,17 @@ export default function AdminOrdersPage() {
               </div>
             </div>
 
-            {/* ✨ FINANCIAL SUMMARY STRIP (FIXED COLORS) */}
+            {/* ✨ FINANCIAL SUMMARY STRIP (UPDATED WITH GIFTS) */}
             {!isLoading && displayedOrders.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
                     <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Banknote size={12}/> Product Sales</p>
                         <p className="text-xl font-bold text-[#1F1F1F]">€{stats.products.toFixed(2)}</p>
+                    </div>
+                    {/* 🎁 NEW: Gift Summary Card */}
+                    <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm">
+                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Gift size={12}/> Gift Boxes</p>
+                        <p className="text-xl font-bold text-blue-500">€{stats.gifts.toFixed(2)}</p>
                     </div>
                     <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Coffee size={12}/> Team Tips</p>
@@ -278,8 +285,9 @@ export default function AdminOrdersPage() {
               {displayedOrders.map((order) => {
                 const tip = Number(order.tip_amount) || 0;
                 const donation = Number(order.donation_amount) || 0;
+                const gift = Number(order.gift_total) || 0; // 🎁 NEW: Fetching the gift total for this row
                 const total = Number(order.total) || 0;
-                const productPrice = total - tip - donation;
+                const productPrice = total - tip - donation - gift; // ✨ Fixed calculation to exclude gift
 
                 return (
                   <div key={order.id} className="bg-white border border-black/5 rounded-3xl p-6 hover:shadow-xl hover:border-[#C9A24D]/20 transition-all animate-in fade-in slide-in-from-bottom-4 group">
@@ -299,6 +307,12 @@ export default function AdminOrdersPage() {
                             {order.shipping_method === 'Express' && (
                               <span className="bg-[#1F1F1F] text-[#C9A24D] px-2 py-1 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 animate-pulse">
                                 <Zap size={10} fill="#C9A24D" /> Priority
+                              </span>
+                            )}
+                            {/* 🎁 NEW: Visual Badge for Gift Wrap Selection */}
+                            {gift > 0 && (
+                              <span className="bg-blue-600 text-white px-2 py-1 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 shadow-sm">
+                                <Gift size={10} fill="white" /> Gift Wrap
                               </span>
                             )}
                         </div>
@@ -339,11 +353,17 @@ export default function AdminOrdersPage() {
                       </div>
                     </div>
 
-                    {/* REVENUE BREAKDOWN STRIP */}
+                    {/* REVENUE BREAKDOWN STRIP (UPDATED WITH GIFT) */}
                     <div className="flex flex-wrap gap-4 mb-8 bg-[#F6EFE6]/50 p-4 rounded-2xl border border-black/5">
                         <div className="flex flex-col">
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Items Revenue</span>
                             <span className="text-sm font-bold text-[#1F1F1F]">€{productPrice.toFixed(2)}</span>
+                        </div>
+                        <div className="w-px h-8 bg-black/5" />
+                        {/* 🎁 NEW: Gift Revenue breakdown item */}
+                        <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-blue-400 uppercase tracking-tighter flex items-center gap-1"><Gift size={8}/> Gift Pack</span>
+                            <span className={`text-sm font-bold ${gift > 0 ? "text-blue-500" : "text-gray-300"}`}>€{gift.toFixed(2)}</span>
                         </div>
                         <div className="w-px h-8 bg-black/5" />
                         <div className="flex flex-col">
@@ -356,6 +376,24 @@ export default function AdminOrdersPage() {
                             <span className={`text-sm font-bold ${donation > 0 ? "text-blue-600" : "text-gray-300"}`}>€{donation.toFixed(2)}</span>
                         </div>
                     </div>
+
+                    {/* 🎁 NEW: Visual Box for the Gift Message from Checkout */}
+                    {order.gift_message && (
+                      <div className="mb-8 p-5 bg-blue-50 border-2 border-blue-100 rounded-3xl animate-in zoom-in-95 duration-500">
+                        <div className="flex items-center gap-2 mb-3">
+                           <div className="bg-blue-600 p-1.5 rounded-xl text-white shadow-md">
+                             <Mail size={16} />
+                           </div>
+                           <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-widest">Gift Packaging Message</h4>
+                        </div>
+                        <p className="text-blue-900 font-bold italic text-base leading-relaxed pl-1">
+                          "{order.gift_message}"
+                        </p>
+                        <div className="mt-3 text-[8px] font-black text-blue-300 uppercase tracking-widest">
+                          Please include this message with the gift packaging
+                        </div>
+                      </div>
+                    )}
 
                     {/* SHIPPING & ITEMS GRID */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

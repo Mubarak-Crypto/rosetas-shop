@@ -73,7 +73,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     } else if (loadedCart.length > 0) {
         // ✨ FIX: If items exist but no timer (legacy cart), start one now
-        const newExpiry = Date.now() + 15 * 60 * 1000;
+        // 🕒 UPDATE: Changed reservation from 15 mins to 1 hour
+        const newExpiry = Date.now() + 60 * 60 * 1000;
         setCartExpiry(newExpiry);
         localStorage.setItem("rosetas_cart_expiry", newExpiry.toString());
     }
@@ -101,7 +102,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (item.maxStock >= 999) return;
     
     // We still maintain the local expiry for user urgency
-    const newExpiry = Date.now() + 15 * 60 * 1000;
+    // 🕒 UPDATE: Changed reservation from 15 mins to 1 hour
+    const newExpiry = Date.now() + 60 * 60 * 1000;
     setCartExpiry(newExpiry); 
     
     // DB Reservation logic removed to prevent locking stock for uncompleted orders
@@ -110,7 +112,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (newItem: CartItem) => {
     if (cart.length === 0) {
-        setCartExpiry(Date.now() + 15 * 60 * 1000);
+        // 🕒 UPDATE: Changed reservation from 15 mins to 1 hour
+        setCartExpiry(Date.now() + 60 * 60 * 1000);
     }
 
     setCart((prev) => {

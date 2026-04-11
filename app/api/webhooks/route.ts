@@ -98,6 +98,12 @@ export async function POST(req: Request) {
     
     // 🔥 Extract the exact database ID from metadata
     const supabaseOrderId = paymentIntent.metadata?.supabase_order_id;
+
+    // 🎁 NEW: Extract Gift Amount from metadata (Defaults to 0 if not found)
+    const giftAmount = parseFloat(paymentIntent.metadata?.gift_amount || '0');
+
+    // 📝 NEW: Extract Gift Message from checkout metadata
+    const giftMessageText = paymentIntent.metadata?.gift_message || '';
     
     try {
         // Wait 2 seconds to ensure DB consistency
@@ -111,7 +117,9 @@ export async function POST(req: Request) {
                 .update({ 
                     status: 'paid', 
                     payment_id: paymentIntent.id,
-                    total: exactAmountCharged // ✅ FORCE SYNC: Overwrite DB total with Stripe Truth
+                    total: exactAmountCharged, // ✅ FORCE SYNC: Overwrite DB total with Stripe Truth
+                    gift_total: giftAmount, // 🎁 NEW: Saving the Gift Fee into its own column
+                    gift_message: giftMessageText // 📝 NEW: Saving the Checkout Gift Message
                 })
                 .eq('id', supabaseOrderId)
                 .select('id, customer_name, items, total') // ✨ NEW: Fetch items for stock deduction
