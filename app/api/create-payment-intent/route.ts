@@ -89,7 +89,8 @@ export async function POST(request: Request) {
   try {
     // Extract full customer data from frontend
     const { 
-        email, formData, discountCode, cart, country, isExpress, packagingType, tipAmount, donationAmount 
+        email, formData, discountCode, cart, country, isExpress, packagingType, tipAmount, donationAmount,
+        giftMessage // 🎁 NEW: Extract the message from the request body
     } = await request.json();
 
     // 🕵️ DEBUG LOG: See what the frontend is actually sending
@@ -189,7 +190,9 @@ export async function POST(request: Request) {
           status: 'pending',
           shipping_method: isExpress ? "Express" : "Standard",
           tip_amount: safeTip, donation_amount: safeDonation,
-          discount_amount: discountAmt, discount_code: discountCode || null
+          discount_amount: discountAmt, discount_code: discountCode || null,
+          gift_total: packagingCost, // 🎁 NEW: Save gift amount to DB immediately
+          gift_message: giftMessage || null // 📝 NEW: Save gift message to DB immediately
         }
       ])
       .select('id').single();
@@ -210,7 +213,9 @@ export async function POST(request: Request) {
       metadata: { 
           supabase_order_id: newOrder.id.toString(),
           branded_id: brandedId,
-          customer_email: email
+          customer_email: email,
+          gift_amount: packagingCost.toString(), // 🎁 NEW: Pass gift amount to Stripe Metadata
+          gift_message: giftMessage || "" // 📝 NEW: Pass gift message to Stripe Metadata
       }, 
     });
 

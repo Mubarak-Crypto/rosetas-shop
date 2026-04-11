@@ -77,7 +77,7 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
   "Tunisia": { rate10kg: 55, rate20kg: 78 },
   "South Africa": { rate10kg: 65, rate20kg: 105 },
   "Senegal": { rate10kg: 65, rate20kg: 105 },
-  "Cam Cameroon": { rate10kg: 65, rate20kg: 105 },
+  "Cameroon": { rate10kg: 65, rate20kg: 105 },
   "Kenya": { rate10kg: 65, rate20kg: 105 },
   "Nigeria": { rate10kg: 65, rate20kg: 105 },
   "UAE": { rate10kg: 65, rate20kg: 105 },
@@ -476,7 +476,7 @@ export default function CheckoutPage() {
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // ✨ SECURE: Updated body to include all data for the server to process
+        // ✨ SECURE: Updated body to include gift message for the server to process
         body: JSON.stringify({ 
             email: formData.email, 
             formData: formData, // ✨ Pass all address info
@@ -486,7 +486,8 @@ export default function CheckoutPage() {
             isExpress: isExpress,
             packagingType: packagingType,
             tipAmount: tipAmount,
-            donationAmount: donationAmount
+            donationAmount: donationAmount,
+            giftMessage: giftNote // 🎁 NEW: Pass the checkout gift message to the server
         }),
       })
       .then((res) => res.json())
@@ -495,7 +496,7 @@ export default function CheckoutPage() {
         setServerBrandedId(data.brandedId); // ✨ Store pretty ID
       });
     }
-  }, [step, finalTotal, appliedCode, cart, formData.country, isExpress, packagingType, tipAmount, donationAmount]);
+  }, [step, finalTotal, appliedCode, cart, formData.country, isExpress, packagingType, tipAmount, donationAmount, giftNote]);
 
   if (cart.length === 0) return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex flex-col items-center justify-center gap-4">
@@ -880,25 +881,11 @@ export default function CheckoutPage() {
           <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
             {cart.map((item) => (
               <div key={item.uniqueId} className="flex gap-4">
-                <div className="w-16 h-16 bg-black rounded-lg overflow-hidden border border-black/10 relative flex-shrink-0"><img src={item.image} className="w-full h-full object-cover" /></div>
+                <div className="w-16 h-16 bg-black rounded-lg overflow-hidden border border-black/10 relative flex-shrink-0"><img src={item.image} className="w-full h-full object-cover" alt={item.name} /></div>
                 <div className="flex-1"><h4 className="font-bold text-sm">{item.name}</h4><p className="text-xs text-[#1F1F1F]/60 font-medium">{item.options ? Object.values(item.options).join(", ") : ""}</p></div>
                 <div className="font-mono text-sm font-bold">€{(item.price * item.quantity).toFixed(2)}</div>
               </div>
             ))}
-
-            {/* --- RAMADAN PROMO: START (Remove after Ramadan) --- */}
-            {/*<div className="flex gap-4 animate-in fade-in slide-in-from-right-2">
-                <div className="w-16 h-16 bg-[#F5F1E8] rounded-lg overflow-hidden border border-[#D4AF37]/20 relative flex-shrink-0 flex items-center justify-center text-[#D4AF37]">
-                    <Moon size={24} fill="currentColor" />
-                </div>
-                <div className="flex-1">
-                    <h4 className="font-bold text-sm text-[#1F1F1F]">Ramadan Free Gift</h4>
-                    <p className="text-[10px] text-[#D4AF37] font-bold uppercase tracking-wider">Ramadan Mubarak</p>
-                </div>
-                <div className="font-mono text-sm font-bold text-green-600">FREE</div>
-            </div>*/}
-            {/* --- RAMADAN PROMO: END --- */}
-
           </div>
           
           {isSupplyOrder && (
