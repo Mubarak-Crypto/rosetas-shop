@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 // ✨ Added 'Plane' to imports for Vacation Mode
 // ✨ Added 'Moon' for Ramadan Promo
 import { ArrowLeft, Lock, ShieldCheck, Mail, Phone, Globe, Zap, AlertCircle, Truck, Gift, Package, Coffee, Droplets, Heart, Check, Tag, Loader2, Plane, Moon } from "lucide-react"; 
+import { motion, AnimatePresence } from "framer-motion"; // ✨ PHASE 2: Added AnimatePresence for the warning notice
 import Link from "next/link";
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext"; 
@@ -549,6 +550,7 @@ export default function CheckoutPage() {
                 
                 {/* Germany Specific Shipping Selection */}
                 {formData.country === "Germany" && (
+                  <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div 
                             onClick={() => setIsExpress(false)} 
@@ -580,6 +582,31 @@ export default function CheckoutPage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* ✨ PHASE 2: DHL Express Delay Warning Notice */}
+                    <AnimatePresence>
+                      {isExpress && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0, y: -10 }}
+                          animate={{ opacity: 1, height: 'auto', y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -10 }}
+                          className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-start gap-3 text-amber-900 shadow-sm overflow-hidden"
+                        >
+                          <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                          <div className="text-xs leading-relaxed font-medium">
+                            <p className="font-bold mb-1">
+                              {language === 'EN' ? "Express Shipping Notice" : "Hinweis zum Expressversand"}
+                            </p>
+                            <p>
+                              {language === 'EN' 
+                                ? "Please note: Although we dispatch express orders on time, DHL Express delivery dates cannot always be guaranteed. Delays of 1–3 days may occasionally occur and are outside of our control."
+                                : "Bitte beachten Sie: Obwohl wir Express-Bestellungen pünktlich versenden, können DHL Express Liefertermine nicht immer garantiert werden. Verzögerungen von 1–3 Tagen können gelegentlich vorkommen und liegen außerhalb unserer Kontrolle."}
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 )}
                 
                 <div className="grid grid-cols-2 gap-4"><input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
@@ -737,17 +764,17 @@ export default function CheckoutPage() {
                               </div>
                               <div className="flex gap-2">
                                  {['3%', '5%', '5eur', 'custom'].map(opt => (
-                                      <button
-                                          key={opt}
-                                          onClick={() => handleTipClick(opt)}
-                                          className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
-                                              tipOption === opt 
-                                              ? "bg-[#1F1F1F] text-white border-[#1F1F1F]" 
-                                              : "bg-white border-black/10 hover:border-[#1F1F1F] text-[#1F1F1F]/60"
-                                          }`}
-                                      >
-                                          {opt === '3%' ? '3%' : opt === '5%' ? '5%' : opt === '5eur' ? '€5' : 'Custom'}
-                                      </button>
+                                     <button
+                                         key={opt}
+                                         onClick={() => handleTipClick(opt)}
+                                         className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                                             tipOption === opt 
+                                             ? "bg-[#1F1F1F] text-white border-[#1F1F1F]" 
+                                             : "bg-white border-black/10 hover:border-[#1F1F1F] text-[#1F1F1F]/60"
+                                         }`}
+                                     >
+                                         {opt === '3%' ? '3%' : opt === '5%' ? '5%' : opt === '5eur' ? '€5' : 'Custom'}
+                                     </button>
                                  ))}
                               </div>
                               {tipOption === 'custom' && (
