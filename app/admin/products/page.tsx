@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Loader2, Video, Globe, Bookmark } from "lucide-react"; 
+import { Plus, Search, Edit, Trash2, Loader2, Video, Globe, Bookmark, Star } from "lucide-react"; 
 import Link from "next/link";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
@@ -138,6 +138,8 @@ export default function AdminProducts() {
                   <th className="px-6 py-4">Product</th>
                   <th className="px-6 py-4">Bilingual</th>
                   <th className="px-6 py-4">Ribbon {/* ✨ Ribbon Mandatory Column */}</th> 
+                  {/* ✨ PHASE 2: Added Featured Status column to easily track homepage products */}
+                  <th className="px-6 py-4 text-center">Homepage</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
                   <th className="px-6 py-4">Total Stock</th> 
@@ -162,7 +164,13 @@ export default function AdminProducts() {
                             </div>
                           )}
                         </div>
-                        <span className="font-bold text-sm text-[#1F1F1F]">{product.name}</span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-sm text-[#1F1F1F] flex items-center gap-2">
+                            {product.name}
+                            {/* ✨ PHASE 2: Small star indicator next to name if product is featured */}
+                            {product.is_featured && <Star size={12} className="fill-[#D4C29A] text-[#D4C29A]" />}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     
@@ -184,6 +192,17 @@ export default function AdminProducts() {
                           <span className="text-[10px] font-bold text-gray-300 uppercase">Disabled</span>
                         )}
                       </div>
+                    </td>
+
+                    {/* ✨ PHASE 2: Visual badge to show if item is on the homepage grid */}
+                    <td className="px-6 py-4 text-center">
+                      {product.is_featured ? (
+                        <span className="bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-tighter">
+                          Featured
+                        </span>
+                      ) : (
+                        <span className="text-gray-200 text-[10px] font-bold uppercase">—</span>
+                      )}
                     </td>
 
                     <td className="px-6 py-4 text-sm text-[#1F1F1F]/60 font-medium">{product.category}</td>

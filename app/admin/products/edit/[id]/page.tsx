@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert } from "lucide-react"; 
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star } from "lucide-react"; // ✨ Added Star icon for Featured Toggle
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -47,6 +47,9 @@ export default function EditProductPage() {
   const [status, setStatus] = useState("active");
   const [description, setDescription] = useState("");
   const [descriptionEn, setDescriptionEn] = useState(""); 
+
+  // ✨ PHASE 2: Featured state for homepage 2x2 grid
+  const [isFeatured, setIsFeatured] = useState(false);
 
   // ✨ NEW: Safety Instructions States
   const [safetyInstructions, setSafetyInstructions] = useState("");
@@ -120,6 +123,9 @@ export default function EditProductPage() {
         setNameEn(data.name_en || ""); 
         setDescription(data.description || "");
         setDescriptionEn(data.description_en || ""); 
+
+        // ✨ PHASE 2: Load Featured Status
+        setIsFeatured(data.is_featured || false);
 
         // ✨ NEW: Load Safety Instructions
         setSafetyInstructions(data.safety_instructions_de || "");
@@ -490,6 +496,10 @@ export default function EditProductPage() {
         needs_ribbon: needsRibbon, 
         stock_matrix: stockMatrix, 
         promo_label: promoLabel, 
+
+        // ✨ PHASE 2: Added is_featured to update logic
+        is_featured: isFeatured,
+
         pers_label_1: persLabel1 || null,
         pers_label_2: persLabel2 || null
       })
@@ -986,7 +996,7 @@ export default function EditProductPage() {
                             <button 
                                 type="button"
                                 onClick={() => setNewExtraAllowQty(!newExtraAllowQty)}
-                                className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${newExtraAllowQty ? 'bg-[#C9A24D] justify-end' : 'bg-gray-200 justify-start'}`}
+                                className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${newExtraAllowQty ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}
                             >
                                 <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
                             </button>
@@ -1074,6 +1084,26 @@ export default function EditProductPage() {
 
             {/* RIGHT COLUMN */}
             <div className="space-y-6">
+              {/* ✨ PHASE 2: HOMEPAGE VISIBILITY TOGGLE (Mirroring the 'New Product' page) */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                  <Star className="text-amber-500 fill-amber-500" size={20} /> Homepage Visibility
+                </h3>
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#1F1F1F]">Feature on Homepage?</p>
+                    <p className="text-[10px] text-amber-700/60 mt-1 font-medium italic">If active, this product will appear in the 2x2 grid on the front page.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setIsFeatured(!isFeatured)}
+                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isFeatured ? 'bg-amber-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                  >
+                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
+                  </button>
+                </div>
+              </div>
+
               {/* IMAGES */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-4">Images</h3>

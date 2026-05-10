@@ -11,9 +11,11 @@ export default async function HomePage() {
     .from('products')
     .select('*')
     .eq('status', 'active') 
+    .eq('is_featured', true) // ✅ PHASE 2 CHANGE: Only fetch Rosetta's chosen featured products
     .neq('category', 'supplies') 
     .order('created_at', { ascending: false })
-    .limit(3); 
+  // 🚀 PHASE 2 CHANGE: Increased limit to 4 products per Rosetta's request
+    .limit(4); 
 
   // 2. Fetch Settings
   const { data: settings } = await supabase

@@ -7,6 +7,7 @@ export const revalidate = 60;
 
 export default async function ShopPage() {
   // 1. Fetch All Active Products (We filter on client for instant speed)
+  // ✅ PHASE 2: Fetching all active products including the new 'is_featured' column
   const { data: products } = await supabase
     .from("products")
     .select("*")
@@ -27,6 +28,7 @@ export default async function ShopPage() {
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 
+  // 🚀 PHASE 2 NOTE: The 2-column layout change happens inside the ShopClient component.
   return (
     <ShopClient 
       initialProducts={products || []} 

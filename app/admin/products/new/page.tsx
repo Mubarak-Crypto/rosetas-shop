@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react"; 
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert } from "lucide-react"; // ✨ Added ShieldAlert for Safety section
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star } from "lucide-react"; // ✨ Added Star for Featured Toggle
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -47,6 +47,9 @@ export default function AddProductPage() {
   const [status, setStatus] = useState("active");
   const [description, setDescription] = useState("");
   const [descriptionEn, setDescriptionEn] = useState(""); 
+
+  // ✨ PHASE 2: Featured state for homepage 2x2 grid
+  const [isFeatured, setIsFeatured] = useState(false);
 
   // ✨ NEW: Safety Instructions States
   const [safetyInstructions, setSafetyInstructions] = useState("");
@@ -420,6 +423,9 @@ export default function AddProductPage() {
           needs_ribbon: needsRibbon, 
           stock_matrix: stockMatrix, 
           promo_label: promoLabel, 
+
+          // ✨ PHASE 2: Added is_featured to the insert object
+          is_featured: isFeatured,
           
           pers_label_1: persLabel1 || null,
           pers_label_2: persLabel2 || null
@@ -727,6 +733,26 @@ export default function AddProductPage() {
 
             {/* RIGHT COLUMN */}
             <div className="space-y-6">
+              {/* ✨ PHASE 2: HOMEPAGE VISIBILITY TOGGLE */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                  <Star className="text-amber-500 fill-amber-500" size={20} /> Homepage Visibility
+                </h3>
+                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#1F1F1F]">Feature on Homepage?</p>
+                    <p className="text-[10px] text-amber-700/60 mt-1 font-medium italic">If active, this product will appear in the 2x2 grid on the front page.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setIsFeatured(!isFeatured)}
+                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isFeatured ? 'bg-amber-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                  >
+                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
+                  </button>
+                </div>
+              </div>
+
               {/* IMAGES */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-4">Images</h3>

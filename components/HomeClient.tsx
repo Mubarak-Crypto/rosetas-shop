@@ -44,6 +44,8 @@ export default function HomeClient({ products = [], settings = null }: { product
           -webkit-background-clip: text;
           background-clip: text;
           -webkit-text-fill-color: transparent;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
           color: transparent; 
           animation: shine-glide 4s linear infinite;
         }
@@ -258,7 +260,8 @@ export default function HomeClient({ products = [], settings = null }: { product
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* ✨ PHASE 2 UPDATE: Changed grid-cols to fixed 2 columns for both mobile and desktop per request */}
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-12 max-w-4xl mx-auto">
           {products.length > 0 ? products.map((product, index) => (
             <ProductCard 
               key={product.id}
@@ -275,7 +278,7 @@ export default function HomeClient({ products = [], settings = null }: { product
               stock={product.stock}
             />
           )) : (
-            <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-10 text-[#1F1F1F]/30 bg-white border border-dashed border-black/10 rounded-3xl">
+            <div className="col-span-2 text-center py-10 text-[#1F1F1F]/30 bg-white border border-dashed border-black/10 rounded-3xl">
               <p className="font-bold uppercase tracking-widest text-sm">{language === 'EN' ? "No active products found." : "Keine aktiven Produkte gefunden."}</p>
             </div>
           )}
