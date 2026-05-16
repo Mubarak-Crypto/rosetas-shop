@@ -27,7 +27,7 @@ export async function generateInvoicePDF(invoiceId: string) {
       args: isProd ? chromium.args : [],
       // This tells your PC to just use the Chrome you already have installed
       executablePath: isProd 
-        ? await chromium.executablePath("/var/task/.next/server/chunks/node_modules/@sparticuz/chromium/bin") 
+        ? await chromium.executablePath("https://github.com/Sparticuz/chromium/releases/download/v123.0.1/chromium-v123.0.1-pack.tar") 
         : "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
       headless: true,
       defaultViewport: {
