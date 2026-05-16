@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users, Percent } from "lucide-react"; // ✨ Added Percent icon
+import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users, Percent, FileText } from "lucide-react"; // ✨ Added Percent and FileText icon
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
@@ -87,6 +87,20 @@ export default function AdminSidebar() {
           >
             <Package size={20} />
             Orders
+          </Link>
+
+          {/* Invoice Center Link */}
+          <Link 
+            href="/admin/invoices" 
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              isActive("/admin/invoices") 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <FileText size={20} />
+            Invoice Center
           </Link>
 
           {/* Products Link */}

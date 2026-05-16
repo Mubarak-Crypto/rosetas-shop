@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, Loader2, Video, Globe, Bookmark, Star } from "lucide-react"; 
 import Link from "next/link";
-import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
 
 export default function AdminProducts() {
@@ -86,7 +85,7 @@ export default function AdminProducts() {
   return (
     /* ✅ FIXED: Theme Colors Updated to Cream & Ink */
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
-      <AdminSidebar />
+     
 
       {/* ✨ FIXED: Added 'pr-24' to create a buffer zone for the Chat Widget on the right */}
       <main className="flex-1 p-8 pr-24 overflow-y-auto">

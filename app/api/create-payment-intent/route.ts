@@ -212,8 +212,8 @@ export async function POST(request: Request) {
       automatic_payment_methods: { enabled: true }, 
       metadata: { 
           supabase_order_id: newOrder.id.toString(),
-          branded_id: brandedId,
-          customer_email: email,
+          orderId: brandedId, // ✨ MATCH: Changed key from 'branded_id' to 'orderId' for webhook logic
+          email: email, // ✨ MATCH: Changed key from 'customer_email' to 'email'
           gift_amount: packagingCost.toString(), // 🎁 NEW: Pass gift amount to Stripe Metadata
           gift_message: giftMessage || "" // 📝 NEW: Pass gift message to Stripe Metadata
       }, 

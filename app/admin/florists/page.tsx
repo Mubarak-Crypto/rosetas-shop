@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
 import { Download, Loader2, Search, ExternalLink, Check, X, Users } from "lucide-react";
 
@@ -60,7 +59,7 @@ export default function FloristLeadsPage() {
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
-      <AdminSidebar />
+
 
       <main className="flex-1 p-8 overflow-y-auto">
         

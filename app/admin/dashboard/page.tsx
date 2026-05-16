@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
 import { DollarSign, ShoppingBag, Package, Loader2, Calendar, User, Truck, X, Mail, Copy, Check, AlertTriangle, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -138,7 +137,7 @@ export default function AdminDashboard() {
   return (
     /* ✅ FIXED: Theme Colors Updated to Cream & Ink */
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
-      <AdminSidebar />
+
 
       <main className="flex-1 p-8 relative overflow-y-auto h-screen selection:bg-[#C9A24D] selection:text-white">
         <div className="max-w-6xl mx-auto space-y-8 pb-20">

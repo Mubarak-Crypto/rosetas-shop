@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js'; // ✅ Added Supabase Import
+import { createInvoiceSnapshot, processAndStorePDF } from "@/lib/invoice-logic"; // ✨ NEW: Invoice Logic Imports
 
 // 1. Initialize Stripe, Resend, and Supabase
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -105,6 +106,9 @@ export async function POST(req: Request) {
     // 📝 NEW: Extract Gift Message from checkout metadata
     const giftMessageText = paymentIntent.metadata?.gift_message || '';
     
+    // ✨ NEW: Holder for the invoice download link
+    let invoiceDownloadUrl = null;
+
     try {
         // Wait 2 seconds to ensure DB consistency
         await new Promise((resolve) => setTimeout(resolve, 2000)); 
@@ -129,6 +133,36 @@ export async function POST(req: Request) {
                 orderId = `ROSETAS-${String(updatedOrder.id).padStart(5, '0')}`;
                 dbCustomerName = updatedOrder.customer_name;
                 orderItems = updatedOrder.items || [];
+
+                // 🚀 ✨ NEW: AUTOMATED INVOICE PIPELINE
+                try {
+                  console.log(`📄 Generating Automated Invoice for Order: ${supabaseOrderId}`);
+                  const snapshot = await createInvoiceSnapshot(supabaseOrderId);
+                  
+                  if (snapshot.success) {
+                    const { data: inv } = await supabase
+                      .from('invoices')
+                      .select('id')
+                      .eq('invoice_number', snapshot.invoiceNumber)
+                      .single();
+
+                    if (inv) {
+                      // Trigger PDF generation AND await it so it's ready for the email
+                      await processAndStorePDF(inv.id, supabaseOrderId);
+                      
+                      // Create the secure download link for the email
+                      invoiceDownloadUrl = `https://rosetasbouquets.com/api/invoices/download/${inv.id}`;
+
+                      // ✅ Mark as SENT in database to update Admin UI badge
+                      await supabase
+                        .from('invoices')
+                        .update({ sent_at: new Date().toISOString() })
+                        .eq('id', inv.id);
+                    }
+                  }
+                } catch (invErr) {
+                  console.error("Invoice Generation Error:", invErr);
+                }
 
                 // --- 🌹 FIXED: INVENTORY DEDUCTION LOGIC ---
                 // 🔥 CHANGE: We now subtract the QTY of items, not the number of roses inside.
@@ -213,6 +247,7 @@ export async function POST(req: Request) {
               .item-name { font-weight: bold; font-size: 14px; color: #1F1F1F; }
               .item-meta { font-size: 11px; color: #C9A24D; font-weight: bold; text-transform: uppercase; }
               .btn { display: inline-block; padding: 18px 40px; background-color: #1F1F1F; color: #ffffff !important; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; }
+              .btn-invoice { display: inline-block; margin-top: 15px; padding: 12px 25px; background-color: #ffffff; color: #1F1F1F !important; border: 2px solid #1F1F1F; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
               .footer { padding: 30px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #F6EFE6; }
             </style>
           </head>
@@ -252,7 +287,10 @@ export async function POST(req: Request) {
                     `).join('')}
                   </div>
                   
-                  <a href="https://rosetasbouquets.com" class="btn">View Our Shop</a>
+                  <div style="margin-top: 20px;">
+                    <a href="https://rosetasbouquets.com" class="btn">View Our Shop</a>
+                    ${invoiceDownloadUrl ? `<br/><a href="${invoiceDownloadUrl}" class="btn-invoice">📄 Download Official Invoice</a>` : ''}
+                  </div>
                   
                   <p style="margin-top: 30px; font-size: 11px; font-style: italic; color: #999;">Thank you for choosing Rosetas.</p>
                 </div>

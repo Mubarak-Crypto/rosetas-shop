@@ -5,7 +5,6 @@ import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Im
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
-import AdminSidebar from "../../../../../components/admin/AdminSidebar";
 import { supabase } from "../../../../../lib/supabase";
 
 // TYPES
@@ -528,7 +527,6 @@ export default function EditProductPage() {
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
-      <AdminSidebar />
 
       <main className="flex-1 p-8 overflow-y-auto">
         <form onSubmit={handleUpdate} className="max-w-5xl mx-auto">

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion"; 
 import { supabase } from "../../../lib/supabase";
 import { Star, Save, Plus, Instagram, MessageCircle, Trash2, CheckCircle, Loader2, Check, ShoppingBag, Upload, X, Image as ImageIcon } from "lucide-react"; // ✨ Added new icons
-import AdminSidebar from "../../../components/admin/AdminSidebar";
+
 
 export default function AdminReviewsPage() {
   const router = useRouter(); 
@@ -127,7 +127,7 @@ export default function AdminReviewsPage() {
   if (isLoading) {
     return (
       <div className="flex h-screen bg-[#F6EFE6]">
-        <AdminSidebar /> 
+
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="animate-spin text-[#C9A24D]" size={48} />
         </div>
@@ -137,7 +137,7 @@ export default function AdminReviewsPage() {
 
   return (
     <div className="flex min-h-screen bg-[#F6EFE6]">
-      <AdminSidebar /> 
+
 
       <main className="flex-1 p-8 md:p-12 overflow-y-auto text-[#1F1F1F]">
         <div className="max-w-6xl mx-auto">

@@ -5,7 +5,6 @@ import {
   Tag, Plus, Trash2, Loader2, Save, X, ToggleLeft, ToggleRight, 
   Calendar, Hash, DollarSign, Percent, ShoppingBag, Users 
 } from "lucide-react";
-import AdminSidebar from "../../../components/admin/AdminSidebar";
 import { supabase } from "../../../lib/supabase";
 
 // Match the SQL Table we just created
@@ -99,7 +98,7 @@ export default function DiscountCodesPage() {
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
-      <AdminSidebar />
+
 
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-5xl mx-auto">

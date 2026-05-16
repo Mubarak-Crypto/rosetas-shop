@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { Loader2 } from "lucide-react";
+import AdminSidebar from "../../components/admin/AdminSidebar";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -36,5 +37,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  return <>{children}</>;
+  // If we are on the login page, don't show the sidebar
+  if (pathname === "/admin/login") return <>{children}</>;
+
+  return (
+    <div className="flex min-h-screen bg-[#050505]">
+      <AdminSidebar />
+      <main className="flex-1 overflow-y-auto">
+        {children}
+      </main>
+    </div>
+  );
 }
