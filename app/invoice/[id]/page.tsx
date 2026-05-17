@@ -50,7 +50,7 @@ export default async function InvoicePage({
       {/* 3. PRINT OPTIMIZATION CSS */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media screen {
-          body { background-color: #f1f5f9; padding: 40px 0; }
+          body { background-color: #F6EFE6; padding: 40px 0; }
         }
         @media print {
           /* 🛡️ THE CLOAK: Target cookie banners and popups specifically */
@@ -88,7 +88,7 @@ export default async function InvoicePage({
         <div className="flex justify-between items-start border-b border-slate-100 pb-10">
           <div>
             <h1 className="text-3xl font-black tracking-tighter text-slate-900">
-              ROSETTA'S <span className="text-blue-600">BOUQUETS</span>
+              ROSETAS <span style={{ color: "#C9A24D" }}>BOUQUETS</span>
             </h1>
             <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-[0.3em]">
               Luxury Floral Artisans • Essen
@@ -106,7 +106,7 @@ export default async function InvoicePage({
         {/* Address Grid */}
         <div className="grid grid-cols-2 gap-12 mt-16">
           <div>
-            <h3 className="text-[10px] font-bold uppercase text-blue-600 mb-3 tracking-widest">Billed To</h3>
+            <h3 className="text-[10px] font-bold uppercase mb-3 tracking-widest" style={{ color: "#C9A24D" }}>Billed To</h3>
             <p className="font-bold text-slate-900 text-lg">{customer.first_name} {customer.last_name}</p>
             <div className="text-slate-500 text-sm mt-1 leading-relaxed">
               <p>{customer.address} {customer.house_number}</p>
@@ -116,11 +116,11 @@ export default async function InvoicePage({
           </div>
           <div className="text-right">
             <h3 className="text-[10px] font-bold uppercase text-slate-300 mb-3 tracking-widest">From</h3>
-            <p className="font-bold text-slate-900">Rosetta's Bouquets</p>
+            <p className="font-bold text-slate-900">Rosetas Bouquets</p>
             <div className="text-slate-500 text-sm mt-1 leading-relaxed">
-              <p>Carl-Wolf-Straße 7</p>
+              <p>Albert-Schweitzer-Str. 5</p>
               <p>45279 Essen, Germany</p>
-              <p className="italic text-blue-500 text-xs mt-1 font-semibold">www.rosetasbouquets.com</p>
+              <p className="italic text-xs mt-1 font-semibold" style={{ color: "#C9A24D" }}>www.rosetasbouquets.com</p>
             </div>
           </div>
         </div>
@@ -160,7 +160,7 @@ export default async function InvoicePage({
             </div>
             <div className="flex justify-between border-t-2 border-slate-900 pt-4 mt-2">
               <span className="text-sm font-black uppercase tracking-widest text-slate-900">Total Amount</span>
-              <span className="text-2xl font-black text-blue-600">€{Number(totals.total).toFixed(2)}</span>
+              <span className="text-2xl font-black" style={{ color: "#C9A24D" }}>€{Number(totals.total).toFixed(2)}</span>
             </div>
           </div>
         </div>
