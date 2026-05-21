@@ -95,16 +95,16 @@ export default async function InvoicePage({
         style={{ 
           width: '210mm', 
           minHeight: '297mm', // Strict A4 Height
-          padding: '30mm 20mm 20mm 25mm',
+          padding: '15mm 15mm 12mm 20mm',
           boxSizing: 'border-box',
           backgroundColor: '#CDBFA8'
         }}
       >
         {/* Main Structural Content Wrapper */}
-        <div className="relative z-20 w-full flex flex-col flex-1 pl-[12mm]">
+        <div className="relative z-20 w-full flex flex-col flex-1 pl-[8mm]">
           
           {/* Header Section */}
-          <div className="flex justify-between items-start pb-6">
+          <div className="flex justify-between items-start pb-4">
             <div className="flex items-center gap-4">
               {/* Top Left Header Mini Branding Asset */}
               <div 
@@ -112,7 +112,7 @@ export default async function InvoicePage({
                 style={{ backgroundImage: rLogoUri ? `url(${rLogoUri})` : 'none' }}
               />
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-990">
                   <span style={{ color: "#000000" }}>ROSETAS</span> <span style={{ color: "#ffffff" }}>BOUQUETS</span>
                 </h1>
                 <p className="text-[9px] font-bold text-slate-400 mt-0.5 uppercase tracking-[0.25em]">
@@ -130,7 +130,7 @@ export default async function InvoicePage({
           </div>
 
           {/* Premium Diamond Line Divider */}
-          <div className="w-full flex items-center justify-center my-4 opacity-75">
+          <div className="w-full flex items-center justify-center my-3 opacity-75">
             <div className="h-[1px] bg-slate-100/50 flex-1"></div>
             <div className="mx-3 flex gap-1 items-center filter drop-shadow-[0_0_4px_#ffffff]">
               <div className="w-1.5 h-1.5 rotate-45" style={{ backgroundColor: "#ffffff" }}></div>
@@ -141,7 +141,7 @@ export default async function InvoicePage({
           </div>
 
           {/* Address & Solid Logo Grid Block */}
-          <div className="grid grid-cols-3 gap-6 items-start mt-8">
+          <div className="grid grid-cols-3 gap-6 items-start mt-4">
             {/* Left Column: Client Info */}
             <div>
               <h3 className="text-[9px] font-bold uppercase mb-2 tracking-widest text-slate-500" style={{ color: "#ffffff" }}>Billed To</h3>
@@ -154,7 +154,7 @@ export default async function InvoicePage({
             </div>
 
             {/* Center Column: Distinct Circular R-Logo Asset */}
-            <div className="flex justify-center items-center h-full pt-4">
+            <div className="flex justify-center items-center h-full pt-2">
               <div 
                 className="w-20 h-20 bg-no-repeat bg-contain bg-center opacity-90 print:opacity-100"
                 style={{ backgroundImage: rLogoCircleUri ? `url(${rLogoCircleUri})` : 'none' }}
@@ -174,7 +174,7 @@ export default async function InvoicePage({
           </div>
 
           {/* Invoice Items Table Wrapper Container with Nesting Illustration Background */}
-          <div className="relative w-full mt-14 min-h-[140mm] flex flex-col">
+          <div className="relative w-full mt-6 min-h-[110mm] flex flex-col">
             {/* Climbing Rose Decorative Column (Nests strictly inside table grid space under address data) */}
             <div 
               className="absolute left-[-20mm] top-[-5mm] w-[50mm] h-full pointer-events-none opacity-95 print:opacity-100 z-0"
@@ -190,27 +190,27 @@ export default async function InvoicePage({
             <table className="w-full text-left border-collapse relative z-10">
               <thead>
                 <tr className="text-[9px] uppercase font-bold tracking-[0.2em] border-b border-white/40" style={{ color: '#ffffff' }}>
-                  <th className="pb-3 pt-3 pl-3">Description</th>
-                  <th className="pb-3 pt-3 text-center w-16">Qty</th>
-                  <th className="pb-3 pt-3 text-right w-28">Unit Price</th>
-                  <th className="pb-3 pt-3 pr-3 text-right w-28">Total</th>
+                  <th className="pb-2 pt-2 pl-3">Description</th>
+                  <th className="pb-2 pt-2 text-center w-16">Qty</th>
+                  <th className="pb-2 pt-2 text-right w-28">Unit Price</th>
+                  <th className="pb-2 pt-2 pr-3 text-right w-28">Total</th>
                 </tr>
               </thead>
               <tbody className="text-xs">
                 {items.map((item: any, i: number) => (
                   <tr key={i} className="border-b border-slate-300/60 hover:bg-slate-50/30 transition-colors">
-                    <td className="py-4 font-medium text-black">{item.name}</td>
-                    <td className="py-4 text-center text-white">{item.quantity}</td>
-                    <td className="py-4 text-right text-white">€{Number(item.price).toFixed(2)}</td>
-                    <td className="py-4 text-right font-bold text-black">€{(Number(item.price) * Number(item.quantity)).toFixed(2)}</td>
+                    <td className="py-3 font-medium text-black">{item.name}</td>
+                    <td className="py-3 text-center text-white">{item.quantity}</td>
+                    <td className="py-3 text-right text-white">€{Number(item.price).toFixed(2)}</td>
+                    <td className="py-3 text-right font-bold text-black">€{(Number(item.price) * Number(item.quantity)).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
             {/* Financial Summary */}
-            <div className="mt-8 flex justify-end relative z-10">
-              <div className="w-64 space-y-2.5">
+            <div className="mt-4 flex justify-end relative z-10">
+              <div className="w-64 space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-slate-500 uppercase tracking-widest text-[9px] font-bold">Subtotal</span>
                   <span className="font-medium text-slate-700">€{Number(totals.subtotal).toFixed(2)}</span>
@@ -219,7 +219,7 @@ export default async function InvoicePage({
                   <span className="text-slate-500 uppercase tracking-widest text-[9px] font-bold">Shipping</span>
                   <span className="font-medium text-slate-700">€{Number(totals.shipping).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between border-t border-white pt-3 mt-1">
+                <div className="flex justify-between border-t border-white pt-2 mt-1">
                   <span className="text-xs font-bold uppercase tracking-widest text-slate-800">Total Amount</span>
                   <span className="text-xl font-bold" style={{ color: "#ffffff" }}>€{Number(totals.total).toFixed(2)}</span>
                 </div>
@@ -228,17 +228,17 @@ export default async function InvoicePage({
           </div>
 
           {/* Legal Note Disclaimer Highlights Container Box */}
-          <div className="p-4 rounded-md border border-[#EADCC9]/40" style={{ backgroundColor: '#EADCC9' }}>
+          <div className="p-3 rounded-md border border-[#EADCC9]/40 mt-4 relative z-10" style={{ backgroundColor: '#EADCC9' }}>
             <p className="text-[9px] leading-relaxed text-slate-800 text-center font-bold tracking-wide">
               KEIN AUSWEIS VON UMSATZSTEUER
             </p>
-            <p className="text-[9px] leading-relaxed text-slate-600 text-center font-medium tracking-wide mt-1">
-              KLEINUNTERNEHMER GEMÄSS § 19 USTG.
+            <p className="text-[9px] leading-relaxed text-slate-600 text-center font-medium tracking-wide mt-0.5">
+              DA KLEINUNTERNEHMER GEMÄSS § 19 USTG.
             </p>
           </div>
 
           {/* Premium Diamond Line Divider Below Tax Box */}
-          <div className="w-full flex items-center justify-center my-4 opacity-75">
+          <div className="w-full flex items-center justify-center my-3 opacity-75">
             <div className="h-[1px] bg-slate-100/50 flex-1"></div>
             <div className="mx-3 flex gap-1 items-center filter drop-shadow-[0_0_4px_#ffffff]">
               <div className="w-1.5 h-1.5 rotate-45" style={{ backgroundColor: "#ffffff" }}></div>
@@ -248,28 +248,28 @@ export default async function InvoicePage({
             <div className="h-[1px] bg-slate-100/50 flex-1"></div>
           </div>
 
-        </div>
-
-        {/* Legal Footer Section */}
-        <div className="relative z-20 w-full pl-[12mm] mt-auto pt-4 flex flex-col items-center">
-          <p className="text-xl text-center lowercase tracking-wide mb-6" style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: '#8C7355' }}>
-            Thank you for your order
-          </p>
-          {/* Integrated Social Channels Connect Grid Footer */}
-          <div className="w-full max-w-lg flex justify-between items-center text-[10px] text-[#ffffff] font-mono border-t border-black/5 pt-4">
-            <div className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-[#ffffff]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
-              <span>@rosetas.bouquets</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-[#ffffff]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" x2="22" y1="12" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10z"></path></svg>
-              <span>www.rosetasbouquets.com</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5 text-[#ffffff]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
-              <span>rosetasbouquetsde@gmail.com</span>
+          {/* Legal Footer Section */}
+          <div className="w-full mt-2 mb-1 flex flex-col items-center relative z-10">
+            <p className="text-lg text-center lowercase tracking-wide mb-2" style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: '#8C7355' }}>
+              Thank you for your order
+            </p>
+            {/* Integrated Social Channels Connect Grid Footer */}
+            <div className="w-full max-w-lg flex justify-between items-center text-[10px] text-[#ffffff] font-mono border-t border-white/20 pt-2">
+              <div className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-[#ffffff]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"></line></svg>
+                <span>@rosetas.bouquets</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-[#ffffff]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" x2="22" y1="12" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10z"></path></svg>
+                <span>www.rosetasbouquets.com</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-[#ffffff]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                <span>rosetasbouquetsde@gmail.com</span>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
     </>
