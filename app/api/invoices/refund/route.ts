@@ -3,6 +3,8 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createInvoiceSnapshot, processAndStorePDF } from "@/lib/invoice-logic";
 
+export const maxDuration = 60; // 🚀 Gives this specific API route 60 seconds to run on Vercel
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2023-10-16" as any,
 });
