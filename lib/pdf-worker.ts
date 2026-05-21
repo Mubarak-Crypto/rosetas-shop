@@ -24,7 +24,7 @@ export async function generateInvoicePDF(invoiceId: string) {
     const isProd = process.env.NODE_ENV === 'production';
 
     browser = await puppeteer.launch({
-      args: isProd ? chromium.args : [],
+      args: isProd ? [...chromium.args, '--single-process', '--no-zygote', '--no-first-run'] : [],
       // This tells your PC to just use the Chrome you already have installed
       executablePath: isProd 
         ? await chromium.executablePath("https://github.com/Sparticuz/chromium/releases/download/v123.0.1/chromium-v123.0.1-pack.tar") 
@@ -51,7 +51,7 @@ export async function generateInvoicePDF(invoiceId: string) {
 
     // 🚀 5. NAVIGATE & RENDER
     await page.goto(targetUrl, {
-      waitUntil: 'networkidle0', // Wait until all fonts/images/styles are loaded
+      waitUntil: 'domcontentloaded', // Wait until all fonts/images/styles are loaded
     });
 
     const pdfBuffer = await page.pdf({
