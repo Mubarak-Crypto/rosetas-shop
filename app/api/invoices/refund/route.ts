@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
       if (inv) {
         // Trigger the Storno PDF generation in the background
-        processAndStorePDF(inv.id, orderId).catch(err => 
+        await processAndStorePDF(inv.id, orderId).catch(err => 
           console.error("Async Storno PDF Generation Failed:", err)
         );
       }
