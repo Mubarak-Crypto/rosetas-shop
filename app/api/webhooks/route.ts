@@ -304,7 +304,7 @@ export async function POST(req: Request) {
         `
       });
 
-      // ✨ NEW: Send Detailed Work Order Alert to OWNER (Rosetasbouquetsde@gmail.com)
+      // 5. Send Detailed Work Order Alert to OWNER (Rosetasbouquetsde@gmail.com)
       await resend.emails.send({
         from: 'Rosetas Orders <orders@rosetasbouquets.com>',
         to: ['Rosetasbouquetsde@gmail.com'], 
