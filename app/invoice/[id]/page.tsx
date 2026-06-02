@@ -216,7 +216,7 @@ export default async function InvoicePage({
                   <span className="font-medium text-slate-700">€{Number(totals.subtotal).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-500 uppercase tracking-widest text-[9px] font-bold">Shipping</span>
+                  <span className="text-slate-500 uppercase tracking-widest text-[9px] font-bold">Versand (Shipping)</span>
                   <span className="font-medium text-slate-700">€{Number(totals.shipping).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t border-white pt-2 mt-1">

@@ -188,6 +188,7 @@ export async function POST(request: Request) {
           total: finalTotal,
           items: cart,
           status: 'pending',
+          shipping_fee: finalShippingCost, // 🚀 Wire up column mapping right here
           shipping_method: isExpress ? "Express" : "Standard",
           tip_amount: safeTip, donation_amount: safeDonation,
           discount_amount: discountAmt, discount_code: discountCode || null,

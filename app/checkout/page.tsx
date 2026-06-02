@@ -487,6 +487,7 @@ export default function CheckoutPage() {
             isExpress: isExpress,
             packagingType: packagingType,
             tipAmount: tipAmount,
+            shippingCost: shippingCost, // 🚀 Add this line to send the shipping price to the backend
             donationAmount: donationAmount,
             giftMessage: giftNote // 🎁 NEW: Pass the checkout gift message to the server
         }),
