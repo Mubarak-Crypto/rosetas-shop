@@ -7,6 +7,7 @@ import Stripe from 'stripe';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js'; // ✅ Added Supabase Import
 import { createInvoiceSnapshot, processAndStorePDF } from "@/lib/invoice-logic"; // ✨ NEW: Invoice Logic Imports
+import crypto from 'crypto';
 
 // 1. Initialize Stripe, Resend, and Supabase
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -276,15 +277,21 @@ export async function POST(req: Request) {
 
                   <div style="margin-bottom: 30px;">
                     <h4 style="text-align: left; text-transform: uppercase; font-size: 10px; color: #999;">Your Selection:</h4>
-                    ${orderItems.map((item: any) => `
-                      <div class="item-row">
-                        <span class="item-name">${item.quantity}x ${item.name}</span><br/>
-                        <span class="item-meta">
-                          ${Object.values(item.options || {}).join(", ")}
-                          ${item.extras && item.extras.length > 0 ? ` • ${item.extras.join(", ")}` : ''}
-                        </span>
-                      </div>
-                    `).join('')}
+                    ${orderItems.map((item: any) => {
+                      const pId = item.id || item.productId || "";
+                      const reviewSig = crypto.createHmac("sha256", process.env.INVOICE_SECRET_TOKEN || "").update(`${orderId}-${pId}`).digest("hex");
+                      const reviewUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.rosetasbouquets.com'}/product/${pId}?reviewOrderId=${orderId}&sig=${reviewSig}`;
+                      return `
+                        <div class="item-row">
+                          <span class="item-name">${item.quantity}x ${item.name}</span><br/>
+                          <span class="item-meta">
+                            ${Object.values(item.options || {}).join(", ")}
+                            ${item.extras && item.extras.length > 0 ? ` • ${item.extras.join(", ")}` : ''}
+                          </span>
+                          <br/><a href="${reviewUrl}" style="display: inline-block; margin-top: 10px; padding: 6px 12px; background-color: #ffffff; color: #1F1F1F; border: 1px solid #1F1F1F; text-decoration: none; font-size: 10px; font-weight: bold; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em;">⭐️ Leave a Review</a>
+                        </div>
+                      `;
+                    }).join('')}
                   </div>
                   
                   <div style="margin-top: 20px;">

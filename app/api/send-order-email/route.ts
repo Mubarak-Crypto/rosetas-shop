@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import crypto from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -14,12 +15,17 @@ export async function POST(request: Request) {
       const optionsStr = item.options ? Object.values(item.options).join(", ") : "";
       const extrasStr = item.extras && item.extras.length > 0 ? ` [EXTRAS: ${item.extras.join(", ")}]` : "";
       const ribbonStr = item.customText ? ` <br/>🎀 RIBBON: "${item.customText}"` : "";
+      const productId = item.id || item.productId || "";
+      const secret = process.env.INVOICE_SECRET_TOKEN || "";
+      const reviewSig = crypto.createHmac("sha256", secret).update(`${orderNumber || 'PENDING'}-${productId}`).digest("hex");
+      const reviewUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.rosetasbouquets.com'}/product/${productId}?reviewOrderId=${orderNumber || 'PENDING'}&sig=${reviewSig}`;
       
       return `
         <div style="margin-bottom: 10px; padding: 10px; border-left: 4px solid #C9A24D; background: #fafafa;">
           <strong>${item.quantity}x ${item.name}</strong><br/>
           <small style="color: #666;">Options: ${optionsStr}${extrasStr}</small>
           ${ribbonStr}
+          <br/><a href="${reviewUrl}" style="display: inline-block; margin-top: 10px; padding: 6px 12px; background-color: #000000; color: #ffffff; text-decoration: none; font-size: 11px; font-weight: bold; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em;">⭐️ Leave a Review</a>
         </div>
       `;
     }).join("");

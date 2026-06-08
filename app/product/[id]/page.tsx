@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { supabase } from "../../../lib/supabase"; 
 import ProductClient from "../../../components/ProductClient"; 
-
+import crypto from "crypto";
 // ✨ SPEED BOOST: Enable ISR (Incremental Static Regeneration)
 // This caches the specific product page for 60 seconds so it loads instantly.
 export const revalidate = 60;
@@ -24,11 +24,11 @@ export async function generateMetadata(props: { params: Promise<{ id: string }> 
 }
 
 // 2. The Server Component
-export default async function ProductPage(props: { params: Promise<{ id: string }> }) {
+export default async function ProductPage(props: { params: Promise<{ id: string }>; searchParams: Promise<{ reviewOrderId?: string; sig?: string }> }) {
   
   // ⚠️ CRITICAL FIX: Await the params before using them
-  const params = await props.params;
-  const { id } = params;
+  const params = await props.params; const sParams = await props.searchParams; const { id } = params;
+  const canReview = !!sParams?.sig && sParams.sig === crypto.createHmac("sha256", process.env.INVOICE_SECRET_TOKEN || "").update(`${sParams.reviewOrderId || ""}-${id}`).digest("hex");
 
   console.log("🔍 Attempting to fetch product with ID:", id); 
 
@@ -69,6 +69,7 @@ export default async function ProductPage(props: { params: Promise<{ id: string 
       initialProduct={product} 
       initialSettings={settings} 
       initialReviews={reviews || []} 
+      canLeaveReview={canReview}
     />
   );
 }

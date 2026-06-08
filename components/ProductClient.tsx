@@ -17,9 +17,10 @@ interface ProductClientProps {
   initialProduct: any;
   initialSettings: any;
   initialReviews: any[];
+  canLeaveReview?: boolean;
 }
 
-export default function ProductClient({ initialProduct, initialSettings, initialReviews }: ProductClientProps) {
+export default function ProductClient({ initialProduct, initialSettings, initialReviews, canLeaveReview }: ProductClientProps) {
   const params = useParams();
   const searchParams = useSearchParams(); 
   const { addToCart, setIsCartOpen } = useCart();
@@ -31,7 +32,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const reviewSectionRef = useRef<HTMLElement>(null);
 
   // ✨ UPDATED: Logic to verify buyer OR if they clicked "Review Now" from success page
-  const isVerifiedBuyer = searchParams.get('verify') === 'true' || searchParams.get('action') === 'write_review';
+  const isVerifiedBuyer = searchParams.get('verify') === 'true' || searchParams.get('action') === 'write_review' || !!canLeaveReview;
 
   // Initialize state with data passed from Server
   const [product, setProduct] = useState<any>(initialProduct);
@@ -87,13 +88,13 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
   // ✨ NEW: Auto-scroll to reviews if action=write_review is in URL
   useEffect(() => {
-    if (searchParams.get('action') === 'write_review') {
+    if (searchParams.get('action') === 'write_review' || canLeaveReview) {
         // Short timeout to ensure DOM is ready
         setTimeout(() => {
             reviewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 800);
     }
-  }, [searchParams]);
+  }, [searchParams, canLeaveReview]);
 
   // ✨ NEW: Handle Review Image Upload
   const handleReviewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -450,7 +451,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const originalUnitPrice = calculateOriginalUnitTotal();
   const totalPrice = unitPrice * quantity;
   const originalTotalPrice = originalUnitPrice * quantity;
-  const isOnSale = unitPrice < originalUnitPrice; 
+  const opacitySale = unitPrice < originalUnitPrice; 
   const currentVariantStock = getSelectedVariantStock(); 
   const allOptionsSelected = product.variants ? product.variants.every((v: any) => selectedOptions[v.name]) : true;
 
@@ -543,7 +544,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 className="relative aspect-[4/5] w-full bg-white rounded-[3rem] shadow-[0_20px_50px_rgba(255,255,255,0.8),0_0_20px_rgba(201,162,77,0.1)] border border-white flex items-center justify-center overflow-hidden group"
             >
                 <div className="absolute top-6 left-6 z-20 flex flex-col gap-2">
-                    {isOnSale && (
+                    {opacitySale && (
                         <div className="bg-red-600 text-white text-xs font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
                             <Tag size={12} fill="white" /> SALE
                         </div>
@@ -668,12 +669,12 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 
                 <div className="flex items-end gap-4">
                 <div className="flex flex-col">
-                    {isOnSale && (
+                    {opacitySale && (
                         <span className="text-lg text-red-400 font-bold line-through decoration-2 opacity-60">
                             €{originalTotalPrice.toFixed(2)}
                         </span>
                     )}
-                    <span className={`text-3xl font-bold ${isOnSale ? "text-red-600" : "text-[#1F1F1F]"}`}>
+                    <span className={`text-3xl font-bold ${opacitySale ? "text-red-600" : "text-[#1F1F1F]"}`}>
                         €{totalPrice.toFixed(2)}
                     </span>
                 </div>
@@ -699,7 +700,6 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                     {language === 'EN' && product.description_en ? product.description_en : product.description}
                 </p>
 
-                {/* ✨ NEW: CARE & SAFETY REVEAL SECTION */}
                 {hasSafetyInstructions && (
                     <div className="pt-2">
                         <button 
@@ -886,7 +886,6 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
                                             return (
                                                 <button
-                                                    key={v}
                                                     onClick={() => selectExtraVariant(extra, v)} 
                                                     className={`text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all ${
                                                         isVariantActive 
@@ -1041,7 +1040,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 {/* Quantity and Add to Cart Section */}
                 <div className="flex items-center bg-white rounded-full border border-black/5 px-4 py-3 w-fit shadow-sm">
                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:text-[#D4C29A] text-gray-300 transition-colors"><Minus size={18} /></button>
-                <span className="w-12 text-center font-bold text-[#1F1F1F]">{quantity}</span>
+                <span className="w-12 text-center font-bold text-[#1F1F1F]">    {quantity}</span>
                 <button 
                     onClick={() => setQuantity(Math.min(currentVariantStock, quantity + 1))} 
                     disabled={quantity >= currentVariantStock}
