@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"; // ✨ Added Viewport Type
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "../context/AuthContext"; // ✨ NEW: Import Auth Provider for Phase 2 Account System
 import { CartProvider } from "../context/CartContext";
 import { LanguageProvider } from "../context/LanguageContext"; // ✨ Added Language Import
 import { WishlistProvider } from "../context/WishlistContext"; // ✨ NEW: Import Wishlist Provider
@@ -197,37 +198,40 @@ export default function RootLayout({
     <html lang="en">
       {/* ✨ Added overflow-x-hidden to body to prevent messy horizontal scrolling on phones */}
       <body className={`${inter.className} antialiased overflow-x-hidden w-full min-h-screen relative`}>
-        {/* ✨ Wrapped with LanguageProvider to enable DE/EN switching */}
-        <LanguageProvider>
-          {/* ✨ Re-ordered CartProvider to ensure it wraps correctly */}
-          <CartProvider>
-            {/* ✨ NEW: Wrapped with WishlistProvider for Saved Items */}
-            <WishlistProvider>
-              
-              {/* ✨ NEW: Ramadan Banner (Always Top) */}
-              <RamadanBanner />
+        {/* ✨ NEW: Wrapped with AuthProvider to manage user accounts, sessions, and guest conversion sync */}
+        <AuthProvider>
+          {/* ✨ Wrapped with LanguageProvider to enable DE/EN switching */}
+          <LanguageProvider>
+            {/* ✨ Re-ordered CartProvider to ensure it wraps correctly */}
+            <CartProvider>
+              {/* ✨ NEW: Wrapped with WishlistProvider for Saved Items */}
+              <WishlistProvider>
+                
+                {/* ✨ NEW: Ramadan Banner (Always Top) */}
+                <RamadanBanner />
 
-              {/* ✨ NEW: Vacation Banner (Shows only if active) */}
-              <VacationBanner />
+                {/* ✨ NEW: Vacation Banner (Shows only if active) */}
+                <VacationBanner />
 
-              {/* ✨ NEW: Exit Intent Popup (Triggers on leave) */}
-              <ExitIntentPopup />
+                {/* ✨ NEW: Exit Intent Popup (Triggers on leave) */}
+                <ExitIntentPopup />
 
-              {/* 1. The Main Content of the page */}
-              {children}
+                {/* 1. The Main Content of the page */}
+                {children}
 
-              {/* 2. The Slide-out Cart (Hidden until clicked) */}
-              <CartSidebar /> 
+                {/* 2. The Slide-out Cart (Hidden until clicked) */}
+                <CartSidebar /> 
 
-              {/* 3. The Footer (Now visible at the bottom) */}
-              <Footer /> 
+                {/* 3. The Footer (Now visible at the bottom) */}
+                <Footer /> 
 
-              {/* ✨ NEW: Cookie Consent Banner (Overlay at bottom) */}
-              <CookieConsent />
+                {/* ✨ NEW: Cookie Consent Banner (Overlay at bottom) */}
+                <CookieConsent />
 
-            </WishlistProvider>
-          </CartProvider>
-        </LanguageProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </LanguageProvider>
+        </AuthProvider>
 
         {/* 💬 Rosetta's Tidio Live Chat Widget */}
         <Script 

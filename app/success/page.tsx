@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 // ✨ UPDATED: Added Loader2 to imports to fix the red line
 import { CheckCircle, ArrowRight, Star, Hash, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useAuth } from "../../context/AuthContext"; // ✨ Added Auth Import
 import { useCart } from "../../context/CartContext";
 import { useLanguage } from "../../context/LanguageContext"; // ✨ Added Language Import
 import { motion } from "framer-motion";
@@ -11,6 +12,7 @@ import { supabase } from "../../lib/supabase"; // ✨ Need Supabase for stock up
 import { useSearchParams } from "next/navigation";
 
 function SuccessContent() {
+  const { user } = useAuth(); // ✨ Access User Auth
   const { clearCart, cart } = useCart(); // ✨ Added cart to reference last items
   const { t, language } = useLanguage(); // ✨ Access translation function
   const searchParams = useSearchParams();
@@ -23,8 +25,14 @@ function SuccessContent() {
     // Capture items and handle stock deduction
     if (cart.length > 0) {
       setPurchasedItems([...cart]);
+      sessionStorage.setItem("rosetas_last_purchase", JSON.stringify(cart)); // Save to storage so refresh doesn't hide reviews
       updateStockDatabase([...cart]); // ✨ Trigger Stock Deduction
       clearCart();
+    } else {
+      const savedItems = sessionStorage.getItem("rosetas_last_purchase");
+      if (savedItems) {
+        setPurchasedItems(JSON.parse(savedItems)); // Restore items list on page reloads
+      }
     }
   }, []);
 
@@ -157,6 +165,33 @@ function SuccessContent() {
       <p className="text-[#1F1F1F]/60 max-w-md mb-8 text-lg font-medium">
         {t('success_message')}
       </p>
+
+      {/* ✨ NEW: Dynamic Guest/Member Status Controller */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-white p-6 rounded-[2rem] border border-black/5 shadow-xl mb-8 w-full max-w-lg text-center">
+        <h3 className="text-lg font-bold mb-2 text-[#1F1F1F]">
+          {user 
+            ? (language === 'EN' ? "🚀 Track your order live!" : "🚀 Verfolge deine Bestellung live!")
+            : (language === 'EN' ? "🎁 Track Handcrafting in Real Time!" : "🎁 Handarbeit in Echtzeit verfolgen!")
+          }
+        </h3>
+        <p className="text-sm text-[#1F1F1F]/60 max-w-sm mx-auto mb-5 leading-relaxed">
+          {user 
+            ? (language === 'EN' ? "Your order is in the vault. Check the live dashboard status now." : "Deine Bestellung ist in deinem Profil. Überprüfe jetzt den Live-Status.")
+            : (language === 'EN' ? "Want to track your order status live? Create a free account to unlock your live member dashboard!" : "Möchtest du deinen Bestellstatus live verfolgen? Erstelle ein kostenloses Konto, um dein Live-Mitglieder-Dashboard freizuschalten!")
+          }
+        </p>
+        <Link href={user ? "/dashboard" : `/signup?orderRef=${orderId || ""}`}>
+          <button className="inline-flex items-center justify-center gap-2 bg-[#C9A24D] hover:bg-[#1F1F1F] text-white text-xs font-bold tracking-wider uppercase px-6 py-4 rounded-xl shadow-lg transition-all duration-300 w-full max-w-xs mx-auto text-center">
+            <span className="!text-white font-bold" style={{ color: 'white', opacity: 1 }}>
+              {user 
+                ? (language === 'EN' ? "Go to Dashboard" : "Zum Dashboard")
+                : (language === 'EN' ? "Create Free Account" : "Konto Erstellen")
+              }
+            </span>
+            <ArrowRight size={14} className="text-white" style={{ color: 'white' }} />
+          </button>
+        </Link>
+      </motion.div>
 
       {/* ✨ NEW: Verified Review Invitation Section */}
       {purchasedItems.length > 0 && (

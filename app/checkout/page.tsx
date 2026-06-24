@@ -12,6 +12,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { supabase } from "../../lib/supabase"; 
 import AutoComplete from "react-google-autocomplete"; 
+import { useAuth } from "../../context/AuthContext"; // ✨ Added secure hook reference context line
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -178,8 +179,15 @@ function PaymentForm({
 }
 
 export default function CheckoutPage() {
+  const { user, profile } = useAuth(); // ✨ Map secure user states safely
   const { cart, cartTotal } = useCart();
   const { t, language } = useLanguage(); 
+
+  // ✨ UPDATED: Moved formData state up here to prevent out-of-order block reference bugs
+  const [formData, setFormData] = useState({
+    email: "", firstName: "", lastName: "", address: "", houseNumber: "", city: "", zip: "", phone: "", country: "Germany"
+  });
+
   const [step, setStep] = useState(1);
   const [clientSecret, setClientSecret] = useState("");
   const [serverBrandedId, setServerBrandedId] = useState(""); // ✨ NEW
@@ -216,6 +224,18 @@ export default function CheckoutPage() {
   const [promoError, setPromoError] = useState("");
   const [isCheckingCode, setIsCheckingCode] = useState(false);
 
+  // Autocomplete boundary configuration lists to link country codes to active dropdown selections
+  const countryCodeMapping: Record<string, string> = { "Germany": "de", "Austria": "at", "Switzerland": "ch", "France": "fr", "Belgium": "be" };
+
+  // Verification hooks inspecting regional postal requirements to screen formats instantly
+  const isZipFormatValid = useMemo(() => {
+    if (!formData.zip) return true;
+    const cleanZip = formData.zip.trim();
+    if (formData.country === "Germany" || formData.country === "Austria") return /^\d{5}$/.test(cleanZip);
+    if (formData.country === "Switzerland") return /^\d{4}$/.test(cleanZip);
+    return cleanZip.length >= 3;
+  }, [formData.zip, formData.country]);
+
   // ✨ FIX: SCROLL RESET LOGIC
   // This forces the page to scroll to the top whenever the 'step' changes.
   useEffect(() => {
@@ -245,10 +265,24 @@ export default function CheckoutPage() {
       fetchSettings();
   }, []);
 
-  // ✨ UPDATED: Added 'houseNumber' to state
-  const [formData, setFormData] = useState({
-    email: "", firstName: "", lastName: "", address: "", houseNumber: "", city: "", zip: "", phone: "", country: "Germany"
-  });
+  // ✨ NEW: Listen for user session logs and dynamically pre-populate billing fields safely
+// ✨ UPDATED: Pull explicit first/last name columns instead of splitting full_name
+  useEffect(() => {
+    if (user && profile) {
+      setFormData((prev) => ({
+        ...prev,
+        email: user.email || prev.email,
+        firstName: profile.first_name || prev.firstName, // Uses dedicated column
+        lastName: profile.last_name || prev.lastName,    // Uses dedicated column
+        address: profile.shipping_street || prev.address,
+        houseNumber: profile.shipping_house_number || prev.houseNumber, // Added missing field
+        city: profile.shipping_city || prev.city,
+        zip: profile.shipping_postal_code || prev.zip,
+        phone: profile.phone_number || prev.phone,
+        country: profile.shipping_country || prev.country
+      }));
+    }
+  }, [user, profile]);
 
   // ✨ UPDATED: Shipping Calculation Logic
   const { shippingCost, needs20kg, standardCost, expressCost, boxCount } = useMemo(() => {
@@ -420,7 +454,7 @@ export default function CheckoutPage() {
 
   // ✨ UPDATED: Added 'vacationValid' check and 'houseNumber' check
   const canProceed = useMemo(() => {
-    const hasAddress = formData.email && formData.phone && formData.address && formData.houseNumber && formData.city && formData.zip;
+    const hasAddress = formData.email && formData.phone && formData.address && formData.houseNumber && formData.city && formData.zip && isZipFormatValid;
     const policyValid = agreedToPolicy;
     const customsValid = isNonEU ? agreedToCustoms : true;
     const withdrawalValid = (!isNonEU && hasPersonalization) ? agreedToWithdrawal : true; 
@@ -434,7 +468,7 @@ export default function CheckoutPage() {
     if (isBlacklisted) return false;
 
     return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid && vacationValid;
-  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation, vacationSettings.isActive, agreedToVacation]);
+  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation, vacationSettings.isActive, agreedToVacation, isZipFormatValid]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -452,6 +486,11 @@ export default function CheckoutPage() {
       // ✨ CHECK HOUSE NUMBER
       if (!formData.houseNumber.trim()) {
         alert(language === 'EN' ? "Please enter your house number." : "Bitte geben Sie Ihre Hausnummer ein.");
+        return;
+      }
+
+      if (!isZipFormatValid) {
+        alert(language === 'EN' ? "The postal code does not match regional requirements." : "Die Postleitzahl ist für die gewählte Region fehlerhaft.");
         return;
       }
 
@@ -584,7 +623,7 @@ export default function CheckoutPage() {
                         </div>
                     </div>
 
-                    {/* ✨ PHASE 2: DHL Express Delay Warning Notice */}
+                    {/* ✨ FINAL LEVEL STAGING: DHL Express Delay Warning Notice */}
                     <AnimatePresence>
                       {isExpress && (
                         <motion.div 
@@ -610,7 +649,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
                 
-                <div className="grid grid-cols-2 gap-4"><input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
+                <div className="grid grid-cols-2 gap-4"><input required type="text" name="firstName" placeholder={`${t('checkout_first_name')} *`} value={formData.firstName} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="lastName" placeholder={`${t('checkout_last_name')} *`} value={formData.lastName} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
                 
                 {/* ✨ SPLIT ADDRESS FIELDS (70% Street / 30% House Number) */}
                 <div className="flex gap-4">
@@ -621,12 +660,17 @@ export default function CheckoutPage() {
                         const addressComponents = place.address_components; 
                         const city = addressComponents.find((c: any) => c.types.includes("locality"))?.long_name || ""; 
                         const zip = addressComponents.find((c: any) => c.types.includes("postal_code"))?.long_name || ""; 
-                        
-                        // ✨ SMART LOGIC: Extract street and number separately
+                        const selectedCountry = addressComponents.find((c: any) => c.types.includes("country"))?.long_name || "";
+
+                        if (selectedCountry && selectedCountry.toLowerCase() !== formData.country.toLowerCase()) {
+                          alert(language === 'EN' 
+                            ? `Address mismatch. You selected an address in ${selectedCountry} but shipping is set to ${formData.country}.`
+                            : `Adressen-Fehlpassung. Sie haben eine Adresse in ${selectedCountry} gewählt, aber der Versand ist auf ${formData.country} eingestellt.`);
+                          return;
+                        }
+
                         const street = addressComponents.find((c: any) => c.types.includes("route"))?.long_name || "";
                         const number = addressComponents.find((c: any) => c.types.includes("street_number"))?.long_name || "";
-                        
-                        // If Google gives us the street, use it. If not, use the full formatted string but try to remove the city/zip.
                         const finalStreet = street || place.formatted_address.split(',')[0];
 
                         setFormData({ 
@@ -637,7 +681,11 @@ export default function CheckoutPage() {
                           zip 
                         }); 
                       }} 
-                      options={{ types: ["address"], fields: ["formatted_address", "address_components"] }} 
+                      options={{ 
+                        types: ["address"], 
+                        fields: ["formatted_address", "address_components"],
+                        restrictions: { country: countryCodeMapping[formData.country] || [] }
+                      }} 
                       className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none text-[#1F1F1F]" 
                       placeholder={`${t('checkout_street')} *`} 
                       // ✨ FORCE VALUE to match state
@@ -658,7 +706,15 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4"><input required type="text" name="city" placeholder={`${t('checkout_city')} *`} value={formData.city} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /><input required type="text" name="zip" placeholder={`${t('checkout_zip')} *`} value={formData.zip} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" /></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <input required type="text" name="city" placeholder={`${t('checkout_city')} *`} value={formData.city} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl p-4 focus:border-[#C9A24D] outline-none" />
+                  <div className="relative">
+                    <input required type="text" name="zip" placeholder={`${t('checkout_zip')} *`} value={formData.zip} onChange={handleChange} className={`w-full bg-white/50 border rounded-xl p-4 outline-none transition-colors ${!isZipFormatValid && formData.zip ? 'border-red-500 focus:border-red-500' : 'border-black/10 focus:border-[#C9A24D]'}`} />
+                    {!isZipFormatValid && formData.zip && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 text-[10px] font-black uppercase tracking-tighter">Format Error</span>
+                    )}
+                  </div>
+                </div>
                 
                 {/* PACKAGING OPTIONS */}
                 <div className="space-y-4 pt-6 border-t border-black/10">
@@ -671,7 +727,7 @@ export default function CheckoutPage() {
 
                 {/* LEGAL CHECKBOXES */}
                 {hasPersonalization && !isNonEU && (<div className="space-y-4 mt-6 animate-in slide-in-from-top-2"><div className="p-4 bg-gray-50 border border-black/5 rounded-xl space-y-2"><p className="text-[11px] text-[#1F1F1F]/80 leading-relaxed italic">{language === 'EN' ? "This product is personalized and is made specifically according to your individual specifications. Therefore, there is no right of withdrawal in accordance with EU consumer law." : "Dieses Produkt wird individuell nach Ihren persönlichen Angaben angefertigt. Daher besteht gemäß EU-Verbraucherrecht kein Widerrufsrecht."}</p></div><div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl"><input required type="checkbox" id="withdrawalPolicy" checked={agreedToWithdrawal} onChange={(e) => setAgreedToWithdrawal(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="withdrawalPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I acknowledge that the right of withdrawal does not apply to personalized items." : "Ich nehme zur Kenntnis, dass das Widerrufsrecht für personalisierte Artikel ausgeschlossen ist."} *</label></div></div>)}
-                {isNonEU && (<div className="space-y-4 mt-6 animate-in slide-in-from-top-2"><div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800"><AlertCircle size={20} className="flex-shrink-0" /><div className="text-xs leading-relaxed"><p className="font-bold mb-1">{language === 'EN' ? "Important: Customs & Duties" : "Wichtig: Zoll & Steuern"}</p><p>{language === 'EN' ? "Shipments to countries outside the EU may be subject to import duties and taxes. These costs are the responsibility of the recipient." : "Lieferungen in Länder außerhalb der EU können Einfuhrzöllen und Steuern unterliegen. Diese Kosten sind vom Empfänger zu tragen."}</p></div></div><div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl"><input required type="checkbox" id="customsAgreement" checked={agreedToCustoms} onChange={(e) => setAgreedToCustoms(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="customsAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I understand that any customs duties, taxes, or import fees that may apply are my responsibility and must be paid by me." : "Ich verstehe, dass anfallende Zollgebühren, Steuern oder Einfuhrabgaben in meiner Verantwortung liegen und von mir bezahlt werden müssen."} *</label></div></div>)}
+                {isNonEU && (<div className="space-y-4 mt-6 animate-in slide-in-from-top-2"><div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-800"><AlertCircle size={20} className="flex-shrink-0" /><div className="text-xs leading-relaxed"><p className="font-bold mb-1">{language === 'EN' ? "Important: Customs & Duties" : "Wichtig: Zoll & Steuern"}</p><p>{language === 'EN' ? "Shipments to countries outside the EU may be subject to import duties and taxes. These costs are the responsibility of the recipient." : "Lieferungen in Länder außerhalb der EU können Einfuhrzöllen und Steuern unterliegen. Diese Kosten sind vom Empfänger zu tragen."}</p></div></div><div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl"><input required type="checkbox" id="customsAgreement" checked={agreedToCustoms} onChange={(e) => setAgreedToCustoms(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="customsAgreement" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I understand that any customs duties, taxes, or import fees that may apply are my responsibility and must be paid by me." : "Ich verstehe, dass anfallende Zollgebielen, Steuern oder Einfuhrabgaben in meiner Verantwortung liegen und von mir bezahlt werden müssen."} *</label></div></div>)}
                 <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl mt-4"><input required type="checkbox" id="deliveryPolicy" checked={agreedToPolicy} onChange={(e) => setAgreedToPolicy(e.target.checked)} className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" /><label htmlFor="deliveryPolicy" className="text-[11px] text-[#1F1F1F]/70 leading-relaxed cursor-pointer">{language === 'EN' ? "I agree that if delivery is unsuccessful, my parcel may be delivered to a neighbor or a nearby parcel shop. Returns to the sender are excluded. Please note: If an order is returned and needs to be resent, the shipping costs must be paid again by the customer." : "Ich stimme zu, dass mein Paket bei einem erfolglosen Zustellversuch an einen Nachbarn oder einen Paketshop geliefert werden kann. Rücksendungen sind ausgeschlossen. Bitte beachten Sie: Wenn eine Bestellung zurückgesendet wird und erneut versendet werden muss, müssen die Versandkosten vom Kunden erneut bezahlt werden."} *</label></div>
                 
                 {/* Mandatory Cancellation Notice */}
@@ -796,16 +852,16 @@ export default function CheckoutPage() {
                       {isDonationActive && (
                           <div className={`transition-all duration-300 border rounded-2xl p-6 shadow-sm ${showDonation ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-black/5'}`}>
                               <div className="flex items-center justify-between cursor-pointer" onClick={() => setShowDonation(!showDonation)}>
-                                 <div className="flex items-center gap-2">
-                                     <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Droplets size={18}/></div>
-                                     <div>
-                                         <h3 className="font-bold text-sm text-[#1F1F1F]">{language === 'EN' ? "Water Well Project" : "Brunnenbau-Projekt"}</h3>
-                                         <p className="text-[10px] text-[#1F1F1F]/50 font-medium">Build a well, change lives.</p>
-                                     </div>
-                                 </div>
-                                 <div className={`w-5 h-5 rounded-full border border-black/10 flex items-center justify-center transition-all ${showDonation ? 'bg-blue-600 border-blue-600' : 'bg-white'}`}>
-                                     {showDonation && <Check size={12} className="text-white" />}
-                                 </div>
+                                  <div className="flex items-center gap-2">
+                                      <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><Droplets size={18}/></div>
+                                      <div>
+                                          <h3 className="font-bold text-sm text-[#1F1F1F]">{language === 'EN' ? "Water Well Project" : "Brunnenbau-Projekt"}</h3>
+                                          <p className="text-[10px] text-[#1F1F1F]/50 font-medium">Build a well, change lives.</p>
+                                      </div>
+                                  </div>
+                                  <div className={`w-5 h-5 rounded-full border border-black/10 flex items-center justify-center transition-all ${showDonation ? 'bg-blue-600 border-blue-600' : 'bg-white'}`}>
+                                      {showDonation && <Check size={12} className="text-white" />}
+                                  </div>
                               </div>
 
                               {showDonation && (

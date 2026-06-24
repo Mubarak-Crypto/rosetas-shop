@@ -30,7 +30,6 @@ type CartContextType = {
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   sessionId: string;
-  cartExpiry: number | null; 
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -40,7 +39,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [sessionId, setSessionId] = useState(""); 
-  const [cartExpiry, setCartExpiry] = useState<number | null>(null); 
 
   useEffect(() => {
     // 1. Session ID
@@ -56,65 +54,51 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const loadedCart = savedCartJson ? JSON.parse(savedCartJson) : [];
     if (savedCartJson) setCart(loadedCart);
 
-    // 3. ✨ Load & Check Expiry
-    // Note: Timer is kept for UI purposes but no longer locks database rows
-    const savedExpiry = localStorage.getItem("rosetas_cart_expiry");
+    // 3. ✨ Load & Check Expiry (REMOVED)
+    // Note: Timer is completely removed as requested by the client.
+    // Carts will no longer expire. We clean up old expiry data here just in case.
+    localStorage.removeItem("rosetas_cart_expiry");
     
-    if (savedExpiry) {
-        const expiryTime = parseInt(savedExpiry);
-        if (expiryTime < Date.now()) {
-            // Expired while away
-            setCart([]);
-            localStorage.removeItem("rosetas_cart");
-            localStorage.removeItem("rosetas_cart_expiry");
-            setCartExpiry(null);
-        } else {
-            setCartExpiry(expiryTime);
-        }
-    } else if (loadedCart.length > 0) {
-        // ✨ FIX: If items exist but no timer (legacy cart), start one now
-        // 🕒 UPDATE: Changed reservation from 15 mins to 1 hour
-        const newExpiry = Date.now() + 60 * 60 * 1000;
-        setCartExpiry(newExpiry);
-        localStorage.setItem("rosetas_cart_expiry", newExpiry.toString());
-    }
+    
+    
+    
+    
+    
 
     setIsLoaded(true);
   }, []);
 
-  // Save Cart & Timer
+  // Save Cart
   useEffect(() => {
     if (isLoaded) {
         localStorage.setItem("rosetas_cart", JSON.stringify(cart));
         
-        if (cart.length === 0) {
-            localStorage.removeItem("rosetas_cart_expiry");
-            setCartExpiry(null);
-        } else if (cartExpiry) {
-            localStorage.setItem("rosetas_cart_expiry", cartExpiry.toString());
-        }
+        
+        
+        
+        
     }
-  }, [cart, isLoaded, cartExpiry]);
+  }, [cart, isLoaded]);
 
   // ✨ UPDATED HELPER: Removed database insertion to prevent "Sold Out" hallucinations
   // Stock is now only deducted upon actual payment success via Stripe/Webhook
   const reserveItemInDB = async (item: CartItem, qty: number) => {
     if (item.maxStock >= 999) return;
     
-    // We still maintain the local expiry for user urgency
-    // 🕒 UPDATE: Changed reservation from 15 mins to 1 hour
-    const newExpiry = Date.now() + 60 * 60 * 1000;
-    setCartExpiry(newExpiry); 
+    // We no longer maintain the local expiry for user urgency
+    
+    
+    
     
     // DB Reservation logic removed to prevent locking stock for uncompleted orders
     // This fixes Issue #2 and #6 regarding inventory accuracy.
   };
 
   const addToCart = (newItem: CartItem) => {
-    if (cart.length === 0) {
-        // 🕒 UPDATE: Changed reservation from 15 mins to 1 hour
-        setCartExpiry(Date.now() + 60 * 60 * 1000);
-    }
+    
+    
+    
+    
 
     setCart((prev) => {
       const existing = prev.find((item) => 
@@ -174,7 +158,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = async () => {
     // Removed specific DB deletion to keep Supabase clean
     setCart([]); 
-    setCartExpiry(null); 
+    
     localStorage.removeItem("rosetas_cart"); 
     localStorage.removeItem("rosetas_cart_expiry");
   };
@@ -201,7 +185,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount, isCartOpen, setIsCartOpen, sessionId, cartExpiry }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount, isCartOpen, setIsCartOpen, sessionId }}>
       {children}
     </CartContext.Provider>
   );

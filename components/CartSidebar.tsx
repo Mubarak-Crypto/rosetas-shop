@@ -1,43 +1,16 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, AlertCircle, Truck, Check, PenTool, Clock } from "lucide-react"; 
+import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, AlertCircle, Truck, Check, PenTool } from "lucide-react"; 
 import Link from "next/link"; 
-import { useState, useEffect } from "react"; 
+import { useState } from "react"; 
 import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext"; 
 
 export default function CartSidebar() {
-  const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal, clearCart, cartExpiry } = useCart();
+  const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal, clearCart } = useCart();
   const { language, t } = useLanguage(); 
   
-  const [timeLeft, setTimeLeft] = useState("");
-
-  useEffect(() => {
-    if (!cartExpiry || cart.length === 0) {
-        setTimeLeft("");
-        return;
-    }
-
-    const interval = setInterval(() => {
-        const now = Date.now();
-        const diff = cartExpiry - now;
-
-        if (diff <= 0) {
-            clearInterval(interval);
-            clearCart(); 
-            setIsCartOpen(false);
-            alert(language === 'EN' ? "Your reservation has expired." : "Ihre Reservierung ist abgelaufen.");
-        } else {
-            const minutes = Math.floor(diff / 60000);
-            const seconds = Math.floor((diff % 60000) / 1000);
-            setTimeLeft(`${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
-        }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [cartExpiry, cart.length, clearCart, setIsCartOpen, language]);
-
   // ✨ Logic for Supplies Minimum Order (€80) - Kept this!
   const suppliesSubtotal = cart
     .filter(item => item.category === 'supplies' || item.category === 'Floristenbedarf')
@@ -87,17 +60,6 @@ export default function CartSidebar() {
                 <X size={20} />
               </button>
             </div>
-
-            {/* ✨ RESERVATION TIMER BANNER (Soft Beige & Black) */}
-            {cart.length > 0 && timeLeft && (
-                <div className="bg-[#EAE0D5] text-[#1F1F1F] text-xs font-bold text-center py-3 px-4 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 border-b border-[#1F1F1F]/5">
-                    <Clock size={14} className="text-[#1F1F1F]/60" />
-                    <span>
-                        {language === 'EN' ? "Items reserved for:" : "Artikel reserviert für:"} 
-                        <span className="text-[#1F1F1F] ml-1 font-mono text-sm">{timeLeft}</span>
-                    </span>
-                </div>
-            )}
 
             {/* 🗑️ REMOVED: Free Shipping Progress Bar (Green Bar) is gone as requested */}
 

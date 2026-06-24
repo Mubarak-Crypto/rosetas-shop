@@ -10,8 +10,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabase"; 
 import SmartSearch from "./SmartSearch"; 
 import { usePathname } from "next/navigation"; 
+import { useAuth } from "../context/AuthContext"; // ✨ Added Auth Context hook to verify states
 
 export default function Navbar() {
+  const { user } = useAuth(); // ✨ Pull user status nodes to handle dynamic re-rendering
   const { setIsCartOpen, cartCount } = useCart();
   // ✨ UPDATED: Added getCategoryName for dynamic translations
   const { language, setLanguage, t, getCategoryName } = useLanguage(); 
@@ -182,9 +184,9 @@ export default function Navbar() {
             </button>
           </div>
 
-          <Link href="/admin/login" className="hidden lg:block">
+          <Link href={user ? "/dashboard" : "/login"} className="hidden lg:block">
             <button className="px-3 py-2 text-sm text-[#1F1F1F]/40 hover:text-[#1F1F1F] transition-colors font-bold uppercase tracking-tighter">
-              {t('admin_login')}
+              {user ? (language === "EN" ? "Dashboard" : "Dashboard") : (language === "EN" ? "Log In" : "Einloggen")}
             </button>
           </Link>
 

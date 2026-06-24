@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink, Gift } from "lucide-react"; 
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink, Gift, Save } from "lucide-react"; 
 import Link from "next/link"; // ✨ Added Link for clickable products
 
 export default function AdminOrdersPage() {
@@ -118,11 +118,28 @@ export default function AdminOrdersPage() {
     }
   };
 
+  // ✨ NEW: Inline status and estimated delivery time-frame update handler
+  const handleInlineUpdate = async (orderId: number, currentStatus: string, currentDelivery: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: currentStatus, estimated_delivery: currentDelivery })
+        .eq('id', orderId);
+
+      if (error) throw error;
+      alert(`Order #ROSETAS-${String(orderId).padStart(5, '0')} specifications successfully updated!`);
+      fetchOrders();
+    } catch (err) {
+      console.error("Inline save error:", err);
+      alert("Error logging state update configuration parameters.");
+    }
+  };
+
   const displayedOrders = orders.filter(order => {
     // 1. FILTER BY STATUS (Pending vs Shipped)
     const matchesTab = activeTab === 'paid' 
-      ? (order.status === 'paid' || order.status === 'pending')
-      : (order.status === 'shipped' || order.status === 'completed');
+      ? (order.status === 'paid' || order.status === 'pending' || order.status === 'handcrafting')
+      : (order.status === 'shipped' || order.status === 'completed' || order.status === 'delivered');
 
     // 2. FILTER BY CATEGORY (All vs Bouquets vs Supplies)
     let matchesCategory = true;
@@ -169,7 +186,7 @@ export default function AdminOrdersPage() {
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans selection:bg-[#C9A24D] selection:text-white">
-     
+      
 
       <main className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-8 pb-20">
@@ -294,15 +311,32 @@ export default function AdminOrdersPage() {
                     {/* ORDER HEADER */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-black/5 pb-4">
                       <div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                             <h3 className="text-xl font-bold text-[#1F1F1F]">{order.customer_name}</h3>
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tight border ${
-                              order.status === 'paid' ? 'bg-green-50 text-green-700 border-green-100' :
-                              order.status === 'shipped' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                              'bg-yellow-50 text-yellow-700 border-yellow-100'
-                            }`}>
-                              {order.status}
-                            </span>
+                            <select 
+                              value={order.status || 'paid'} 
+                              onChange={(e) => handleInlineUpdate(order.id, e.target.value, order.estimated_delivery || '10-14 Business Days')}
+                              className="bg-[#F6EFE6]/60 border border-black/5 rounded-xl py-1 px-3 text-xs font-black uppercase tracking-tight focus:outline-none focus:border-[#C9A24D] cursor-pointer"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="paid">Paid</option>
+                              <option value="handcrafting">Handcrafting</option>
+                              <option value="shipped">Shipped</option>
+                              <option value="delivered">Delivered</option>
+                            </select>
+                            
+                            <select
+                              value={order.estimated_delivery || '10-14 Business Days'}
+                              onChange={(e) => handleInlineUpdate(order.id, order.status || 'paid', e.target.value)}
+                              className="bg-[#F6EFE6]/60 border border-black/5 rounded-xl py-1 px-3 text-xs font-bold focus:outline-none focus:border-[#C9A24D] cursor-pointer"
+                            >
+                              <option value="14 Business Days">14 Business Days</option>
+                              <option value="10 Business Days">10 Business Days</option>
+                              <option value="10-14 Business Days">10-14 Business Days</option>
+                              <option value="5-7 Business Days">5-7 Business Days</option>
+                              <option value="3-5 Business Days">3-5 Business Days</option>
+                            </select>
+
                             {order.shipping_method === 'Express' && (
                               <span className="bg-[#1F1F1F] text-[#C9A24D] px-2 py-1 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 animate-pulse">
                                 <Zap size={10} fill="#C9A24D" /> Priority
@@ -332,7 +366,7 @@ export default function AdminOrdersPage() {
                             <span className="text-2xl font-bold text-[#C9A24D]">€{total.toFixed(2)}</span>
                         </div>
                         
-                        {(order.status === 'paid' || order.status === 'pending') ? (
+                        {(order.status === 'paid' || order.status === 'pending' || order.status === 'handcrafting') ? (
                           <button 
                             onClick={() => setShippingModal({ open: true, orderId: order.id })}
                             className="bg-[#1F1F1F] text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#C9A24D] transition-all flex items-center gap-2 shadow-lg group-hover:scale-105"
@@ -342,7 +376,7 @@ export default function AdminOrdersPage() {
                         ) : (
                           <div className="text-right">
                             <div className="flex items-center gap-2 text-blue-700 font-black text-[10px] uppercase tracking-widest bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 mb-1">
-                              <CheckCircle size={14} /> Shipped via {order.carrier}
+                              <CheckCircle size={14} /> Shipped via {order.carrier || "DHL"}
                             </div>
                             <div className="text-[10px] text-[#1F1F1F]/30 font-mono tracking-wider font-bold">
                               TRK: {order.tracking_number}
