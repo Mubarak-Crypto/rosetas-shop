@@ -4,13 +4,13 @@ import { useState, Suspense } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { useSearchParams, useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import { ArrowRight, Lock, Mail, User, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion"; // Added Framer Motion for premium entrance animations
 
 // Initialize local browser client configuration safely
-const supabase = createClient(
+const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );

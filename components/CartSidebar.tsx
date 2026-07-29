@@ -8,7 +8,8 @@ import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext"; 
 
 export default function CartSidebar() {
-  const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal, clearCart } = useCart();
+  // ✨ ADDED: Destructured cartValidationErrors from the context
+  const { cart, isCartOpen, setIsCartOpen, removeFromCart, updateQuantity, cartTotal, clearCart, cartValidationErrors } = useCart();
   const { language, t } = useLanguage(); 
   
   // ✨ Logic for Supplies Minimum Order (€80) - Kept this!
@@ -21,6 +22,10 @@ export default function CartSidebar() {
   
   // Only calculate missing amount for the error message
   const missingAmount = Math.max(0, MIN_SUPPLIES_VALUE - suppliesSubtotal);
+
+  // ✨ ADDED: Evaluate if ANY gatekeeper errors exist to completely block checkout
+  const hasValidationErrors = cartValidationErrors && cartValidationErrors.length > 0;
+  const isCheckoutBlocked = isSuppliesBelowMinimum || hasValidationErrors;
 
   return (
     <AnimatePresence>
@@ -178,6 +183,25 @@ export default function CartSidebar() {
                   </div>
                 )}
 
+                {/* ✨ NEW: Alert for Gatekeeper Rules (Makeup Add-ons, etc.) */}
+                {hasValidationErrors && cartValidationErrors.map((error, idx) => {
+                    // Skip the duplicate supply error from context since the legacy one is beautifully styled above
+                    if (error.includes("Florist supplies") && isSuppliesBelowMinimum) return null;
+                    return (
+                        <div key={idx} className="p-4 bg-red-50 border border-red-200 rounded-xl flex gap-3 items-start animate-pulse">
+                            <AlertCircle className="text-red-500 shrink-0" size={18} />
+                            <p className="text-[11px] font-bold text-[#1F1F1F] leading-tight">
+                                {language === 'EN' 
+                                  ? error
+                                  : error.includes("Makeup items") 
+                                    ? "Make-up-Artikel sind exklusive Zusatzartikel! Bitte wählen Sie zuerst einen Blumenstrauß oder einen Korb aus." 
+                                    : error // Fallback
+                                }
+                            </p>
+                        </div>
+                    );
+                })}
+
                 <div className="flex justify-between items-center text-sm text-[#1F1F1F]/60 font-medium">
                   <span>{language === 'EN' ? "Subtotal" : "Zwischensumme"}</span>
                   <span className="text-[#1F1F1F] font-mono text-xl font-bold">€{cartTotal.toFixed(2)}</span>
@@ -186,19 +210,19 @@ export default function CartSidebar() {
                   {language === 'EN' ? "Shipping calculated at checkout." : "Versandkosten werden beim Checkout berechnet."}
                 </p>
                 
-                {/* ✨ RESTORED: Checkout Button logic (Disabled if below €80) */}
+                {/* ✨ UPDATED: Checkout Button logic (Disabled if ANY Gatekeeper rule fails) */}
                 <Link 
-                  href={isSuppliesBelowMinimum ? "#" : "/checkout"} 
+                  href={isCheckoutBlocked ? "#" : "/checkout"} 
                   onClick={(e) => {
-                    if (isSuppliesBelowMinimum) e.preventDefault();
+                    if (isCheckoutBlocked) e.preventDefault();
                     else setIsCartOpen(false);
                   }} 
-                  className={`block transition-all ${isSuppliesBelowMinimum ? 'cursor-not-allowed grayscale' : 'cursor-pointer'}`}
+                  className={`block transition-all ${isCheckoutBlocked ? 'cursor-not-allowed grayscale' : 'cursor-pointer'}`}
                 >
                   <button 
-                    disabled={isSuppliesBelowMinimum}
+                    disabled={isCheckoutBlocked}
                     className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-500 font-bold
-                      ${isSuppliesBelowMinimum 
+                      ${isCheckoutBlocked 
                         ? 'bg-gray-300 border-2 border-transparent cursor-not-allowed' 
                         : 'bg-[#add9af] border-2 border-white shadow-[0_0_20px_rgba(173,217,175,0.4)] hover:shadow-[0_0_30px_rgba(173,217,175,0.6)] hover:bg-[#9ccc9e]'
                       }`}
@@ -207,12 +231,12 @@ export default function CartSidebar() {
                         className="!text-white" 
                         style={{ color: 'white', display: 'inline-block' }}
                     >
-                        {isSuppliesBelowMinimum 
+                        {isCheckoutBlocked 
                           ? (language === 'EN' ? "Minimum Order Not Met" : "Mindestbestellwert nicht erreicht")
                           : (language === 'EN' ? "Checkout Securely" : "Sicher zur Kasse")
                         }
                     </span> 
-                    {!isSuppliesBelowMinimum && (
+                    {!isCheckoutBlocked && (
                       <ArrowRight 
                           size={18} 
                           className="!text-white" 

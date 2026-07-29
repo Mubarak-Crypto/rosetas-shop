@@ -5,7 +5,9 @@ import { createClient } from '@supabase/supabase-js';
 import { User } from '@supabase/supabase-js';
 
 // Initialize the browser-side Supabase client
-const supabase = createClient(
+// ✨ BUG FIX: We added 'export' here. This allows your dashboard/page.tsx 
+// to import this exact client so they share the same authentication token!
+export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
@@ -29,10 +31,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 1. Check active sessions on page mount
     const bootstrapAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
+      // ✨ BUG FIX: Added error handling to the local storage check
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
+      // ✨ BUG FIX: Added server-side token validation. 
+      // getSession() only checks local storage (which causes ghost sessions). 
+      // getUser() makes a network request to verify the token is actually still alive.
+      const { data: { user: verifiedUser }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !verifiedUser) {
+        console.warn("Auth token invalid or expired. Wiping stale session.");
+        await supabase.auth.signOut(); // Force clear the broken local storage
+        setUser(null);
+        setProfile(null);
+      } else {
+        setUser(verifiedUser);
+        await fetchUserProfile(verifiedUser.id);
       }
       setLoading(false);
     };
@@ -41,6 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // 2. Listen for auth changes (Sign-ins, sign-outs, token refreshes)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // ✨ BUG FIX: Explicitly intercept sign-out events to guarantee state clears.
+      // (Removed 'USER_DELETED' to fix TypeScript AuthChangeEvent strict typing error)
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       

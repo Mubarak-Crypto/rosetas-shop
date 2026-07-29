@@ -17,6 +17,9 @@ type CartItem = {
   customText?: string; 
   promoLabel?: string;
   maxStock: number; 
+  // ✨ ADDED: Product Classification Flags for Checkout Gatekeeper
+  is_addon?: boolean;
+  is_supply?: boolean;
 };
 
 type CartContextType = {
@@ -30,6 +33,8 @@ type CartContextType = {
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   sessionId: string;
+  // ✨ ADDED: To expose checkout validation to the UI
+  cartValidationErrors: string[]; 
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -39,6 +44,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [sessionId, setSessionId] = useState(""); 
+  
+  // ✨ ADDED: State to track if cart meets all rules (like the €80 threshold)
+  const [cartValidationErrors, setCartValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     // 1. Session ID
@@ -95,6 +103,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const addToCart = (newItem: CartItem) => {
+    // ✨ ADDED: Logic Gate (The Guardrail) for Add-ons like Makeup
+    if (newItem.is_addon) {
+      // A "Main Gift" is anything that is NOT an addon and NOT a supply
+      const hasMainGift = cart.some(item => !item.is_addon && !item.is_supply);
+      if (!hasMainGift) {
+         alert("Makeup items are exclusive add-ons! Please select a bouquet or basket first to include this in your gift.");
+         return; // Stop the addition completely
+      }
+    }
     
     
     
@@ -133,7 +150,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (itemToRemove) {
         reserveItemInDB(itemToRemove, 0); 
     }
-    setCart((prev) => prev.filter((item) => item.uniqueId !== uniqueId));
+    
+    setCart((prev) => {
+       const newCart = prev.filter((item) => item.uniqueId !== uniqueId);
+       
+       // ✨ ADDED: Safety Logic (The "Cart Bouncer")
+       // Check if deleting this item left the cart without a main gift
+       const hasMainGift = newCart.some(item => !item.is_addon && !item.is_supply);
+       const hasAddon = newCart.some(item => item.is_addon);
+       
+       if (!hasMainGift && hasAddon) {
+           // Wait a tiny bit so the user isn't confused by an instant flash, then alert and remove
+           setTimeout(() => alert("Makeup add-ons require a bouquet or basket and have been removed from your cart."), 150);
+           return newCart.filter(item => !item.is_addon);
+       }
+       
+       return newCart;
+    });
   };
 
   const updateQuantity = (uniqueId: string, delta: number) => {
@@ -184,8 +217,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return sum + itemTotal;
   }, 0);
 
+  // ✨ ADDED: Validation Engine for wholesale supply threshold (€80) AND Makeup Add-ons
+  // This constantly monitors the cart to ensure ALL rules are respected
+  useEffect(() => {
+    const errors: string[] = [];
+    const hasSupply = cart.some(item => item.is_supply);
+    
+    // ✨ NEW: Gatekeeper Failsafe for Makeup
+    const hasAddon = cart.some(item => item.is_addon);
+    const hasMainGift = cart.some(item => !item.is_addon && !item.is_supply);
+    
+    if (hasSupply && cartTotal < 80) {
+        errors.push("Florist supplies require a minimum cart total of €80 to checkout.");
+    }
+    
+    // ✨ NEW: If somehow a makeup item exists without a main gift, throw an error
+    if (hasAddon && !hasMainGift) {
+        errors.push("Makeup items are exclusive add-ons! Please select a bouquet or basket first.");
+    }
+    
+    setCartValidationErrors(errors);
+  }, [cart, cartTotal]);
+
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount, isCartOpen, setIsCartOpen, sessionId }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal, cartCount, isCartOpen, setIsCartOpen, sessionId, cartValidationErrors }}>
       {children}
     </CartContext.Provider>
   );

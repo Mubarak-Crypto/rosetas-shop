@@ -12,6 +12,8 @@ export default async function ShopPage() {
     .from("products")
     .select("*")
     .eq('status', 'active')
+    // ✨ ADDED: Completely hides makeup (add-ons) from the main shop catalog
+    .not('is_addon', 'eq', true)
     .order('created_at', { ascending: false });
 
   // 2. Fetch Global Settings

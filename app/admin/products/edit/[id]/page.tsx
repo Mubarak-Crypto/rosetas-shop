@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star } from "lucide-react"; // ✨ Added Star icon for Featured Toggle
+// ✨ ADDED: ShieldCheck for Gatekeeper UI
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star, ShieldCheck } from "lucide-react"; 
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -26,6 +27,22 @@ type UploadType = "product" | "extra";
 // Helper Type for the Temp List Builder
 type TempVariantItem = { de: string; en: string; stock: string };
 
+// ✨ NEW: Global Color Presets (Click to Auto-fill)
+const COLOR_PRESETS = [
+  { de: "Rot", en: "Red" },
+  { de: "Weiß", en: "White" },
+  { de: "Schwarz", en: "Black" },
+  { de: "Lightrose", en: "Lightrose" },
+  { de: "Rubinfeuer", en: "Ruby Fire" },
+  { de: "Rosenkuss", en: "Rosekiss" },
+  { de: "Zartrosa", en: "Softpink" },
+  { de: "Sahneweiß", en: "Cream White" },
+  { de: "Schneeflockenweiß", en: "Snowflake White" },
+  { de: "Nachtrose", en: "Night Rose" },
+  { de: "Eismeerblau", en: "Ice Blue" },
+  { de: "Pastellviolett", en: "Pastel Violet" }
+];
+
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
@@ -47,10 +64,12 @@ export default function EditProductPage() {
   const [description, setDescription] = useState("");
   const [descriptionEn, setDescriptionEn] = useState(""); 
 
-  // ✨ PHASE 2: Featured state for homepage 2x2 grid
   const [isFeatured, setIsFeatured] = useState(false);
 
-  // ✨ NEW: Safety Instructions States
+  // ✨ NEW: GATEKEEPER STATES (For Makeup Add-ons and Wholesale Supplies)
+  const [isAddon, setIsAddon] = useState(false);
+  const [isSupply, setIsSupply] = useState(false);
+
   const [safetyInstructions, setSafetyInstructions] = useState("");
   const [safetyInstructionsEn, setSafetyInstructionsEn] = useState("");
 
@@ -66,7 +85,7 @@ export default function EditProductPage() {
   // Variants
   const [variants, setVariants] = useState<Variant[]>([]);
   const [isAddingVariant, setIsAddingVariant] = useState(false);
-  const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null); // ✨ NEW: Track editing index
+  const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null); 
   const [newVariantName, setNewVariantName] = useState("");
   const [newVariantNameEn, setNewVariantNameEn] = useState("");
   
@@ -123,16 +142,18 @@ export default function EditProductPage() {
         setDescription(data.description || "");
         setDescriptionEn(data.description_en || ""); 
 
-        // ✨ PHASE 2: Load Featured Status
         setIsFeatured(data.is_featured || false);
+        
+        // ✨ LOAD GATEKEEPER STATES
+        setIsAddon(data.is_addon || false);
+        setIsSupply(data.is_supply || false);
 
-        // ✨ NEW: Load Safety Instructions
         setSafetyInstructions(data.safety_instructions_de || "");
         setSafetyInstructionsEn(data.safety_instructions_en || "");
 
         setPrice(data.price.toString());
         setCategory(data.category || "");
-        setStock(data.stock?.toString() || "0");
+        setStock(data.stock?.toString() || "0"); // Original stock logic restored
         setStatus(data.status || "active");
         setImages(data.images || []);
         
@@ -187,7 +208,6 @@ export default function EditProductPage() {
     }
   }, [variants]);
 
-  // HANDLE MULTIPLE VIDEO UPLOADS
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
@@ -219,7 +239,6 @@ export default function EditProductPage() {
     setVideoUrls(videoUrls.filter((_, i) => i !== index));
   };
 
-  // --- 2. IMAGE LOGIC (CROPPER) ---
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: UploadType = "product") => {
     if (e.target.files && e.target.files.length > 0) {
       setUploadType(type); 
@@ -338,19 +357,25 @@ export default function EditProductPage() {
     
     setTempList([...tempList, newItem]);
     
-    // Reset inputs
     setTempValueName("");
     setTempValueNameEn("");
     setTempValueStock("");
   };
 
-  // ✨ NEW: Prepare Edit Variant
+  // ✨ NEW: Easy Reordering Function for Variants
+  const moveTempItem = (index: number, direction: 'left' | 'right') => {
+    const newList = [...tempList];
+    const newIndex = direction === 'left' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= newList.length) return;
+    [newList[index], newList[newIndex]] = [newList[newIndex], newList[index]];
+    setTempList(newList);
+  };
+
   const handleEditVariant = (index: number) => {
     const variant = variants[index];
     setNewVariantName(variant.name);
     setNewVariantNameEn(variant.name_en || "");
 
-    // Parse the values string back into TempList format
     const valuesDe = variant.values.split(',').map(s => s.trim());
     const valuesEn = variant.values_en ? variant.values_en.split(',').map(s => s.trim()) : [];
 
@@ -452,7 +477,6 @@ export default function EditProductPage() {
         setExtras([...extras, newExtraObj]);
     }
     
-    // Reset Form
     setNewExtraName("");
     setNewExtraNameEn("");
     setNewExtraPrice("");
@@ -481,7 +505,6 @@ export default function EditProductPage() {
         name_en: nameEn, 
         description,
         description_en: descriptionEn, 
-        // ✨ NEW: Added Safety Instructions to update logic
         safety_instructions_de: safetyInstructions,
         safety_instructions_en: safetyInstructionsEn,
         price: parseFloat(price),
@@ -495,9 +518,11 @@ export default function EditProductPage() {
         needs_ribbon: needsRibbon, 
         stock_matrix: stockMatrix, 
         promo_label: promoLabel, 
-
-        // ✨ PHASE 2: Added is_featured to update logic
         is_featured: isFeatured,
+        
+        // ✨ SAVE GATEKEEPER STATES
+        is_addon: isAddon,
+        is_supply: isSupply,
 
         pers_label_1: persLabel1 || null,
         pers_label_2: persLabel2 || null
@@ -508,7 +533,6 @@ export default function EditProductPage() {
       alert("Error updating: " + error.message);
     } else {
       alert("Product updated successfully!");
-      // ✨ FIXED: Force refresh the data so list view updates instantly
       router.refresh(); 
       router.push("/admin/products");
     }
@@ -527,7 +551,6 @@ export default function EditProductPage() {
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
-
       <main className="flex-1 p-8 overflow-y-auto">
         <form onSubmit={handleUpdate} className="max-w-5xl mx-auto">
           
@@ -559,8 +582,11 @@ export default function EditProductPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* LEFT COLUMN */}
+            
+            {/* LEFT COLUMN (Properly contained to prevent layout breakage) */}
             <div className="lg:col-span-2 space-y-6">
+              
+              {/* PRODUCT DETAILS */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <h3 className="font-bold text-lg">Product Details</h3>
@@ -657,7 +683,6 @@ export default function EditProductPage() {
                   </div>
                 </div>
 
-                {/* ✨ NEW: SAFETY INSTRUCTIONS SECTION */}
                 <div className="space-y-4 pt-4 border-t border-black/5">
                   <h4 className="font-bold text-sm flex items-center gap-2 text-red-500">
                     <ShieldAlert size={16} /> Safety & Care Instructions (Reveal Button Content)
@@ -679,9 +704,9 @@ export default function EditProductPage() {
                     </div>
                   </div>
                 </div>
-
               </div>
 
+              {/* PERSONALIZATION MODE */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
                 <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
                   <Bookmark className="text-[#C9A24D]" size={20} /> Personalization Mode
@@ -729,7 +754,7 @@ export default function EditProductPage() {
                 </div>
               </div>
 
-              {/* OPTIONS (VARIANTS) */}
+              {/* OPTIONS (VARIANTS) WITH NEW PRESETS AND ARROWS */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-2">Options</h3>
                 <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
@@ -776,6 +801,24 @@ export default function EditProductPage() {
                     </div>
                     
                     <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
+                        
+                        {/* ✨ NEW: Quick-Click Color Presets */}
+                        <div className="mb-3 border-b border-black/5 pb-3">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Quick-Click Color Presets</span>
+                            <div className="flex flex-wrap gap-1.5">
+                                {COLOR_PRESETS.map((c, i) => (
+                                    <button 
+                                        key={i} 
+                                        type="button" 
+                                        onClick={() => { setTempValueName(c.de); setTempValueNameEn(c.en); }}
+                                        className="text-[9px] font-bold bg-white text-[#1F1F1F]/60 border border-black/10 hover:border-[#C9A24D] hover:text-[#C9A24D] rounded px-2 py-1 transition-colors"
+                                    >
+                                        {c.de}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
@@ -798,12 +841,19 @@ export default function EditProductPage() {
                         {tempList.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-2 border-t border-black/5 mt-2">
                                 {tempList.map((t, i) => (
-                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5">
+                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5 min-w-[100px]">
                                             <div className="flex items-center gap-2 justify-between">
                                                 <span className="text-[10px] font-bold">{t.de}</span>
                                                 <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
                                             </div>
                                             <span className="text-[9px] text-[#C9A24D]">{t.en} {t.stock ? `(${t.stock})` : ''}</span>
+                                            
+                                            {/* ✨ NEW: Easy Reordering Arrows */}
+                                            <div className="flex items-center justify-between mt-1 pt-1 border-t border-black/5">
+                                                <button type="button" onClick={() => moveTempItem(i, 'left')} disabled={i === 0} className="p-0.5 text-gray-400 hover:text-[#1F1F1F] disabled:opacity-30"><ArrowLeftIcon size={12}/></button>
+                                                <span className="text-[8px] text-gray-300">Pos {i + 1}</span>
+                                                <button type="button" onClick={() => moveTempItem(i, 'right')} disabled={i === tempList.length - 1} className="p-0.5 text-gray-400 hover:text-[#1F1F1F] disabled:opacity-30"><ArrowRight size={12}/></button>
+                                            </div>
                                     </div>
                                 ))}
                             </div>
@@ -824,6 +874,7 @@ export default function EditProductPage() {
                 )}
               </div>
 
+              {/* INDIVIDUAL STOCK TRACKING */}
               {variants.length > 1 && (
                 <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-6">
                   <div className="flex items-center gap-2">
@@ -842,7 +893,7 @@ export default function EditProductPage() {
                       </thead>
                       <tbody className="divide-y divide-black/5">
                         {stockMatrix.map((item, idx) => {
-                            const isUnlimited = item.stock === -1;
+                            const isUnlimitedMatrix = item.stock === -1;
                             
                             return (
                               <tr key={idx} className="hover:bg-gray-50 transition-colors">
@@ -855,21 +906,21 @@ export default function EditProductPage() {
                                         onClick={() => {
                                             const updated = [...stockMatrix];
                                             // Toggle between -1 (Unlimited) and 0 (Tracked)
-                                            updated[idx].stock = isUnlimited ? 0 : -1;
+                                            updated[idx].stock = isUnlimitedMatrix ? 0 : -1;
                                             setStockMatrix(updated);
                                         }}
                                         className={`flex items-center gap-2 text-xs font-bold px-2 py-1 rounded-lg transition-colors ${
-                                            isUnlimited ? "text-green-600 bg-green-50" : "text-[#C9A24D] bg-[#F6EFE6]"
+                                            isUnlimitedMatrix ? "text-green-600 bg-green-50" : "text-[#C9A24D] bg-[#F6EFE6]"
                                         }`}
                                     >
-                                        {isUnlimited ? <ToggleLeft size={16}/> : <ToggleRight size={16}/>}
-                                        {isUnlimited ? "Unlimited" : "Tracked"}
+                                        {isUnlimitedMatrix ? <ToggleLeft size={16}/> : <ToggleRight size={16}/>}
+                                        {isUnlimitedMatrix ? "Unlimited" : "Tracked"}
                                     </button>
                                 </td>
 
                                 {/* Stock Quantity Input */}
                                 <td className="px-4 py-2">
-                                  {isUnlimited ? (
+                                  {isUnlimitedMatrix ? (
                                     <span className="text-xl text-gray-300 font-bold">∞</span>
                                   ) : (
                                     <input 
@@ -898,7 +949,7 @@ export default function EditProductPage() {
                 </div>
               )}
 
-              {/* EXTRAS (With Image & Variant Support) */}
+              {/* UPSELLS / EXTRAS */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-2">Upsells / Extras</h3>
                 <div className="space-y-3 mb-4">
@@ -915,7 +966,6 @@ export default function EditProductPage() {
                                 <span className="text-sm text-[#1F1F1F] font-bold block">
                                     {ex.name} {ex.name_en ? <span className="text-[#C9A24D]">/ {ex.name_en}</span> : ''}
                                 </span>
-                                {/* VISUAL INDICATORS */}
                                 {ex.inputType === 'letter' && <div className="text-[10px] bg-[#1F1F1F] text-white px-1.5 rounded flex items-center gap-1"><FileText size={10}/> Letter</div>}
                                 {ex.inputType === 'short_note' && <div className="text-[10px] bg-[#1F1F1F] text-white px-1.5 rounded flex items-center gap-1"><MessageSquare size={10}/> Note</div>}
                                 {ex.allowQuantity && <div className="text-[10px] bg-[#C9A24D] text-white px-1.5 rounded flex items-center gap-1"><Hash size={10}/> Qty</div>}
@@ -956,7 +1006,6 @@ export default function EditProductPage() {
 
                     <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15 or -10)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none" /></div>
                     
-                    {/* INPUT LOGIC SELECTOR */}
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Input Logic (Conditional)</label>
                         <div className="flex gap-2">
@@ -985,7 +1034,6 @@ export default function EditProductPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        {/* QUANTITY TOGGLE */}
                         <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
                             <div className="flex flex-col">
                                 <span className="text-xs font-bold text-[#1F1F1F]">Enable Quantity?</span>
@@ -1000,7 +1048,6 @@ export default function EditProductPage() {
                             </button>
                         </div>
 
-                        {/* MULTIPLE SELECTION TOGGLE */}
                         <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
                             <div className="flex flex-col">
                                 <span className="text-xs font-bold text-[#1F1F1F]">Allow Multiple?</span>
@@ -1078,11 +1125,39 @@ export default function EditProductPage() {
                 )}
               </div>
 
-            </div>
+              {/* PRICING & PROMOTION (Restored to its original state exactly as provided) */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg mb-4">Pricing & Promotion</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
+                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
+                    <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
+                      <Tag size={10} /> Promotion (Optional)
+                    </label>
+                    <input 
+                      type="text" 
+                      value={promoLabel} 
+                      onChange={(e) => setPromoLabel(e.target.value)} 
+                      placeholder="e.g. 2 for 50" 
+                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30" 
+                    />
+                  </div>
+                </div>
+              </div>
+
+            </div> {/* END LEFT COLUMN */}
 
             {/* RIGHT COLUMN */}
             <div className="space-y-6">
-              {/* ✨ PHASE 2: HOMEPAGE VISIBILITY TOGGLE (Mirroring the 'New Product' page) */}
+              
+              {/* HOMEPAGE VISIBILITY */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
                 <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
                   <Star className="text-amber-500 fill-amber-500" size={20} /> Homepage Visibility
@@ -1096,6 +1171,41 @@ export default function EditProductPage() {
                     type="button"
                     onClick={() => setIsFeatured(!isFeatured)}
                     className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isFeatured ? 'bg-amber-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                  >
+                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
+                  </button>
+                </div>
+              </div>
+
+              {/* ✨ NEW: CATEGORY RULES (GATEKEEPER TOGGLES) */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                  <ShieldCheck className="text-green-500" size={20} /> Category Rules
+                </h3>
+                
+                <div className="p-4 bg-gray-50 rounded-xl border border-black/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#1F1F1F]">Is Makeup Add-on?</p>
+                    <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Cannot be bought without a Bouquet/Basket.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setIsAddon(!isAddon)}
+                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isAddon ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                  >
+                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
+                  </button>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-xl border border-black/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#1F1F1F]">Is Florist Supply?</p>
+                    <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Requires cart total &ge; €80 to checkout.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setIsSupply(!isSupply)}
+                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isSupply ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
                   >
                     <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
                   </button>
@@ -1176,32 +1286,7 @@ export default function EditProductPage() {
                 </div>
               </div>
 
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-4">Pricing & Promotion</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
-                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
-                    <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
-                      <Tag size={10} /> Promotion (Optional)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={promoLabel} 
-                      onChange={(e) => setPromoLabel(e.target.value)} 
-                      placeholder="e.g. 2 for 50" 
-                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30" 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            </div> {/* END RIGHT COLUMN */}
           </div>
         </form>
 

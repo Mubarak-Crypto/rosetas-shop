@@ -33,6 +33,7 @@ export default async function ProductPage(props: { params: Promise<{ id: string 
   console.log("🔍 Attempting to fetch product with ID:", id); 
 
   // A. Fetch Product Data using the awaited 'id'
+  // Note: This fetches everything, including our new is_addon and is_supply columns
   const { data: product, error } = await supabase
     .from('products')
     .select('*')
@@ -64,6 +65,8 @@ export default async function ProductPage(props: { params: Promise<{ id: string 
     .order('created_at', { ascending: false });
 
   // 3. Hand over data to Client Component
+  // ✨ NOTE: The 'product' prop now contains is_addon and is_supply flags
+  // These will be used in ProductClient.tsx to handle the "Smart" Add-to-Cart button
   return (
     <ProductClient 
       initialProduct={product} 

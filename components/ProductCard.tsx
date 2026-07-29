@@ -12,8 +12,8 @@ interface ProductProps {
   id: number;
   title: string;
   price: number | string; 
-  salePrice?: number;     
-  isOnSale?: boolean;     
+  salePrice?: number;      
+  isOnSale?: boolean;      
   globalDiscount?: number;
   category: string;
   image: string;
@@ -21,15 +21,20 @@ interface ProductProps {
   videoUrl?: string | string[];
   promoLabel?: string; 
   stock?: number; 
+  // ✨ ADDED: Flags for the Gatekeeper logic so the Quick Add button is protected
+  isAddon?: boolean;
+  isSupply?: boolean;
 }
 
 export default function ProductCard({ 
   id, title, price, salePrice, isOnSale, globalDiscount, 
-  category, image, delay, videoUrl, promoLabel, stock 
+  category, image, delay, videoUrl, promoLabel, stock,
+  isAddon, isSupply // Destructure the new props
 }: ProductProps) {
   
   const { language } = useLanguage(); 
-  const { addToCart } = useCart(); 
+  // ✨ ADDED: Pulling cart state for quick-add validation
+  const { cart, cartTotal, addToCart } = useCart(); 
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist(); 
   
   const videoSrc = Array.isArray(videoUrl) ? videoUrl[0] : videoUrl;
@@ -50,10 +55,33 @@ export default function ProductCard({
     isDiscounted = true;
   }
 
-  // ✨ Handle Quick Add to Cart with Stock Check
+  // ✨ GATEKEEPER FALLBACK LOGIC
+  // Just in case the parent component forgets to pass the isAddon flag, we check the category string too!
+  const isSupplyItem = isSupply || category === 'supplies' || category === 'Floristenbedarf';
+  const isAddonItem = isAddon || category.toLowerCase().includes('makeup') || category.toLowerCase().includes('add-on') || category.toLowerCase().includes('ergänzung');
+
+  // ✨ Handle Quick Add to Cart with Stock & Gatekeeper Checks
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigating to product page
     e.stopPropagation();
+
+    // ✨ ADDED: Gatekeeper Validation for Makeup Add-ons
+    if (isAddonItem) {
+        const hasMainGift = cart.some(item => !item.is_addon && !item.is_supply);
+        if (!hasMainGift) {
+            alert(language === 'EN' ? "Makeup items are exclusive add-ons! Please select a bouquet or basket first." : "Make-up-Artikel sind exklusive Ergänzungen! Bitte wählen Sie zuerst einen Strauß oder Korb.");
+            return; // Block the add to cart
+        }
+    }
+
+    // ✨ ADDED: Gatekeeper Validation for Florist Supplies
+    if (isSupplyItem) {
+        const projectedTotal = cartTotal + finalPrice;
+        if (projectedTotal < 80) {
+            alert(language === 'EN' ? "Florist supplies require a minimum cart total of €80." : "Für Floristenbedarf gilt ein Mindestbestellwert von 80 €.");
+            return; // Block the add to cart
+        }
+    }
 
     // ✨ Fix: If stock is -1, treat as unlimited (999)
     const availableStock = stock === -1 ? 999 : (typeof stock === 'number' ? stock : 0);
@@ -69,7 +97,9 @@ export default function ProductCard({
       options: {},
       extras: [],
       promoLabel,
-      maxStock: availableStock 
+      maxStock: availableStock,
+      is_addon: isAddonItem,     // ✨ Pass flags down to cart context
+      is_supply: isSupplyItem    // ✨ Pass flags down to cart context
     });
   };
 

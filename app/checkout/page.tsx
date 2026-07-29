@@ -205,6 +205,9 @@ export default function CheckoutPage() {
   const [vacationSettings, setVacationSettings] = useState({ isActive: false, endDate: '', message: '' });
   const [agreedToVacation, setAgreedToVacation] = useState(false);
 
+  // ✨ NEW: Google Maps Strict Lock State
+  const [isGoogleVerified, setIsGoogleVerified] = useState(false);
+
   // Benevolence
   const [tipOption, setTipOption] = useState<string | null>(null);
   const [tipAmount, setTipAmount] = useState(0);
@@ -224,17 +227,24 @@ export default function CheckoutPage() {
   const [promoError, setPromoError] = useState("");
   const [isCheckingCode, setIsCheckingCode] = useState(false);
 
-  // Autocomplete boundary configuration lists to link country codes to active dropdown selections
-  const countryCodeMapping: Record<string, string> = { "Germany": "de", "Austria": "at", "Switzerland": "ch", "France": "fr", "Belgium": "be" };
+  // ✨ UPDATED: Added more ISO codes to ensure Google Autocomplete triggers correctly for more countries
+  const countryCodeMapping: Record<string, string> = { 
+    "Germany": "de", "Austria": "at", "Switzerland": "ch", "France": "fr", "Belgium": "be",
+    "Italy": "it", "Spain": "es", "Netherlands": "nl", "United States": "us", "South Africa": "za",
+    "United Kingdom": "gb", "Ireland": "ie", "Sweden": "se", "Denmark": "dk"
+  };
 
   // Verification hooks inspecting regional postal requirements to screen formats instantly
   const isZipFormatValid = useMemo(() => {
+    // ✨ NEW: If Google verified the address, we trust Google's postal code formatting completely!
+    if (isGoogleVerified) return true; 
+
     if (!formData.zip) return true;
     const cleanZip = formData.zip.trim();
     if (formData.country === "Germany" || formData.country === "Austria") return /^\d{5}$/.test(cleanZip);
     if (formData.country === "Switzerland") return /^\d{4}$/.test(cleanZip);
     return cleanZip.length >= 3;
-  }, [formData.zip, formData.country]);
+  }, [formData.zip, formData.country, isGoogleVerified]);
 
   // ✨ FIX: SCROLL RESET LOGIC
   // This forces the page to scroll to the top whenever the 'step' changes.
@@ -265,24 +275,51 @@ export default function CheckoutPage() {
       fetchSettings();
   }, []);
 
-  // ✨ NEW: Listen for user session logs and dynamically pre-populate billing fields safely
-// ✨ UPDATED: Pull explicit first/last name columns instead of splitting full_name
+  // ✨ BULLETPROOF AUTOCOMPLETE FIX: 
+  // Because the Server Action saved data behind the scenes, we bypass the stale React state
+  // and force the Checkout page to aggressively fetch the absolute freshest profile from the DB on load!
   useEffect(() => {
-    if (user && profile) {
-      setFormData((prev) => ({
-        ...prev,
-        email: user.email || prev.email,
-        firstName: profile.first_name || prev.firstName, // Uses dedicated column
-        lastName: profile.last_name || prev.lastName,    // Uses dedicated column
-        address: profile.shipping_street || prev.address,
-        houseNumber: profile.shipping_house_number || prev.houseNumber, // Added missing field
-        city: profile.shipping_city || prev.city,
-        zip: profile.shipping_postal_code || prev.zip,
-        phone: profile.phone_number || prev.phone,
-        country: profile.shipping_country || prev.country
-      }));
-    }
-  }, [user, profile]);
+    const fetchFreshestProfile = async () => {
+      if (!user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (data) {
+          setFormData((prev) => ({
+            ...prev,
+            email: user.email || prev.email,
+            firstName: data.first_name || prev.firstName, 
+            lastName: data.last_name || prev.lastName,    
+            address: data.shipping_street || prev.address,
+            houseNumber: data.shipping_house_number || prev.houseNumber, 
+            city: data.shipping_city || prev.city,
+            zip: data.shipping_postal_code || prev.zip,
+            phone: data.phone_number || prev.phone,
+            country: data.shipping_country || prev.country
+          }));
+
+          // ✨ NEW BUG FIX FOR 1-CLICK CHECKOUT: 
+          // If the database successfully loaded a valid address, we automatically unlock 
+          // the strict Google Maps verification gate so they can instantly proceed to payment.
+          if (data.shipping_street && data.shipping_city && data.shipping_postal_code) {
+            setIsGoogleVerified(true);
+          }
+        } else if (user.email) {
+          // Fallback if they have no profile yet
+          setFormData(prev => ({ ...prev, email: user.email! }));
+        }
+      } catch (err) {
+        console.error("Error fetching latest profile for autocomplete:", err);
+      }
+    };
+
+    fetchFreshestProfile();
+  }, [user?.id]); // Watch user ID specifically so it triggers as soon as auth loads
 
   // ✨ UPDATED: Shipping Calculation Logic
   const { shippingCost, needs20kg, standardCost, expressCost, boxCount } = useMemo(() => {
@@ -452,7 +489,7 @@ export default function CheckoutPage() {
 
   const isBlacklisted = shippingBlacklist.includes(formData.country);
 
-  // ✨ UPDATED: Added 'vacationValid' check and 'houseNumber' check
+  // ✨ UPDATED: Added 'vacationValid' check, 'houseNumber' check, and 'isGoogleVerified' strict lock!
   const canProceed = useMemo(() => {
     const hasAddress = formData.email && formData.phone && formData.address && formData.houseNumber && formData.city && formData.zip && isZipFormatValid;
     const policyValid = agreedToPolicy;
@@ -467,12 +504,18 @@ export default function CheckoutPage() {
 
     if (isBlacklisted) return false;
 
-    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid && vacationValid;
-  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation, vacationSettings.isActive, agreedToVacation, isZipFormatValid]);
+    // ✨ MUST BE GOOGLE VERIFIED NOW
+    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid && vacationValid && isGoogleVerified;
+  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation, vacationSettings.isActive, agreedToVacation, isZipFormatValid, isGoogleVerified]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (e.target.name === "country" && e.target.value !== "Germany") setIsExpress(false);
+    
+    // ✨ NEW: If the user manually touches any core address fields after using Google, we un-verify the address lock!
+    if (["address", "city", "zip", "country"].includes(e.target.name)) {
+        setIsGoogleVerified(false);
+    }
   };
 
   const handleDetailsSubmit = (e: React.FormEvent) => {
@@ -492,6 +535,12 @@ export default function CheckoutPage() {
       if (!isZipFormatValid) {
         alert(language === 'EN' ? "The postal code does not match regional requirements." : "Die Postleitzahl ist für die gewählte Region fehlerhaft.");
         return;
+      }
+
+      // ✨ NEW ALERT: Tell them exactly why it's locked
+      if (!isGoogleVerified) {
+          alert(language === 'EN' ? "Please select a valid address from the Google Maps suggestions to verify your location." : "Bitte wählen Sie eine gültige Adresse aus den Google Maps-Vorschlägen aus, um Ihren Standort zu bestätigen.");
+          return;
       }
 
       if (packagingType === 'gift' && giftNote.trim().length === 0) {
@@ -579,7 +628,11 @@ export default function CheckoutPage() {
 
               {/* SHIPPING ADDRESS */}
               <div className="space-y-4 pt-6 border-t border-black/10">
-                <h2 className="text-2xl font-bold">{t('checkout_address')}</h2>
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  {t('checkout_address')}
+                  {/* ✨ NEW: Shows a Green Checkmark to visually confirm the Google Lock is Active */}
+                  {isGoogleVerified && <ShieldCheck className="text-green-600 w-5 h-5" />}
+                </h2>
                 <div className="relative">
                   <Globe className="absolute left-4 top-4 text-[#1F1F1F]/30" size={18} />
                   <select name="country" value={formData.country} onChange={handleChange} className="w-full bg-white/50 border border-black/10 rounded-xl pl-12 pr-4 py-4 focus:border-[#C9A24D] outline-none font-bold cursor-pointer appearance-none">
@@ -658,20 +711,22 @@ export default function CheckoutPage() {
                       apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} 
                       onPlaceSelected={(place) => { 
                         const addressComponents = place.address_components; 
-                        const city = addressComponents.find((c: any) => c.types.includes("locality"))?.long_name || ""; 
-                        const zip = addressComponents.find((c: any) => c.types.includes("postal_code"))?.long_name || ""; 
-                        const selectedCountry = addressComponents.find((c: any) => c.types.includes("country"))?.long_name || "";
+                        // ✨ FIXED: Added optional chaining to prevent TypeScript type errors if address components are undefined
+                        const city = addressComponents?.find((c: any) => c.types.includes("locality"))?.long_name || ""; 
+                        const zip = addressComponents?.find((c: any) => c.types.includes("postal_code"))?.long_name || ""; 
+                        const selectedCountry = addressComponents?.find((c: any) => c.types.includes("country"))?.long_name || "";
 
                         if (selectedCountry && selectedCountry.toLowerCase() !== formData.country.toLowerCase()) {
                           alert(language === 'EN' 
                             ? `Address mismatch. You selected an address in ${selectedCountry} but shipping is set to ${formData.country}.`
                             : `Adressen-Fehlpassung. Sie haben eine Adresse in ${selectedCountry} gewählt, aber der Versand ist auf ${formData.country} eingestellt.`);
+                          setIsGoogleVerified(false); // ✨ NEW: Block verification on mismatch
                           return;
                         }
 
-                        const street = addressComponents.find((c: any) => c.types.includes("route"))?.long_name || "";
-                        const number = addressComponents.find((c: any) => c.types.includes("street_number"))?.long_name || "";
-                        const finalStreet = street || place.formatted_address.split(',')[0];
+                        const street = addressComponents?.find((c: any) => c.types.includes("route"))?.long_name || "";
+                        const number = addressComponents?.find((c: any) => c.types.includes("street_number"))?.long_name || "";
+                        const finalStreet = street || place.formatted_address?.split(',')[0] || "";
 
                         setFormData({ 
                           ...formData, 
@@ -680,6 +735,7 @@ export default function CheckoutPage() {
                           city, 
                           zip 
                         }); 
+                        setIsGoogleVerified(true); // ✨ NEW: Lock the address as successfully verified by Google!
                       }} 
                       options={{ 
                         types: ["address"], 
@@ -690,7 +746,10 @@ export default function CheckoutPage() {
                       placeholder={`${t('checkout_street')} *`} 
                       // ✨ FORCE VALUE to match state
                       value={formData.address}
-                      onChange={(e: any) => setFormData({...formData, address: e.target.value})}
+                      onChange={(e: any) => {
+                          setFormData({...formData, address: e.target.value});
+                          setIsGoogleVerified(false); // ✨ NEW: Remove verified lock if they type manually
+                      }}
                     />
                   </div>
                   <div className="w-[30%]">

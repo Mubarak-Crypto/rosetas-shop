@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react"; 
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star } from "lucide-react"; // ✨ Added Star for Featured Toggle
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star, ShieldCheck } from "lucide-react"; // ✨ Added Star for Featured Toggle, ShieldCheck for Gatekeeper
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -13,14 +13,14 @@ type Variant = { name: string; name_en?: string; values: string; values_en?: str
 type InputType = "none" | "short_note" | "letter";
 // ✨ UPDATED: Added allowQuantity and allowMultiple to Extra
 type Extra = { 
-    name: string; 
-    name_en?: string; 
-    price: number; 
-    image?: string; 
-    variants?: string[]; 
-    inputType?: InputType;
-    allowQuantity?: boolean; 
-    allowMultiple?: boolean; 
+  name: string; 
+  name_en?: string; 
+  price: number; 
+  image?: string; 
+  variants?: string[]; 
+  inputType?: InputType;
+  allowQuantity?: boolean; 
+  allowMultiple?: boolean; 
 }; 
 type Area = { x: number; y: number; width: number; height: number; };
 
@@ -50,12 +50,17 @@ export default function AddProductPage() {
   // ✨ PHASE 2: Featured state for homepage 2x2 grid
   const [isFeatured, setIsFeatured] = useState(false);
 
+  // ✨ NEW: GATEKEEPER STATES (For Makeup Add-ons and Wholesale Supplies)
+  const [isAddon, setIsAddon] = useState(false);
+  const [isSupply, setIsSupply] = useState(false);
+
   // ✨ NEW: Safety Instructions States
   const [safetyInstructions, setSafetyInstructions] = useState("");
   const [safetyInstructionsEn, setSafetyInstructionsEn] = useState("");
 
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [isUnlimited, setIsUnlimited] = useState(false); // ✨ NEW: Unlimited Stock Toggle
   const [needsRibbon, setNeedsRibbon] = useState(false); 
   const [promoLabel, setPromoLabel] = useState(""); 
   
@@ -414,6 +419,7 @@ export default function AddProductPage() {
           price: finalPrice, 
           category: category.trim(), 
           stock: finalStock, 
+          is_unlimited: isUnlimited, // ✨ NEW: Save unlimited state
           status, 
           images, 
           video_url: videoUrls, 
@@ -426,6 +432,10 @@ export default function AddProductPage() {
           // ✨ PHASE 2: Added is_featured to the insert object
           is_featured: isFeatured,
           
+          // ✨ ADDED: Save Gatekeeper flags directly to DB
+          is_addon: isAddon,
+          is_supply: isSupply,
+
           pers_label_1: persLabel1 || null,
           pers_label_2: persLabel2 || null
         }
@@ -646,7 +656,7 @@ export default function AddProductPage() {
                       </thead>
                       <tbody className="divide-y divide-black/5">
                         {stockMatrix.map((item, idx) => {
-                            const isUnlimited = item.stock === -1;
+                            const isUnlimitedMatrix = item.stock === -1;
                             
                             return (
                               <tr key={idx} className="hover:bg-gray-50 transition-colors">
@@ -659,21 +669,21 @@ export default function AddProductPage() {
                                         onClick={() => {
                                             const updated = [...stockMatrix];
                                             // Toggle between -1 (Unlimited) and 0 (Tracked)
-                                            updated[idx].stock = isUnlimited ? 0 : -1;
+                                            updated[idx].stock = isUnlimitedMatrix ? 0 : -1;
                                             setStockMatrix(updated);
                                         }}
                                         className={`flex items-center gap-2 text-xs font-bold px-2 py-1 rounded-lg transition-colors ${
-                                            isUnlimited ? "text-green-600 bg-green-50" : "text-[#C9A24D] bg-[#F6EFE6]"
+                                            isUnlimitedMatrix ? "text-green-600 bg-green-50" : "text-[#C9A24D] bg-[#F6EFE6]"
                                         }`}
                                     >
-                                        {isUnlimited ? <ToggleLeft size={16}/> : <ToggleRight size={16}/>}
-                                        {isUnlimited ? "Unlimited" : "Tracked"}
+                                        {isUnlimitedMatrix ? <ToggleLeft size={16}/> : <ToggleRight size={16}/>}
+                                        {isUnlimitedMatrix ? "Unlimited" : "Tracked"}
                                     </button>
                                 </td>
 
                                 {/* Stock Quantity Input - ✨ FIXED TEXT COLOR AND LOGIC */}
                                 <td className="px-4 py-2">
-                                  {isUnlimited ? (
+                                  {isUnlimitedMatrix ? (
                                     <span className="text-xl text-gray-300 font-bold">∞</span>
                                   ) : (
                                     <input 
@@ -711,8 +721,17 @@ export default function AddProductPage() {
                     <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
-                    <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
+                      <button type="button" onClick={() => setIsUnlimited(!isUnlimited)} className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${isUnlimited ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {isUnlimited ? <ToggleRight size={12}/> : <ToggleLeft size={12}/>} Unlimited
+                      </button>
+                    </div>
+                    {isUnlimited ? (
+                      <div className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm text-gray-400 font-bold flex items-center justify-center">∞ Unlimited</div>
+                    ) : (
+                      <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" placeholder="e.g. 100" />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
@@ -746,6 +765,41 @@ export default function AddProductPage() {
                     type="button"
                     onClick={() => setIsFeatured(!isFeatured)}
                     className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isFeatured ? 'bg-amber-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                  >
+                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
+                  </button>
+                </div>
+              </div>
+
+              {/* ✨ NEW: CATEGORY RULES (GATEKEEPER TOGGLES) */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
+                  <ShieldCheck className="text-green-500" size={20} /> Category Rules
+                </h3>
+                
+                <div className="p-4 bg-gray-50 rounded-xl border border-black/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#1F1F1F]">Is Makeup Add-on?</p>
+                    <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Cannot be bought without a Bouquet/Basket.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setIsAddon(!isAddon)}
+                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isAddon ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
+                  >
+                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
+                  </button>
+                </div>
+
+                <div className="p-4 bg-gray-50 rounded-xl border border-black/5 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-[#1F1F1F]">Is Florist Supply?</p>
+                    <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Requires cart total &ge; €80 to checkout.</p>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setIsSupply(!isSupply)}
+                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isSupply ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
                   >
                     <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
                   </button>

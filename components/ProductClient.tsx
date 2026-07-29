@@ -23,7 +23,8 @@ interface ProductClientProps {
 export default function ProductClient({ initialProduct, initialSettings, initialReviews, canLeaveReview }: ProductClientProps) {
   const params = useParams();
   const searchParams = useSearchParams(); 
-  const { addToCart, setIsCartOpen } = useCart();
+  // ✨ UPDATED: Brought in 'cart' and 'cartTotal' so the button can check the rules
+  const { cart, cartTotal, addToCart, setIsCartOpen } = useCart();
   const { language, t } = useLanguage(); 
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist(); 
   const videoRef = useRef<HTMLVideoElement>(null); 
@@ -231,7 +232,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
   const getSelectedVariantStock = () => {
     if (!product || !product.variants || product.variants.length === 0) {
-        return product.stock === -1 ? 999 : (product.stock || 0);
+        return product.is_unlimited ? 999 : Math.max(0, product.stock || 0);
     }
 
     const matrix = Array.isArray(product.stock_matrix) ? product.stock_matrix : [];
@@ -245,10 +246,11 @@ export default function ProductClient({ initialProduct, initialSettings, initial
         });
 
         if (match) {
-            return match.stock === -1 ? 999 : match.stock;
+            return product.is_unlimited ? 999 : Math.max(0, match.stock || 0);
         }
         
-        const hasAnyStock = matrix.some((item: any) => item.stock === -1 || item.stock > 0);
+        if (product.is_unlimited) return 999;
+        const hasAnyStock = matrix.some((item: any) => item.stock > 0);
         if (hasAnyStock) return 999;
     }
     
@@ -418,7 +420,9 @@ export default function ProductClient({ initialProduct, initialSettings, initial
       category: product.category,
       customText: finalCustomText, 
       promoLabel: product.promo_label,
-      maxStock: getSelectedVariantStock()
+      maxStock: getSelectedVariantStock(),
+      is_addon: product.is_addon,     // ✨ Pass flags to cart
+      is_supply: product.is_supply
     });
     
     setIsCartOpen(true);
@@ -487,8 +491,16 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
   const isCurrentlyInStock = currentVariantStock > 0; 
   
-  // ✨ Updated Logic: Requires checkbox if personalized
-  const canAddToCart = allOptionsSelected && isRibbonValid && isCurrentlyInStock && (!isPersonalizedOrder || withdrawalAccepted);
+  // ✨ ADDED: Gatekeeper Logic for Add-ons (Makeup) and Supplies
+  const hasMainGift = cart.some(item => !item.is_addon && !item.is_supply);
+  const projectedTotal = cartTotal + totalPrice;
+  const isMakeupBlocked = product?.is_addon === true && !hasMainGift;
+  // Make sure to also check category just in case is_supply flag isn't set yet
+  const isSupplyItemFlag = product?.is_supply === true || product?.category === 'supplies' || product?.category === 'Floristenbedarf';
+  const isSupplyBlocked = isSupplyItemFlag && projectedTotal < 80;
+
+  // ✨ Updated Logic: Includes the Gatekeeper checks for makeup and supplies
+  const canAddToCart = allOptionsSelected && isRibbonValid && isCurrentlyInStock && (!isPersonalizedOrder || withdrawalAccepted) && !isMakeupBlocked && !isSupplyBlocked;
   
   const isSupplyProduct = product.category === 'supplies' || product.category === 'Floristenbedarf';
   const avgRating = reviews.length > 0 ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length : 5.0;
@@ -750,11 +762,11 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             const cleanLabel = val.split('(')[0].split('|')[0].trim();
                             const subLabel = val.includes('(') ? val.split('(')[1].split(')')[0] : "";
                             
-                            let itemStock = 999; 
+                            let itemStock = product.is_unlimited ? 999 : (product.stock !== undefined ? Math.max(0, product.stock) : 999); 
                             const matrix = Array.isArray(product.stock_matrix) ? product.stock_matrix : [];
                             if(matrix.length > 0) {
                                 const match = matrix.find((m: any) => m[variant.name] === deVal.split('|')[0].trim());
-                                if(match) itemStock = match.stock === -1 ? 999 : match.stock;
+                                if(match) itemStock = product.is_unlimited ? 999 : Math.max(0, match.stock || 0);
                             }
 
                             return (
@@ -1050,6 +1062,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 </button>
                 </div>
                 
+                {/* ✨ SMART "Add to Cart" BUTTON WITH GATEKEEPER MESSAGES */}
                 <button 
                 onClick={handleAddToCart} 
                 disabled={!canAddToCart} 
@@ -1063,7 +1076,11 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 <span className={canAddToCart ? "text-white" : ""}>
                     {canAddToCart 
                     ? `${t('add_to_cart')} - €${totalPrice.toFixed(2)}` 
-                    : !isCurrentlyInStock ? t('out_of_stock') : !allOptionsSelected ? t('select_options') : (isPersonalizedOrder && !withdrawalAccepted ? (language === 'EN' ? "Accept Policy" : "Richtlinie akzeptieren") : t('ribbon_placeholder'))}
+                    : isMakeupBlocked
+                        ? (language === 'EN' ? "Select a Bouquet/Basket First" : "Zuerst einen Strauß/Korb wählen")
+                        : isSupplyBlocked
+                            ? (language === 'EN' ? `Min. €80 for Supplies` : `Min. 80 € für Bedarf`)
+                            : !isCurrentlyInStock ? t('out_of_stock') : !allOptionsSelected ? t('select_options') : (isPersonalizedOrder && !withdrawalAccepted ? (language === 'EN' ? "Accept Policy" : "Richtlinie akzeptieren") : t('ribbon_placeholder'))}
                 </span>
                 </button>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ShoppingBag, Heart, Menu, X, Search } from "lucide-react"; 
+import { ShoppingBag, Heart, Menu, X, Search, Globe } from "lucide-react"; // ✨ Added Globe icon
 import Link from "next/link";
 import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext"; 
@@ -168,20 +168,24 @@ export default function Navbar() {
              </button>
           )}
 
-          <div className="flex items-center gap-1 md:gap-2 bg-black/5 border border-black/5 px-2 md:px-3 py-1.5 rounded-full backdrop-blur-sm">
-            <button 
-              onClick={() => setLanguage('DE')}
-              className={`text-[9px] md:text-[10px] font-black tracking-widest transition-colors ${language === 'DE' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
-            >
-              DE
-            </button>
-            <span className="w-[1px] h-3 bg-black/10"></span>
-            <button 
-              onClick={() => setLanguage('EN')}
-              className={`text-[9px] md:text-[10px] font-black tracking-widest transition-colors ${language === 'EN' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
-            >
-              EN
-            </button>
+          {/* ✨ UPDATED: High-visibility Language Toggle Pill */}
+          <div className="flex items-center gap-1.5 md:gap-2 bg-white border-[1.5px] border-[#C9A24D]/40 hover:border-[#C9A24D] px-3 md:px-4 py-1.5 md:py-2 rounded-full shadow-sm transition-all cursor-pointer">
+            <Globe size={16} className="text-[#C9A24D] hidden md:block" />
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <button 
+                onClick={() => setLanguage('DE')}
+                className={`text-[11px] md:text-xs font-black tracking-wider transition-colors ${language === 'DE' ? 'text-[#1F1F1F]' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+              >
+                DE
+              </button>
+              <span className="w-[1px] h-3 bg-black/15"></span>
+              <button 
+                onClick={() => setLanguage('EN')}
+                className={`text-[11px] md:text-xs font-black tracking-wider transition-colors ${language === 'EN' ? 'text-[#1F1F1F]' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
+              >
+                EN
+              </button>
+            </div>
           </div>
 
           <Link href={user ? "/dashboard" : "/login"} className="hidden lg:block">

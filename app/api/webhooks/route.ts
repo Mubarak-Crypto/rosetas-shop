@@ -106,6 +106,9 @@ export async function POST(req: Request) {
 
     // 📝 NEW: Extract Gift Message from checkout metadata
     const giftMessageText = paymentIntent.metadata?.gift_message || '';
+
+    // 👤 NEW: Extract User ID from checkout metadata
+    const userIdString = paymentIntent.metadata?.user_id || null;
     
     // ✨ NEW: Holder for the invoice download link
     let invoiceDownloadUrl = null;
@@ -124,7 +127,8 @@ export async function POST(req: Request) {
                     payment_id: paymentIntent.id,
                     total: exactAmountCharged, // ✅ FORCE SYNC: Overwrite DB total with Stripe Truth
                     gift_total: giftAmount, // 🎁 NEW: Saving the Gift Fee into its own column
-                    gift_message: giftMessageText // 📝 NEW: Saving the Checkout Gift Message
+                    gift_message: giftMessageText, // 📝 NEW: Saving the Checkout Gift Message
+                    user_id: userIdString // 👤 NEW: Map the user ID to the database row so the dashboard sees it!
                 })
                 .eq('id', supabaseOrderId)
                 .select('id, customer_name, items, total') // ✨ NEW: Fetch items for stock deduction
@@ -166,29 +170,43 @@ export async function POST(req: Request) {
                 }
 
                 // --- 🌹 FIXED: INVENTORY DEDUCTION LOGIC ---
-                // 🔥 CHANGE: We now subtract the QTY of items, not the number of roses inside.
-                // This prevents the "-47" error where the system over-subtracted individual roses.
+                // 🔥 CHANGE: Safely fetch the exact product and deduct with a strict Math.max(0) floor.
                 if (Array.isArray(orderItems)) {
                   for (const item of orderItems) {
                     try {
                       const qtyBought = item.quantity || 1;
-
                       console.log(`📉 Reducing stock for Product ${item.productId} by ${qtyBought}`);
 
-                      // Calls the SQL RPC function we created
-                      const { error: stockError } = await supabase.rpc('decrement_stock', {
-                        product_id_input: item.productId,
-                        amount_to_subtract: qtyBought // 👈 Changed from totalRosesToSubtract to qtyBought
-                      });
+                      const { data: currentProd } = await supabase
+                        .from('products')
+                        .select('stock, is_unlimited, stock_matrix')
+                        .eq('id', item.productId)
+                        .single();
 
-                      if (stockError) {
-                        const { data: currentProd } = await supabase.from('products').select('stock').eq('id', item.productId).single();
-                        if (currentProd) {
-                          // Ensure we never go below 0 if possible
-                          await supabase.from('products').update({ 
-                            stock: Math.max(0, (currentProd.stock || 0) - qtyBought) 
-                          }).eq('id', item.productId);
+                      if (currentProd && !currentProd.is_unlimited) {
+                        // 1. Update Global Stock (Floor at 0)
+                        const newGlobalStock = Math.max(0, (currentProd.stock || 0) - qtyBought);
+                        
+                        // 2. Update Variant Stock Matrix (Floor at 0)
+                        let updatedMatrix = currentProd.stock_matrix;
+                        if (updatedMatrix && Array.isArray(updatedMatrix)) {
+                          updatedMatrix = updatedMatrix.map((mItem: any) => {
+                            const isMatch = Object.keys(item.rawOptions || {}).every(key => mItem[key] === item.rawOptions[key]);
+                            if (isMatch) {
+                              return { ...mItem, stock: Math.max(0, (mItem.stock || 0) - qtyBought) };
+                            }
+                            return mItem;
+                          });
                         }
+
+                        // 3. Save the clamped stock safely back to the database
+                        await supabase
+                          .from('products')
+                          .update({ 
+                            stock: newGlobalStock,
+                            stock_matrix: updatedMatrix
+                          })
+                          .eq('id', item.productId);
                       }
                     } catch (stockErr) {
                       console.error('Stock reduction error:', stockErr);

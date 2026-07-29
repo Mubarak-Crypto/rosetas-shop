@@ -90,7 +90,8 @@ export async function POST(request: Request) {
     // Extract full customer data from frontend
     const { 
         email, formData, discountCode, cart, country, isExpress, packagingType, tipAmount, donationAmount,
-        giftMessage // 🎁 NEW: Extract the message from the request body
+        giftMessage, // 🎁 NEW: Extract the message from the request body
+        userId // 👤 NEW: Extract the logged-in user's ID
     } = await request.json();
 
     // 🕵️ DEBUG LOG: See what the frontend is actually sending
@@ -100,7 +101,8 @@ export async function POST(request: Request) {
     const productIds = cart.map((item: any) => item.productId);
     const { data: dbProducts, error: prodError } = await supabase
         .from('products')
-        .select('id, price, sale_price, is_on_sale, category')
+        // ✨ NEW: Added stock, is_unlimited, and stock_matrix to the fetch list for the Bouncer check
+        .select('id, price, sale_price, is_on_sale, category, stock, is_unlimited, stock_matrix')
         .in('id', productIds);
 
     if (prodError || !dbProducts) throw new Error("Security Alert: Verification failed.");
@@ -112,6 +114,25 @@ export async function POST(request: Request) {
     for (const item of cart) {
         const dbProduct = dbProducts.find((p) => p.id === item.productId);
         if (!dbProduct) throw new Error(`Invalid product ID in cart.`);
+
+        // 🚨 STOCK BOUNCER: Verify inventory before allowing checkout
+        if (!dbProduct.is_unlimited) {
+            let availableStock = Math.max(0, dbProduct.stock || 0);
+
+            // Check if there is a specific variant matrix we need to look at
+            if (dbProduct.stock_matrix && Array.isArray(dbProduct.stock_matrix) && dbProduct.stock_matrix.length > 0) {
+                const match = dbProduct.stock_matrix.find((matrixItem: any) => {
+                    return Object.keys(item.rawOptions || {}).every(key => matrixItem[key] === item.rawOptions[key]);
+                });
+                if (match) {
+                    availableStock = Math.max(0, match.stock || 0);
+                }
+            }
+
+            if (availableStock < item.quantity) {
+                throw new Error(`Whoops! "${item.name}" just sold out or doesn't have enough stock left.`);
+            }
+        }
 
         // --- 🌹 FINAL HANDSHAKE FIX: USE FRONTEND PRICE DIRECTLY ---
         // Since your frontend already calculates Roses + Extras correctly (e.g., €402),
@@ -193,7 +214,8 @@ export async function POST(request: Request) {
           tip_amount: safeTip, donation_amount: safeDonation,
           discount_amount: discountAmt, discount_code: discountCode || null,
           gift_total: packagingCost, // 🎁 NEW: Save gift amount to DB immediately
-          gift_message: giftMessage || null // 📝 NEW: Save gift message to DB immediately
+          gift_message: giftMessage || null, // 📝 NEW: Save gift message to DB immediately
+          user_id: userId || null // 👤 NEW: Bind this order to the logged-in user
         }
       ])
       .select('id').single();
@@ -216,7 +238,8 @@ export async function POST(request: Request) {
           orderId: brandedId, // ✨ MATCH: Changed key from 'branded_id' to 'orderId' for webhook logic
           email: email, // ✨ MATCH: Changed key from 'customer_email' to 'email'
           gift_amount: packagingCost.toString(), // 🎁 NEW: Pass gift amount to Stripe Metadata
-          gift_message: giftMessage || "" // 📝 NEW: Pass gift message to Stripe Metadata
+          gift_message: giftMessage || "", // 📝 NEW: Pass gift message to Stripe Metadata
+          user_id: userId || "" // 👤 NEW: Pass user ID to Stripe Metadata
       }, 
     });
 

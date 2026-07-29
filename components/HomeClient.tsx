@@ -11,7 +11,8 @@ import Image from "next/image";
 import { useLanguage } from "../context/LanguageContext"; 
 
 // ✨ ACCEPT DATA AS PROPS (Instead of fetching it slowly)
-export default function HomeClient({ products = [], settings = null }: { products: any[], settings: any }) {
+// ✨ UPDATED: Now accepting makeupProducts as an additional prop
+export default function HomeClient({ products = [], makeupProducts = [], settings = null }: { products: any[], makeupProducts: any[], settings: any }) {
   const shopSectionRef = useRef<HTMLDivElement>(null); 
   const { language, t } = useLanguage(); 
 
@@ -284,6 +285,62 @@ export default function HomeClient({ products = [], settings = null }: { product
           )}
         </div>
       </section>
+
+      {/* ✨ ADDED: ELEVATE YOUR GIFT (Makeup / Add-ons Section) */}
+      {makeupProducts && makeupProducts.length > 0 && (
+        <section className="relative z-10 max-w-7xl mx-auto px-6 py-16 md:py-20 border-t border-black/5 bg-[#FDFBF7] rounded-[2rem] md:rounded-[3rem] mb-12 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 text-center md:text-left">
+            <div className="max-w-xl">
+              <div className="inline-flex items-center gap-2 text-[#D4C29A] text-xs font-black uppercase tracking-[0.2em] mb-3 justify-center md:justify-start w-full">
+                <Sparkles size={14} />
+                {language === 'EN' ? "Premium Add-ons" : "Premium-Ergänzungen"}
+              </div>
+              <h2 className="text-3xl md:text-4xl font-playfair font-bold mb-3 text-[#1F1F1F]">
+                {language === 'EN' ? "Elevate Your Gift" : "Werten Sie Ihr Geschenk auf"}
+              </h2>
+              <p className="text-[#1F1F1F]/60 font-medium text-sm md:text-base">
+                {language === 'EN' 
+                  ? "Complete the look. These exclusive makeup products are only available when paired with a bouquet or basket." 
+                  : "Vervollständigen Sie den Look. Diese exklusiven Produkte sind nur in Kombination mit einem Strauß oder Korb erhältlich."}
+              </p>
+            </div>
+            
+            <Link href="/shop/makeup" className="w-fit mx-auto md:mx-0 shrink-0">
+              {/* ✨ FIXED: Updated button to be a solid darker beige (#BA9F85) */}
+              <button 
+                  className="px-6 py-3 rounded-full font-bold uppercase tracking-widest text-[10px] md:text-xs flex items-center gap-2 transition-all hover:scale-105 active:scale-95 border backdrop-blur-sm"
+                  style={{
+                      backgroundColor: '#BA9F85',
+                      color: '#1F1F1F',
+                      borderColor: '#BA9F85',
+                      boxShadow: '0 0 15px rgba(186, 159, 133, 0.4)'
+                  }}
+              >
+                {language === 'EN' ? "Shop Add-ons" : "Ergänzungen kaufen"} <ChevronRight size={14} />
+              </button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 max-w-5xl mx-auto">
+            {makeupProducts.map((product, index) => (
+              <ProductCard 
+                key={product.id}
+                id={product.id}
+                title={language === 'EN' && product.name_en ? product.name_en : product.name} 
+                price={product.price} 
+                salePrice={product.sale_price} 
+                isOnSale={product.is_on_sale} 
+                globalDiscount={settings?.is_global_sale_active ? settings?.global_discount_percentage : 0} 
+                category={product.category}
+                image={product.images?.[0] || "/products/red-glitter.jpg"} 
+                delay={index * 0.1} 
+                promoLabel={product.promo_label}
+                stock={product.stock}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* SUPPLIES BANNER */}
       <section className="px-4 md:px-6 py-12">
