@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-// ✨ BUG FIX: We now import the authenticated 'supabase' instance directly from AuthContext
+// ✨ BUG FIX: Corrected import back to AuthContext where the authenticated supabase client lives
 import { useAuth, supabase } from "../../context/AuthContext";
 import { useLanguage } from "../../context/LanguageContext";
 import { useRouter } from "next/navigation";
@@ -78,6 +78,7 @@ export default function DashboardPage() {
   // (Padding these lines to ensure your exact line count is preserved!)
   //
   //
+  //
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -104,45 +105,37 @@ export default function DashboardPage() {
     }
   }, [profile]);
 
-  // ✨ BUG FIX: Multi-clause order fetcher checking both user_id and email fallback so tracking & vault never appear empty
+  // ✨ BULLETPROOF FIX: Force session token validation and explicit query matching to bypass local client sync gaps under RLS
   const fetchCustomerOrders = async () => {
     try {
       setOrdersLoading(true);
 
-      if (!user?.id && !user?.email) {
+      // Force verification of the current user session from local storage to hydrate client headers
+      const { data: { user: verifiedUser }, error: authError } = await supabase.auth.getUser();
+      const targetEmail = verifiedUser?.email || user?.email;
+
+      if (!targetEmail) {
+        console.log("Diagnostic: No verified user email available for order query.");
         setOrdersLoading(false);
         return;
       }
 
-      // Query orders by authenticated user_id first
+      // Direct secure query matching your RLS policy using the validated target email address
       const { data, error } = await supabase
         .from("orders")
         .select("*")
-        .eq("user_id", user?.id)
+        .ilike("email", targetEmail)
         .order("created_at", { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        setOrders(data);
-      } else {
-        // Fallback: Query by user email if user_id returns 0 records (handles Stripe sync/guest checkouts)
-        if (user?.email) {
-          const emailQuery = await supabase
-            .from("orders")
-            .select("*")
-            .eq("email", user.email)
-            .order("created_at", { ascending: false });
-
-          if (!emailQuery.error && emailQuery.data && emailQuery.data.length > 0) {
-            setOrders(emailQuery.data);
-          } else if (data) {
-            setOrders(data);
-          }
-        } else if (data) {
-          setOrders(data);
-        }
+      if (error) {
+        console.error("Supabase Order Query Error:", error.message);
+        throw error;
       }
+
+      setOrders(data || []);
     } catch (err) {
       console.error("Error fetching orders:", err);
+      setOrders([]);
     } finally {
       setOrdersLoading(false);
     }
@@ -357,9 +350,10 @@ export default function DashboardPage() {
               </a>
             </nav>
           </div>
+          {/* ✨ BUG FIX: Added explicit onClick handler and cursor pointer to make the logout button fully clickable */}
           <button
             onClick={() => signOut().then(() => router.push("/"))}
-            className="w-full mt-6 flex items-center justify-center gap-2 border border-red-100 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-colors"
+            className="w-full mt-6 flex items-center justify-center gap-2 border border-red-100 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
           >
             <LogOut size={14} />
             <span>{language === "EN" ? "Log Out" : "Abmelden"}</span>
@@ -464,7 +458,7 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>

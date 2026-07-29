@@ -26,6 +26,35 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // ✨ BUG FIX: Updated Google and Apple OAuth triggers to pass proper redirect options matching production standards
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "apple",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setErrorMessage(err.message);
+    }
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
@@ -144,7 +173,7 @@ function LoginContent() {
         {/* OAuth Federation Provider Nodes */}
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={signInWithGoogle}
+            onClick={handleGoogleLogin}
             type="button"
             className="flex items-center justify-center gap-2 border border-black/5 bg-[#F6EFE6]/40 hover:bg-[#C9A24D] hover:text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 group"
           >
@@ -158,7 +187,7 @@ function LoginContent() {
           </button>
 
           <button
-            onClick={signInWithApple}
+            onClick={handleAppleLogin}
             type="button"
             className="flex items-center justify-center gap-2 border border-black/5 bg-[#F6EFE6]/40 hover:bg-[#C9A24D] hover:text-white py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 group"
           >

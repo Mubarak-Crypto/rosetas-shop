@@ -4,9 +4,11 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { User } from '@supabase/supabase-js';
 
-// Initialize the browser-side Supabase client
+// Initialize the browser-side Supabase client using native default persistence
 // ✨ BUG FIX: We added 'export' here. This allows your dashboard/page.tsx 
 // to import this exact client so they share the same authentication token!
+// ✨ REVISED BUG FIX: Reverted to native default persistence options to fix the login redirect loop 
+// and allow Supabase to handle default browser token storage correctly without dropping or misrouting headers.
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
