@@ -5,12 +5,19 @@ import { cookies } from 'next/headers';
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
-  const origin = requestUrl.origin;
+
+  // Safely handle production load balancers and domain proxies
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const isLocalEnv = process.env.NODE_ENV === 'development';
+  
+  let origin = requestUrl.origin;
+  if (!isLocalEnv && forwardedHost) {
+    origin = `https://${forwardedHost}`;
+  }
 
   if (code) {
-    // ✨ FIX: Added 'await' because cookies() is now asynchronous in Next.js
     const cookieStore = await cookies();
-    
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -25,8 +32,7 @@ export async function GET(request: Request) {
                 cookieStore.set(name, value, options)
               );
             } catch {
-              // The `setAll` method was called from a Server Component.
-              // This can be ignored if you have middleware refreshing user sessions.
+              // Handled via middleware
             }
           },
         },
@@ -34,8 +40,12 @@ export async function GET(request: Request) {
     );
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+
     if (!error) {
+      // ⚠️ Make sure '/dashboard' actually exists in your app!
       return NextResponse.redirect(`${origin}/dashboard`);
+    } else {
+      console.error("Supabase Session Exchange Error:", error.message);
     }
   }
 

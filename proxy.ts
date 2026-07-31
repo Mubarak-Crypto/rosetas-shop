@@ -11,46 +11,33 @@ export async function proxy(request: NextRequest) {
   })
 
   // 2. Setup the Supabase Client
+  // ✨ UPDATE: The older get/set/remove methods cause redirect loops in Next.js 16.
+  // ✨ UPDATE: We replaced them with getAll and setAll to properly synchronize 
+  // ✨ UPDATE: the server and client cookies during the OAuth callback phase.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        // ✨ UPDATE: Replaced 'get' with 'getAll' to grab all cookies securely at once
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
+        // ✨ UPDATE: Replaced 'set' and 'remove' with 'setAll' to handle both actions safely
+        setAll(cookiesToSet) {
+          // First loop: update the request cookies so subsequent checks see them immediately
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value)
           })
+          
+          // Re-create the response to apply the updated request headers
           response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
+          
+          // Second loop: apply the final cookies to the outgoing response 
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
           })
         },
       },
@@ -58,6 +45,7 @@ export async function proxy(request: NextRequest) {
   )
 
   // 3. Check if the user is logged in
+  // ✨ UPDATE: This getUser() call is what triggers the setAll block above to refresh the session!
   const { data: { user } } = await supabase.auth.getUser()
 
   // 4. SECURITY CHECK (The "Bouncer")
@@ -84,5 +72,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  // ✨ UPDATE: Added your auth callback route to the matcher so the proxy actually processes it.
+  // ✨ UPDATE: Without this, the proxy ignores the Google login return, causing the loop.
+  matcher: [
+    '/admin/:path*',
+    '/auth/callback'
+  ],
 }
