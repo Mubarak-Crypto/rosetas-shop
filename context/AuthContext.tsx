@@ -1,7 +1,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+// ✨ NEW UPDATE: Changed import from '@supabase/supabase-js' to '@supabase/ssr' 
+// This forces the client to read from Cookies (where the server put the token) instead of Local Storage!
+import { createBrowserClient } from '@supabase/ssr';
 import { User } from '@supabase/supabase-js';
 
 // Initialize the browser-side Supabase client using native default persistence
@@ -9,7 +11,8 @@ import { User } from '@supabase/supabase-js';
 // to import this exact client so they share the same authentication token!
 // ✨ REVISED BUG FIX: Reverted to native default persistence options to fix the login redirect loop 
 // and allow Supabase to handle default browser token storage correctly without dropping or misrouting headers.
-export const supabase = createClient(
+// ✨ NEW UPDATE: Swapped createClient for createBrowserClient so the client shares the cookie jar with the server.
+export const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
