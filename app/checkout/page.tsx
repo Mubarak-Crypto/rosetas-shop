@@ -13,6 +13,7 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 import { supabase } from "../../lib/supabase"; 
 import AutoComplete from "react-google-autocomplete"; 
 import { useAuth } from "../../context/AuthContext"; // ✨ Added secure hook reference context line
+import { createBrowserClient } from "@supabase/ssr"; // ✨ AUTH FIX: Import SSR client to access cookies
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -283,7 +284,15 @@ export default function CheckoutPage() {
       if (!user?.id) return;
 
       try {
-        const { data, error } = await supabase
+        // ✨ AUTH FIX: We instantiate the SSR browser client here so it correctly reads the authentication 
+        // cookies we set up previously. If we used the standard 'supabase' import, it would check local storage, 
+        // fail to find the Google Auth session, and RLS would block this query, returning empty fields!
+        const supabaseSsr = createBrowserClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
+        const { data, error } = await supabaseSsr
           .from("profiles")
           .select("*")
           .eq("id", user.id)
