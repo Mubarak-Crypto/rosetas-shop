@@ -726,9 +726,16 @@ export default function CheckoutPage() {
                         // ✨ FIXED: Added optional chaining to prevent TypeScript type errors if address components are undefined
                         const city = addressComponents?.find((c: any) => c.types.includes("locality"))?.long_name || ""; 
                         const zip = addressComponents?.find((c: any) => c.types.includes("postal_code"))?.long_name || ""; 
-                        const selectedCountry = addressComponents?.find((c: any) => c.types.includes("country"))?.long_name || "";
+                        
+                        // ✨ BUG FIX: Compare 2-letter country codes instead of full localized names (e.g. "Deutschland" vs "Germany")
+                        const countryComponent = addressComponents?.find((c: any) => c.types.includes("country"));
+                        const selectedCountry = countryComponent?.long_name || "";
+                        const selectedCountryCode = countryComponent?.short_name?.toLowerCase() || "";
 
-                        if (selectedCountry && selectedCountry.toLowerCase() !== formData.country.toLowerCase()) {
+                        // ✨ Look up the expected 2-letter code from the existing countryCodeMapping
+                        const expectedCountryCode = countryCodeMapping[formData.country]?.toLowerCase();
+
+                        if (selectedCountryCode && expectedCountryCode && selectedCountryCode !== expectedCountryCode) {
                           alert(language === 'EN' 
                             ? `Address mismatch. You selected an address in ${selectedCountry} but shipping is set to ${formData.country}.`
                             : `Adressen-Fehlpassung. Sie haben eine Adresse in ${selectedCountry} gewählt, aber der Versand ist auf ${formData.country} eingestellt.`);
