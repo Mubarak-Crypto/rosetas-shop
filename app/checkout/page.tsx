@@ -517,6 +517,9 @@ export default function CheckoutPage() {
     return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid && vacationValid && isGoogleVerified;
   }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation, vacationSettings.isActive, agreedToVacation, isZipFormatValid, isGoogleVerified]);
 
+  // ✨ NEW: Variable to check if the user is typing an address without selecting the Google dropdown
+  const isMissingDropdownClick = formData.address.trim().length > 4 && !isGoogleVerified;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (e.target.name === "country" && e.target.value !== "Germany") setIsExpress(false);
@@ -868,6 +871,31 @@ export default function CheckoutPage() {
                 )}
 
               </div>
+
+              {/* ✨ NEW: Warning notice to enforce Google Autocomplete selection */}
+              <AnimatePresence>
+                {isMissingDropdownClick && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0, y: -10 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -10 }}
+                    className="mb-4 bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 text-red-700 shadow-sm overflow-hidden"
+                  >
+                    <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                    <div className="text-xs leading-relaxed font-medium">
+                      <p className="font-bold mb-1">
+                        {language === 'EN' ? "Address Verification Required" : "Adressverifizierung erforderlich"}
+                      </p>
+                      <p>
+                        {language === 'EN' 
+                          ? "Please select your exact address from the Google Maps dropdown suggestions. If you only type it manually, the 'Continue' button will remain disabled to prevent shipping errors." 
+                          : "Bitte wählen Sie Ihre genaue Adresse aus den Google Maps-Vorschlägen aus. Wenn Sie diese nur manuell eingeben, bleibt die Schaltfläche 'Weiter' deaktiviert, um Versandfehler zu vermeiden."}
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <button type="submit" disabled={!canProceed} className="w-full bg-[#1F1F1F] hover:bg-[#C9A24D] py-5 rounded-xl transition-all text-white font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50">{t('checkout_continue')} <ArrowLeft className="rotate-180" size={18} /></button>
             </form>
           ) : (

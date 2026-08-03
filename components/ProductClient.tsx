@@ -62,6 +62,9 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const [letterFont, setLetterFont] = useState<'Classic' | 'Modern' | 'Handwritten'>('Classic');
   const [shortNoteText, setShortNoteText] = useState("");
 
+  // ✨ NEW: State to track if the user tried to type an emoji
+  const [showEmojiWarning, setShowEmojiWarning] = useState(false);
+
   // ✨ STATE: Safety Reveal
   const [showSafety, setShowSafety] = useState(false);
 
@@ -222,8 +225,47 @@ export default function ProductClient({ initialProduct, initialSettings, initial
     });
   };
 
+  // ✨ NEW: Helper functions to check and strip emojis from text fields
+  const hasEmojis = (text: string) => {
+    return /[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu.test(text);
+  };
+
+  const removeEmojis = (text: string) => {
+    return text.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '');
+  };
+
+  // ✨ NEW: Custom change handler for Ribbon Text
+  const handleCustomTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawText = e.target.value;
+    if (hasEmojis(rawText)) {
+      setShowEmojiWarning(true);
+    } else {
+      setShowEmojiWarning(false);
+    }
+    setCustomText(removeEmojis(rawText));
+  };
+
+  // ✨ NEW: Custom change handler for Letter Text
+  const handleLetterTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const rawText = e.target.value;
+    if (hasEmojis(rawText)) {
+      setShowEmojiWarning(true);
+    } else {
+      setShowEmojiWarning(false);
+    }
+    setLetterText(removeEmojis(rawText));
+  };
+
+  // ✨ UPDATED: Short Note handler with emoji checking
   const handleShortNoteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value;
+      const rawText = e.target.value;
+      if (hasEmojis(rawText)) {
+        setShowEmojiWarning(true);
+      } else {
+        setShowEmojiWarning(false);
+      }
+      
+      const val = removeEmojis(rawText);
       const words = val.trim().split(/\s+/);
       if (val === "" || words.length <= 5 || (words.length === 6 && val.endsWith(" "))) {
           setShortNoteText(val);
@@ -944,17 +986,24 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                                 </button>
                             </div>
                         </div>
+                        {/* ✨ UPDATED: Added handleCustomTextChange */}
                         <input 
                             type="text" 
                             placeholder={language === 'EN' ? "Enter personalized text..." : "Persönlichen Text eingeben..."}
                             value={customText} 
-                            onChange={(e) => setCustomText(e.target.value)}
+                            onChange={handleCustomTextChange}
                             className={`w-full bg-white border rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none transition-all placeholder:text-gray-300 ${
                                 !customText.trim() ? "border-red-200 focus:border-red-500" : "border-black/5 focus:border-[#D4C29A]"
                             }`}
                         />
+                        {/* ✨ NEW: Emoji Warning Display */}
+                        {showEmojiWarning && (
+                            <span className="text-red-500 text-sm font-medium mt-1 inline-block">
+                                Emojis are not supported for printing
+                            </span>
+                        )}
                         {!customText.trim() && (
-                            <p className="text-red-500 text-xs flex items-center gap-1 font-bold animate-pulse">
+                            <p className="text-red-500 text-xs flex items-center gap-1 font-bold animate-pulse mt-1">
                                 <AlertCircle size={12} /> {t('ribbon_error')}
                             </p>
                         )}
@@ -974,15 +1023,22 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                                 <button onClick={() => setLetterFont('Handwritten')} className={`text-[10px] px-3 py-1.5 rounded-md italic font-bold transition-all ${letterFont === 'Handwritten' ? 'bg-[#1F1F1F] text-white' : 'text-[#1F1F1F]/50'}`}>Script</button>
                             </div>
                         </div>
+                        {/* ✨ UPDATED: Added handleLetterTextChange */}
                         <textarea 
                             rows={8}
                             placeholder={language === 'EN' ? "Write your message here (up to 2 pages)..." : "Schreiben Sie hier Ihre Nachricht (bis zu 2 Seiten)..."}
                             value={letterText}
-                            onChange={(e) => setLetterText(e.target.value)}
+                            onChange={handleLetterTextChange}
                             className={`w-full bg-white border border-black/5 rounded-xl px-4 py-4 text-[#1F1F1F] focus:outline-none focus:border-[#D4C29A] transition-all placeholder:text-gray-300 resize-y 
                                 ${letterFont === 'Classic' ? 'font-serif' : letterFont === 'Modern' ? 'font-sans' : 'italic'}
                             `}
                         />
+                        {/* ✨ NEW: Emoji Warning Display */}
+                        {showEmojiWarning && (
+                            <span className="text-red-500 text-sm font-medium mt-1 inline-block">
+                                Emojis are not supported for printing
+                            </span>
+                        )}
                     </div>
                 )}
 
@@ -992,6 +1048,7 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             <MessageSquare size={14} /> 
                             <span>{language === 'EN' ? "Short Note (Max 5 Words)" : "Kurze Notiz (Max 5 Wörter)"}</span>
                         </label>
+                        {/* ✨ UPDATED: Handler is now emoji aware */}
                         <input 
                             type="text"
                             placeholder={language === 'EN' ? "z.B. I Love You, Sarah" : "z.B. Ich liebe dich, Sarah"}
@@ -999,6 +1056,12 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             onChange={handleShortNoteChange}
                             className="w-full bg-white border border-black/5 rounded-xl px-4 py-4 text-[#1F1F1F] font-bold focus:outline-none focus:border-[#D4C29A] transition-all placeholder:text-gray-300"
                         />
+                        {/* ✨ NEW: Emoji Warning Display */}
+                        {showEmojiWarning && (
+                            <span className="text-red-500 text-sm font-medium mt-1 inline-block">
+                                Emojis are not supported for printing
+                            </span>
+                        )}
                         <p className="text-[10px] text-right font-bold text-[#1F1F1F]/30">{shortNoteText.trim().split(/\s+/).filter(Boolean).length} / 5 Words</p>
                     </div>
                 )}
