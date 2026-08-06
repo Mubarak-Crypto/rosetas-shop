@@ -1,4 +1,3 @@
-
 'use server'
 
 import { createClient } from '@/utils/supabase/server';
@@ -11,10 +10,10 @@ export async function requestPasswordReset(formData: FormData) {
   const supabase = await createClient();
 
   // The redirectTo URL is where the user goes AFTER clicking the email link
-  // UPDATED: Hardcoding the exact live URL to bypass any Vercel environment variable issues.
-  // This guarantees the redirect lands perfectly on the custom update-password page.
+  // UPDATED: Sending to the callback route first to create the session cookie, 
+  // then passing a parameter to forward them to the update-password page
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://www.rosetasbouquets.com/update-password',
+    redirectTo: 'https://www.rosetasbouquets.com/auth/callback?next=/update-password',
   });
 
   if (error) {
