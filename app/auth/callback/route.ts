@@ -42,7 +42,16 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // --- NEW CODE ADDED TO HANDLE REDIRECT PARAMETER ---
+      // Extract the 'next' parameter from the URL to know where to send the user
+      const next = requestUrl.searchParams.get('next');
+      
       // ⚠️ Make sure '/dashboard' actually exists in your app!
+      // UPDATED: If there is a 'next' parameter (like /update-password), go there.
+      // Otherwise, fall back to the default /dashboard route.
+      if (next) {
+        return NextResponse.redirect(`${origin}${next}`);
+      }
       return NextResponse.redirect(`${origin}/dashboard`);
     } else {
       console.error("Supabase Session Exchange Error:", error.message);
