@@ -9,6 +9,7 @@ import Navbar from "./Navbar";
 import Link from "next/link";
 import Image from "next/image"; 
 import { useLanguage } from "../context/LanguageContext"; 
+import StorefrontStories from "@/components/storefront/StorefrontStories"; // ✨ NEW: Import the interactive stories component for the storefront
 
 // ✨ ACCEPT DATA AS PROPS (Instead of fetching it slowly)
 // ✨ UPDATED: Now accepting makeupProducts as an additional prop
@@ -65,6 +66,9 @@ export default function HomeClient({ products = [], makeupProducts = [], setting
       <div className="absolute bottom-0 right-0 w-[250px] md:w-[500px] h-[250px] md:h-[500px] bg-[#D4C29A]/5 rounded-full blur-[60px] md:blur-[100px] pointer-events-none" />
 
       <Navbar />
+
+      {/* ✨ NEW: Storefront Stories Widget placed right at the top of the client layout for interactive browsing */}
+      <StorefrontStories />
 
       {/* Hero Section */}
       {/* ✨ UPDATED: Increased padding px-6 to stop text cutting off */}

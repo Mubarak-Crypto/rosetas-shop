@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink, Gift, Save } from "lucide-react"; 
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink, Gift, Save, ClipboardList, PenTool } from "lucide-react"; // ✨ PACKING UI UPDATE: Added ClipboardList and PenTool
 import Link from "next/link"; // ✨ Added Link for clickable products
 
 export default function AdminOrdersPage() {
@@ -430,77 +430,106 @@ export default function AdminOrdersPage() {
 
                     {/* SHIPPING & ITEMS GRID */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                      <div className="space-y-4 text-sm text-[#1F1F1F]/60">
-                        <div>
-                          <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-2">Shipping Address</h4>
-                          <p className="flex items-start gap-2">
-                            <MapPin size={14} className="mt-1 text-[#C9A24D]" />
-                            <span className="text-[#1F1F1F] font-medium leading-relaxed">
-                              {order.address}<br/>
-                              {order.city}, {order.zip}<br/>
-                              <span className="flex items-center gap-1 mt-1 text-[#1F1F1F] font-bold">
-                                 <Globe size={12} className="text-[#C9A24D]" /> {order.country || "Germany"}
-                              </span>
+                      {/* ✨ PACKING UI UPDATE: Shipping Label Box Restructured */}
+                      <div className="space-y-4 text-sm">
+                        <div className="bg-[#F9F9F9] border-2 border-dashed border-gray-300 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+                          <div className="absolute top-0 right-0 bg-gray-200 text-gray-500 px-3 py-1 rounded-bl-xl text-[8px] font-black uppercase tracking-widest">
+                             Print Label
+                          </div>
+                          <h4 className="text-[10px] font-black text-[#1F1F1F]/40 uppercase tracking-widest mb-3 flex items-center gap-1">
+                             <MapPin size={12} /> Shipping Address
+                          </h4>
+                          <p className="text-[#1F1F1F] font-bold text-base leading-relaxed font-mono">
+                            {order.customer_name}<br/>
+                            {order.address}<br/>
+                            {order.zip} {order.city}<br/>
+                            <span className="flex items-center gap-1 mt-2 text-[#C9A24D] font-black uppercase">
+                               <Globe size={12} /> {order.country || "Germany"}
                             </span>
                           </p>
+                          <div className="mt-4 pt-4 border-t border-gray-200">
+                              <h4 className="text-[10px] font-black text-[#1F1F1F]/40 uppercase tracking-widest mb-1">Contact</h4>
+                              <p className="text-[#1F1F1F] font-bold font-mono">{order.phone}</p>
+                          </div>
                         </div>
+
                         <div>
-                            <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Method</h4>
-                            <p className={`text-[11px] font-black uppercase ${order.shipping_method === 'Express' ? 'text-[#C9A24D]' : 'text-[#1F1F1F]'}`}>
-                              {order.shipping_method || "Standard"}
+                            <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Shipping Method</h4>
+                            <p className={`text-xs font-black uppercase inline-block px-3 py-1.5 rounded-lg ${order.shipping_method === 'Express' ? 'bg-[#C9A24D]/10 text-[#C9A24D] border border-[#C9A24D]/20' : 'bg-gray-100 text-gray-600'}`}>
+                              {order.shipping_method || "Standard Delivery"}
                             </p>
-                        </div>
-                        <div>
-                            <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-1">Contact</h4>
-                            <p className="text-[#1F1F1F] font-bold">{order.phone}</p>
                         </div>
                       </div>
 
+                      {/* ✨ PACKING UI UPDATE: Packing Checklist Layout */}
                       <div className="lg:col-span-2">
-                        <h4 className="text-[10px] font-black text-[#1F1F1F]/30 uppercase tracking-widest mb-3">Order Items</h4>
-                        <div className="space-y-3">
+                        <div className="flex items-center gap-2 mb-4">
+                           <ClipboardList size={18} className="text-[#1F1F1F]/40" />
+                           <h4 className="text-xs font-black text-[#1F1F1F]/60 uppercase tracking-widest">Packing Checklist</h4>
+                        </div>
+                        
+                        <div className="space-y-4">
                           {order.items && order.items.map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-black/5 hover:bg-white transition-colors group/item">
+                            <div key={idx} className="flex flex-col sm:flex-row items-start gap-4 bg-white p-4 rounded-2xl border-2 border-[#F6EFE6] shadow-sm hover:border-[#C9A24D]/30 transition-colors group/item relative">
+                              
+                              {/* Quantity Badge - Huge for easy reading */}
+                              <div className="absolute -top-3 -left-3 bg-[#1F1F1F] text-[#C9A24D] w-10 h-10 rounded-full flex items-center justify-center font-black text-lg shadow-lg border-2 border-white z-10">
+                                {item.quantity}x
+                              </div>
+
                               {/* ✨ UPDATED: IMAGE IS NOW A CLICKABLE LINK TO LIVE SITE */}
-                              <Link href={`/product/${item.productId}`} target="_blank" className="w-12 h-12 bg-white rounded-lg overflow-hidden flex-shrink-0 border border-black/5 shadow-sm relative block">
-                                <img src={item.image} className="w-full h-full object-cover group-hover/item:scale-110 transition-transform" alt={item.name} />
+                              <Link href={`/product/${item.productId}`} target="_blank" className="w-20 h-20 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 border border-black/5 shadow-sm relative block mt-2 sm:mt-0">
+                                <img src={item.image} className="w-full h-full object-cover group-hover/item:scale-105 transition-transform" alt={item.name} />
                                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/item:opacity-100 flex items-center justify-center text-white transition-opacity">
-                                  <ExternalLink size={14} />
+                                  <ExternalLink size={16} />
                                 </div>
                               </Link>
 
-                              <div className="flex-1">
-                                {/* ✨ UPDATED: PRODUCT NAME IS NOW A CLICKABLE LINK TO LIVE SITE */}
-                                <Link 
-                                  href={`/product/${item.productId}`} 
-                                  target="_blank" 
-                                  className="text-sm font-bold text-[#1F1F1F] hover:text-[#C9A24D] transition-colors flex items-center gap-1"
-                                >
-                                  <span className="text-[#C9A24D]">{item.quantity}x</span> {item.name}
-                                </Link>
+                              <div className="flex-1 w-full space-y-3">
+                                <div className="flex justify-between items-start">
+                                    {/* ✨ UPDATED: PRODUCT NAME IS NOW A CLICKABLE LINK TO LIVE SITE */}
+                                    <Link 
+                                      href={`/product/${item.productId}`} 
+                                      target="_blank" 
+                                      className="text-lg font-black text-[#1F1F1F] hover:text-[#C9A24D] transition-colors pr-4"
+                                    >
+                                      {item.name}
+                                    </Link>
+                                    <div className="text-sm font-mono text-[#1F1F1F] font-bold bg-gray-50 px-2 py-1 rounded-lg">
+                                      €{(item.price * item.quantity).toFixed(2)}
+                                    </div>
+                                </div>
 
+                                {/* ✨ PACKING UI UPDATE: HIGH VISIBILITY RIBBON BOX */}
                                 {item.customText && (
-                                  <p className="text-[10px] text-[#C9A24D] mt-0.5 font-black uppercase tracking-tight flex items-center gap-1">
-                                    🎀 Ribbon: "{item.customText}"
-                                  </p>
+                                  <div className="bg-[#FFF8E7] border-l-4 border-[#C9A24D] p-3 rounded-r-xl shadow-sm">
+                                    <p className="text-[10px] text-[#C9A24D] font-black uppercase tracking-widest flex items-center gap-1.5 mb-1">
+                                      <PenTool size={12} /> Custom Ribbon Text
+                                    </p>
+                                    <p className="text-[#1F1F1F] font-bold text-base">
+                                        "{item.customText}"
+                                    </p>
+                                  </div>
                                 )}
                                 
-                                {/* ✨ UPDATED: ENHANCED VISIBILITY FOR CROWN / EXTRAS (Fixes Issue #1) */}
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {item.options && Object.entries(item.options).map(([key, val]) => (
-                                    <span key={key} className="text-[9px] bg-white border border-black/5 px-1.5 py-0.5 rounded text-[#1F1F1F]/60 font-bold uppercase tracking-tighter">
-                                      {key}: {val as string}
-                                    </span>
-                                  ))}
-                                  {item.extras?.map((extra: string) => (
-                                    <span key={extra} className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter border ${extra.includes('WITHOUT') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-[#C9A24D]/10 text-[#C9A24D] border-[#C9A24D]/20'}`}>
-                                      {extra}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="text-sm font-mono text-[#1F1F1F] font-bold">
-                                €{(item.price * item.quantity).toFixed(2)}
+                                {/* ✨ PACKING UI UPDATE: CHECKLIST STYLE EXTRAS */}
+                                {(item.options || (item.extras && item.extras.length > 0)) && (
+                                    <div className="bg-[#F9F9F9] p-3 rounded-xl border border-black/5">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Specifications & Add-ons</p>
+                                        <div className="flex flex-wrap gap-2">
+                                          {item.options && Object.entries(item.options).map(([key, val]) => (
+                                            <span key={key} className="text-xs bg-white border border-gray-200 px-2 py-1 rounded-md text-[#1F1F1F] font-bold shadow-sm">
+                                              <span className="text-gray-400 font-medium mr-1">{key}:</span>{val as string}
+                                            </span>
+                                          ))}
+                                          {item.extras?.map((extra: string) => (
+                                            <span key={extra} className={`text-xs px-2 py-1 rounded-md font-bold shadow-sm border ${extra.includes('WITHOUT') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-[#C9A24D]/10 text-[#C9A24D] border-[#C9A24D]/20'}`}>
+                                              + {extra}
+                                            </span>
+                                          ))}
+                                        </div>
+                                    </div>
+                                )}
                               </div>
                             </div>
                           ))}

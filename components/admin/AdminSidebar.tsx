@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users, Percent, FileText } from "lucide-react"; // ✨ Added Percent and FileText icon
+import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users, Percent, FileText, PlaySquare } from "lucide-react"; // ✨ Added Percent, FileText, and PlaySquare icon for stories
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
@@ -143,6 +143,20 @@ export default function AdminSidebar() {
           >
             <Percent size={20} />
             Promo Codes
+          </Link>
+
+          {/* ✨ NEW: Shop Stories Link added here for Phase 2 integration */}
+          <Link 
+            href="/admin/stories" 
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              isActive("/admin/stories") 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <PlaySquare size={20} />
+            Shop Stories
           </Link>
 
           {/* Storefront Link */}
