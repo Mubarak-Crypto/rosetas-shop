@@ -76,6 +76,10 @@ function LoginContent() {
           "rosetasbouquetde@gmail.com"
         ];
 
+        // --- NEW CODE ADDED TO FIX INFINITE LOADING HANG ---
+        // Forces Next.js to clear the client-side router cache so the secure pages load properly
+        router.refresh();
+
         if (userEmail && administrativeStaff.includes(userEmail)) {
           // Server-side authorized access routes them to the orders workspace
           router.push("/admin/orders");
@@ -85,6 +89,9 @@ function LoginContent() {
         }
       }
     } catch (err: any) {
+      // --- NEW CODE ADDED FOR BETTER DEBUGGING ---
+      console.error("Login attempt failed:", err.message);
+      
       setErrorMessage(
         language === "EN"
           ? "Invalid email credentials or incorrect account password."
@@ -143,6 +150,17 @@ function LoginContent() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-[#F6EFE6]/40 border border-black/5 rounded-xl py-3.5 pl-12 pr-4 text-sm font-medium focus:outline-none focus:border-[#C9A24D] transition-colors"
             />
+          </div>
+
+          {/* --- NEW CODE ADDED: Forgot Password Link --- */}
+          {/* Positioned cleanly below the password input, fully styled to match the theme */}
+          <div className="flex justify-end -mt-2 mb-2">
+            <Link 
+              href="/forgot-password" 
+              className="text-xs font-semibold text-[#CDAF95] hover:text-[#C9A24D] transition-colors duration-300"
+            >
+              {language === "EN" ? "Forgot Password?" : "Passwort vergessen?"}
+            </Link>
           </div>
 
           {/* Luxury core action trigger button: Updates background canvas properties matching the primary shop look */}
