@@ -493,50 +493,57 @@ export default function EditProductPage() {
     setExtras(extras.filter((_, i) => i !== index));
   };
 
-  // --- 3. SAVE UPDATE ---
+  // --- 3. SAVE UPDATE WITH BULLETPROOF ERROR HANDLING ---
+  // 🐛 NEW FIX: We fully wrapped this in a try/catch/finally block!
+  // If the user's connection drops or the token dies while sitting idle, 
+  // the app will catch the crash, alert the user, and immediately stop the spinner.
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
 
-    const { error } = await supabase
-      .from('products')
-      .update({
-        name,
-        name_en: nameEn, 
-        description,
-        description_en: descriptionEn, 
-        safety_instructions_de: safetyInstructions,
-        safety_instructions_en: safetyInstructionsEn,
-        price: parseFloat(price),
-        category: category.trim(),
-        stock: parseInt(stock) || 0,
-        status,
-        images,
-        video_url: videoUrls, 
-        variants,
-        extras, 
-        needs_ribbon: needsRibbon, 
-        stock_matrix: stockMatrix, 
-        promo_label: promoLabel, 
-        is_featured: isFeatured,
-        
-        // ✨ SAVE GATEKEEPER STATES
-        is_addon: isAddon,
-        is_supply: isSupply,
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name,
+          name_en: nameEn, 
+          description,
+          description_en: descriptionEn, 
+          safety_instructions_de: safetyInstructions,
+          safety_instructions_en: safetyInstructionsEn,
+          price: parseFloat(price),
+          category: category.trim(),
+          stock: parseInt(stock) || 0,
+          status,
+          images,
+          video_url: videoUrls, 
+          variants,
+          extras, 
+          needs_ribbon: needsRibbon, 
+          stock_matrix: stockMatrix, 
+          promo_label: promoLabel, 
+          is_featured: isFeatured,
+          
+          // ✨ SAVE GATEKEEPER STATES
+          is_addon: isAddon,
+          is_supply: isSupply,
 
-        pers_label_1: persLabel1 || null,
-        pers_label_2: persLabel2 || null
-      })
-      .eq('id', productId);
+          pers_label_1: persLabel1 || null,
+          pers_label_2: persLabel2 || null
+        })
+        .eq('id', productId);
 
-    if (error) {
-      alert("Error updating: " + error.message);
-    } else {
+      if (error) throw error; // If Supabase throws a soft error, we throw it hard into the catch block.
+
       alert("Product updated successfully!");
       router.refresh(); 
       router.push("/admin/products");
+    } catch (err: any) {
+      console.error("Update Error:", err);
+      alert("Error updating: " + (err.message || "Your connection may have timed out. Please try again."));
+    } finally {
+      setIsSaving(false); // ✨ GUARANTEED UN-FREEZE: Always stops the infinite spinner!
     }
-    setIsSaving(false);
   };
 
   const colorLabels = getColorLabels();
@@ -549,9 +556,21 @@ export default function EditProductPage() {
     );
   }
 
+  // ✨ BULLETPROOF BUG FIX EXPLANATION ✨
+  // Just like the "Add New Product" page, the admin dashboard's global layout 
+  // uses a 'select-none' Tailwind class to prevent the sidebars from turning blue.
+  // 
+  // Because this edit page is rendered inside that layout, the 'select-none' class
+  // cascaded down and locked all of your inputs, completely breaking copy & paste!
+  // 
+  // To fix it, we injected 'select-text' into the main parent container below,
+  // and explicitly added it to every single input and textarea to guarantee
+  // the browser will allow normal typing, selecting, and pasting.
+
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
-      <main className="flex-1 p-8 overflow-y-auto">
+      {/* ✨ BUG FIX: Added select-text here to unlock the container */}
+      <main className="flex-1 p-8 overflow-y-auto select-text">
         <form onSubmit={handleUpdate} className="max-w-5xl mx-auto">
           
           <div className="flex items-center justify-between mb-8">
@@ -598,14 +617,14 @@ export default function EditProductPage() {
                       <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
                       Name (German)
                     </label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold" />
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
                       <span className="w-4 h-3 bg-[#C9A24D]/20 rounded-sm text-[8px] flex items-center justify-center text-[#C9A24D]">EN</span>
                       Name (English)
                     </label>
-                    <input type="text" value={nameEn} onChange={(e) => setNameEn(e.target.value)} placeholder="English title..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold" />
+                    <input type="text" value={nameEn} onChange={(e) => setNameEn(e.target.value)} placeholder="English title..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" />
                   </div>
                 </div>
 
@@ -619,7 +638,7 @@ export default function EditProductPage() {
                           value={category} 
                           onChange={(e) => setCategory(e.target.value)} 
                           placeholder="Enter new category name..." 
-                          className="w-full bg-gray-50 border border-[#C9A24D]/50 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#1F1F1F]" 
+                          className="w-full bg-gray-50 border border-[#C9A24D]/50 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#1F1F1F] select-text" 
                           autoFocus
                         />
                         <button 
@@ -672,14 +691,14 @@ export default function EditProductPage() {
                       <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
                       Description (German)
                     </label>
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none"></textarea>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none select-text"></textarea>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
                       <span className="w-4 h-3 bg-[#C9A24D]/20 rounded-sm text-[8px] flex items-center justify-center text-[#C9A24D]">EN</span>
                       Description (English)
                     </label>
-                    <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={4} placeholder="English description..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none"></textarea>
+                    <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={4} placeholder="English description..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none select-text"></textarea>
                   </div>
                 </div>
 
@@ -693,14 +712,14 @@ export default function EditProductPage() {
                         <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
                         Safety Tips (German)
                       </label>
-                      <textarea value={safetyInstructions} onChange={(e) => setSafetyInstructions(e.target.value)} rows={3} placeholder="z.B. Nicht essbar, von Kindern fernhalten..." className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic"></textarea>
+                      <textarea value={safetyInstructions} onChange={(e) => setSafetyInstructions(e.target.value)} rows={3} placeholder="z.B. Nicht essbar, von Kindern fernhalten..." className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic select-text"></textarea>
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
                         <span className="w-4 h-3 bg-[#C9A24D]/20 rounded-sm text-[8px] flex items-center justify-center text-[#C9A24D]">EN</span>
                         Safety Tips (English)
                       </label>
-                      <textarea value={safetyInstructionsEn} onChange={(e) => setSafetyInstructionsEn(e.target.value)} rows={3} placeholder="e.g. Not edible, keep away from children..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic"></textarea>
+                      <textarea value={safetyInstructionsEn} onChange={(e) => setSafetyInstructionsEn(e.target.value)} rows={3} placeholder="e.g. Not edible, keep away from children..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic select-text"></textarea>
                     </div>
                   </div>
                 </div>
@@ -736,7 +755,7 @@ export default function EditProductPage() {
                             placeholder="e.g. On Vase" 
                             value={persLabel1}
                             onChange={(e) => setPersLabel1(e.target.value)}
-                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none"
+                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none select-text"
                         />
                     </div>
                     <div className="space-y-2">
@@ -748,7 +767,7 @@ export default function EditProductPage() {
                             placeholder="e.g. On Box" 
                             value={persLabel2}
                             onChange={(e) => setPersLabel2(e.target.value)}
-                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none"
+                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none select-text"
                         />
                     </div>
                 </div>
@@ -796,8 +815,8 @@ export default function EditProductPage() {
                 {isAddingVariant ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                        <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                        <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                        <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] select-text" />
+                        <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
                     </div>
                     
                     <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
@@ -822,18 +841,18 @@ export default function EditProductPage() {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
-                                <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                                <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
                             </div>
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
-                                <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                                <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
                             </div>
                         </div>
                         
                         <div className="flex items-end gap-3">
                             <div className="flex-1 space-y-1">
                                  <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
-                                 <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                                 <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
                             </div>
                             <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
                         </div>
@@ -935,7 +954,7 @@ export default function EditProductPage() {
                                         );
                                         setStockMatrix(updated);
                                       }}
-                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold text-[#1F1F1F] outline-none focus:border-[#C9A24D]"
+                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold text-[#1F1F1F] outline-none focus:border-[#C9A24D] select-text"
                                       placeholder="0"
                                     />
                                   )}
@@ -1000,11 +1019,11 @@ export default function EditProductPage() {
                 {isAddingExtra ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3 animate-in fade-in slide-in-from-top-2">
                     <div className="grid grid-cols-2 gap-2">
-                        <input type="text" placeholder="Name (DE)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none" />
-                        <input type="text" placeholder="Name (EN)" value={newExtraNameEn} onChange={(e) => setNewExtraNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none text-[#C9A24D]" />
+                        <input type="text" placeholder="Name (DE)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none select-text" />
+                        <input type="text" placeholder="Name (EN)" value={newExtraNameEn} onChange={(e) => setNewExtraNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none text-[#C9A24D] select-text" />
                     </div>
 
-                    <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15 or -10)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none" /></div>
+                    <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15 or -10)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none select-text" /></div>
                     
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Input Logic (Conditional)</label>
@@ -1095,7 +1114,7 @@ export default function EditProductPage() {
                                         placeholder="Color (e.g. Gold)" 
                                         value={tempExtraVariant} 
                                         onChange={(e) => setTempExtraVariant(e.target.value)} 
-                                        className="flex-1 bg-white border border-black/5 rounded-lg px-2 py-1 text-xs outline-none focus:border-[#C9A24D]" 
+                                        className="flex-1 bg-white border border-black/5 rounded-lg px-2 py-1 text-xs outline-none focus:border-[#C9A24D] select-text" 
                                     />
                                     <button type="button" onClick={handleAddExtraVariantItem} className="bg-[#1F1F1F] text-white px-2 rounded text-xs font-bold">Add</button>
                                     <button type="button" onClick={() => { setIsAddingExtraVariants(false); setExtraVariantsList([]); }} className="text-xs text-red-400"><X size={14} /></button>
@@ -1131,11 +1150,11 @@ export default function EditProductPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
-                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors select-text" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
-                    <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                    <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors select-text" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
@@ -1146,143 +1165,9 @@ export default function EditProductPage() {
                       value={promoLabel} 
                       onChange={(e) => setPromoLabel(e.target.value)} 
                       placeholder="e.g. 2 for 50" 
-                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30" 
+                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30 select-text" 
                     />
                   </div>
-                </div>
-              </div>
-
-            </div> {/* END LEFT COLUMN */}
-
-            {/* RIGHT COLUMN */}
-            <div className="space-y-6">
-              
-              {/* HOMEPAGE VISIBILITY */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
-                  <Star className="text-amber-500 fill-amber-500" size={20} /> Homepage Visibility
-                </h3>
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-[#1F1F1F]">Feature on Homepage?</p>
-                    <p className="text-[10px] text-amber-700/60 mt-1 font-medium italic">If active, this product will appear in the 2x2 grid on the front page.</p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setIsFeatured(!isFeatured)}
-                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isFeatured ? 'bg-amber-500 justify-end' : 'bg-gray-200 justify-start'}`}
-                  >
-                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
-                  </button>
-                </div>
-              </div>
-
-              {/* ✨ NEW: CATEGORY RULES (GATEKEEPER TOGGLES) */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
-                  <ShieldCheck className="text-green-500" size={20} /> Category Rules
-                </h3>
-                
-                <div className="p-4 bg-gray-50 rounded-xl border border-black/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-[#1F1F1F]">Is Makeup Add-on?</p>
-                    <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Cannot be bought without a Bouquet/Basket.</p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setIsAddon(!isAddon)}
-                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isAddon ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
-                  >
-                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
-                  </button>
-                </div>
-
-                <div className="p-4 bg-gray-50 rounded-xl border border-black/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-[#1F1F1F]">Is Florist Supply?</p>
-                    <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Requires cart total &ge; €80 to checkout.</p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setIsSupply(!isSupply)}
-                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isSupply ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
-                  >
-                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
-                  </button>
-                </div>
-              </div>
-
-              {/* IMAGES */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <h3 className="font-bold text-lg mb-4">Images</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  {images.map((img, idx) => (
-                    <div key={idx} className="relative space-y-2 group">
-                      <div className="relative aspect-[4/5] rounded-lg overflow-hidden border border-black/5">
-                        <img src={img} alt={`Product ${idx}`} className="w-full h-full object-cover" />
-                        
-                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm p-2 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" onClick={() => moveImage(idx, 'left')} disabled={idx === 0} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowLeftIcon size={14}/></button>
-                          <button type="button" onClick={() => removeImage(idx)} className="p-1 text-white hover:text-red-500"><Trash2 size={14} /></button>
-                          <button type="button" onClick={() => moveImage(idx, 'right')} disabled={idx === images.length - 1} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowRight size={14}/></button>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 rounded px-2 py-1 border border-black/5 text-center">
-                        <span className="text-[9px] font-bold text-gray-400 uppercase block leading-tight">Pos {idx + 1}</span>
-                        <span className="text-[10px] font-bold text-[#C9A24D] uppercase truncate block">
-                          {colorLabels[idx] || "Extra"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <label className={`aspect-[4/5] rounded-lg border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isUploading ? (
-                      <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <Upload size={24} />
-                        <span className="text-[10px] font-bold uppercase">Add Photo</span>
-                      </div>
-                    )}
-                    <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'product')} disabled={isUploading} />
-                  </label>
-                </div>
-                <p className="text-xs text-gray-400 italic">
-                  {isUploading ? "Uploading..." : "Tip: Images are automatically cropped to 4:5 Portrait mode."}
-                </p>
-              </div>
-
-              {/* PRODUCT VIDEOS */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <h3 className="font-bold text-lg mb-4">Product Videos</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {videoUrls.map((url, idx) => (
-                    <div key={idx} className="relative rounded-xl overflow-hidden border border-black/5 aspect-video bg-black group">
-                      <video src={url} className="w-full h-full object-cover" muted loop autoPlay />
-                      <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[9px] font-bold text-white uppercase tracking-widest">Video {idx + 1}</div>
-                      <button 
-                        type="button" 
-                        onClick={() => removeVideo(idx)} 
-                        className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  <label className={`w-full aspect-video rounded-xl border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isUploadingVideo ? (
-                      <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <Video size={24} />
-                        <span className="text-[10px] font-bold uppercase">Add Video (MP4)</span>
-                      </div>
-                    )}
-                    <input type="file" className="hidden" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
-                  </label>
                 </div>
               </div>
 

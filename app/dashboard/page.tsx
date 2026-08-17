@@ -280,6 +280,19 @@ export default function DashboardPage() {
     return `https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html?piececode=${trackingNum}`;
   };
 
+  // ✨ BUG FIX: Custom logout handler to fix the button hanging issue when sitting idle too long
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (err) {
+      console.error("Failed to sign out normally, forcing clear.", err);
+    } finally {
+      // 🐛 NEW FIX: A hard window location reset completely clears Next.js memory caches
+      // This forces the server to process the updated token state seamlessly!
+      window.location.href = "/";
+    }
+  };
+
   // ✨ BUG FIX: Changed from `(authLoading || !user)` to `(authLoading && !user)`
   // If the browser background-refreshes the session when switching tabs, 
   // it won't unmount the entire dashboard and lock you out anymore!
@@ -313,7 +326,7 @@ export default function DashboardPage() {
               <Link href="/">
                 <div className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-[#1F1F1F]/70 hover:bg-[#F6EFE6]/60 hover:text-[#1F1F1F] transition-all mb-4 cursor-pointer border border-dashed border-black/5">
                   <ArrowRight size={18} className="rotate-180 text-[#C9A24D]" />
-                  <span>{language === "EN" ? "Back to Shop" : "Zurück zum Shop"}</span>
+                <span>{language === "EN" ? "Back to Shop" : "Zurück zum Shop"}</span>
                 </div>
               </Link>
               <button
@@ -350,9 +363,9 @@ export default function DashboardPage() {
               </a>
             </nav>
           </div>
-          {/* ✨ BUG FIX: Added explicit onClick handler and cursor pointer to make the logout button fully clickable */}
+          {/* ✨ BUG FIX: Connected button to the new hard-refresh handleSignOut function */}
           <button
-            onClick={() => signOut().then(() => router.push("/"))}
+            onClick={handleSignOut}
             className="w-full mt-6 flex items-center justify-center gap-2 border border-red-100 hover:bg-red-50 text-red-600 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
           >
             <LogOut size={14} />

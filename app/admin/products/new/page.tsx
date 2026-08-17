@@ -391,7 +391,10 @@ export default function AddProductPage() {
     setExtras(extras.filter((_, i) => i !== index));
   };
 
-  // --- SAVE FUNCTION ---
+  // --- SAVE FUNCTION WITH BULLETPROOF ERROR HANDLING ---
+  // 🐛 NEW FIX: We fully wrapped this in a try/catch/finally block!
+  // If the user's connection drops or the token dies while sitting idle, 
+  // the app will catch the crash, alert the user, and immediately stop the spinner.
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -405,58 +408,72 @@ export default function AddProductPage() {
       return;
     }
 
-    const { error } = await supabase
-      .from('products')
-      .insert([
-        { 
-          name, 
-          name_en: nameEn, 
-          description, 
-          description_en: descriptionEn, 
-          // ✨ NEW: Added Safety Instructions to save logic
-          safety_instructions_de: safetyInstructions,
-          safety_instructions_en: safetyInstructionsEn,
-          price: finalPrice, 
-          category: category.trim(), 
-          stock: finalStock, 
-          is_unlimited: isUnlimited, // ✨ NEW: Save unlimited state
-          status, 
-          images, 
-          video_url: videoUrls, 
-          variants, 
-          extras, 
-          needs_ribbon: needsRibbon, 
-          stock_matrix: stockMatrix, 
-          promo_label: promoLabel, 
+    try {
+      const { error } = await supabase
+        .from('products')
+        .insert([
+          { 
+            name, 
+            name_en: nameEn, 
+            description, 
+            description_en: descriptionEn, 
+            // ✨ NEW: Added Safety Instructions to save logic
+            safety_instructions_de: safetyInstructions,
+            safety_instructions_en: safetyInstructionsEn,
+            price: finalPrice, 
+            category: category.trim(), 
+            stock: finalStock, 
+            is_unlimited: isUnlimited, // ✨ NEW: Save unlimited state
+            status, 
+            images, 
+            video_url: videoUrls, 
+            variants, 
+            extras, 
+            needs_ribbon: needsRibbon, 
+            stock_matrix: stockMatrix, 
+            promo_label: promoLabel, 
 
-          // ✨ PHASE 2: Added is_featured to the insert object
-          is_featured: isFeatured,
-          
-          // ✨ ADDED: Save Gatekeeper flags directly to DB
-          is_addon: isAddon,
-          is_supply: isSupply,
+            // ✨ PHASE 2: Added is_featured to the insert object
+            is_featured: isFeatured,
+            
+            // ✨ ADDED: Save Gatekeeper flags directly to DB
+            is_addon: isAddon,
+            is_supply: isSupply,
 
-          pers_label_1: persLabel1 || null,
-          pers_label_2: persLabel2 || null
-        }
-      ]);
+            pers_label_1: persLabel1 || null,
+            pers_label_2: persLabel2 || null
+          }
+        ]);
 
-    if (error) {
-      alert("Error: " + error.message);
-    } else {
+      if (error) throw error; // If Supabase throws a soft error, we throw it hard into the catch block.
+
       alert("Product Published Successfully!");
       router.push("/admin/products");
+    } catch (err: any) {
+      console.error("Save Error:", err);
+      alert("Error saving: " + (err.message || "Your connection may have timed out. Please try again."));
+    } finally {
+      setIsLoading(false); // ✨ GUARANTEED UN-FREEZE: Always stops the infinite spinner!
     }
-    setIsLoading(false);
   };
 
   const colorLabels = getColorLabels();
 
+  // ✨ BULLETPROOF BUG FIX EXPLANATION ✨
+  // The admin dashboard's global layout uses a 'select-none' Tailwind class 
+  // to make the app feel like a native desktop program (stopping accidental text highlighting).
+  // 
+  // However, that class cascaded down into this form, making the browser block the user 
+  // from highlighting, selecting, or replacing text inside the input fields!
+  // 
+  // To fix it, we injected 'select-text' into the main parent container below.
+  // This explicitly overrides the parent layout and tells the browser: 
+  // "Hey, it is 100% okay to select, highlight, copy, and paste text on this page!"
+
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans">
-
-
-      <main className="flex-1 p-8 overflow-y-auto">
+      {/* ✨ BUG FIX: Added select-text to this main container so all inputs inside are selectable! */}
+      <main className="flex-1 p-8 overflow-y-auto select-text">
         <form onSubmit={handleSave} className="max-w-5xl mx-auto">
           
           <div className="flex items-center justify-between mb-8">
@@ -481,14 +498,14 @@ export default function AddProductPage() {
                       <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
                       Product Name (German)
                     </label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold" />
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
                       <span className="w-4 h-3 bg-[#C9A24D]/20 rounded-sm text-[8px] flex items-center justify-center text-[#C9A24D]">EN</span>
                       Product Name (English)
                     </label>
-                    <input type="text" value={nameEn} onChange={(e) => setNameEn(e.target.value)} placeholder="English title..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold" />
+                    <input type="text" value={nameEn} onChange={(e) => setNameEn(e.target.value)} placeholder="English title..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" />
                   </div>
                 </div>
 
@@ -502,7 +519,7 @@ export default function AddProductPage() {
                           value={category} 
                           onChange={(e) => setCategory(e.target.value)} 
                           placeholder="Enter new category name..." 
-                          className="w-full bg-gray-50 border border-[#C9A24D]/50 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#1F1F1F]" 
+                          className="w-full bg-gray-50 border border-[#C9A24D]/50 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#1F1F1F] select-text" 
                           autoFocus
                         />
                         <button 
@@ -555,14 +572,15 @@ export default function AddProductPage() {
                       <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
                       Description (German)
                     </label>
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none"></textarea>
+                    {/* ✨ BUG FIX: Appended select-text to these textareas to explicitly guarantee highlighting works */}
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none select-text"></textarea>
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
                       <span className="w-4 h-3 bg-[#C9A24D]/20 rounded-sm text-[8px] flex items-center justify-center text-[#C9A24D]">EN</span>
                       Description (English)
                     </label>
-                    <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={4} placeholder="English description..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none"></textarea>
+                    <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={4} placeholder="English description..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors resize-none select-text"></textarea>
                   </div>
                 </div>
 
@@ -577,14 +595,14 @@ export default function AddProductPage() {
                         <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
                         Safety Tips (German)
                       </label>
-                      <textarea value={safetyInstructions} onChange={(e) => setSafetyInstructions(e.target.value)} rows={3} placeholder="z.B. Nicht essbar, von Kindern fernhalten..." className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic"></textarea>
+                      <textarea value={safetyInstructions} onChange={(e) => setSafetyInstructions(e.target.value)} rows={3} placeholder="z.B. Nicht essbar, von Kindern fernhalten..." className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic select-text"></textarea>
                     </div>
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
                         <span className="w-4 h-3 bg-[#C9A24D]/20 rounded-sm text-[8px] flex items-center justify-center text-[#C9A24D]">EN</span>
                         Safety Tips (English)
                       </label>
-                      <textarea value={safetyInstructionsEn} onChange={(e) => setSafetyInstructionsEn(e.target.value)} rows={3} placeholder="e.g. Not edible, keep away from children..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic"></textarea>
+                      <textarea value={safetyInstructionsEn} onChange={(e) => setSafetyInstructionsEn(e.target.value)} rows={3} placeholder="e.g. Not edible, keep away from children..." className="w-full bg-gray-50 border border-[#C9A24D]/20 rounded-xl px-4 py-3 text-sm focus:border-red-400 outline-none transition-colors resize-none italic select-text"></textarea>
                     </div>
                   </div>
                 </div>
@@ -620,7 +638,7 @@ export default function AddProductPage() {
                             placeholder="e.g. On Vase" 
                             value={persLabel1}
                             onChange={(e) => setPersLabel1(e.target.value)}
-                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none"
+                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none select-text"
                         />
                     </div>
                     <div className="space-y-2">
@@ -632,7 +650,7 @@ export default function AddProductPage() {
                             placeholder="e.g. On Box" 
                             value={persLabel2}
                             onChange={(e) => setPersLabel2(e.target.value)}
-                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none"
+                            className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none select-text"
                         />
                     </div>
                 </div>
@@ -699,7 +717,7 @@ export default function AddProductPage() {
                                         );
                                         setStockMatrix(updated);
                                       }}
-                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold text-[#1F1F1F] outline-none focus:border-[#C9A24D]"
+                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold text-[#1F1F1F] outline-none focus:border-[#C9A24D] select-text"
                                       placeholder="0"
                                     />
                                   )}
@@ -718,7 +736,7 @@ export default function AddProductPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
-                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" />
+                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors select-text" />
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -730,7 +748,7 @@ export default function AddProductPage() {
                     {isUnlimited ? (
                       <div className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm text-gray-400 font-bold flex items-center justify-center">∞ Unlimited</div>
                     ) : (
-                      <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors" placeholder="e.g. 100" />
+                      <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors select-text" placeholder="e.g. 100" />
                     )}
                   </div>
                   <div className="space-y-2">
@@ -742,7 +760,7 @@ export default function AddProductPage() {
                       value={promoLabel} 
                       onChange={(e) => setPromoLabel(e.target.value)} 
                       placeholder="e.g. 2 for 50" 
-                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30" 
+                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30 select-text" 
                     />
                   </div>
                 </div>
@@ -915,8 +933,8 @@ export default function AddProductPage() {
                 {isAddingVariant ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3">
                     <div className="grid grid-cols-2 gap-2">
-                        <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D]" />
-                        <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                        <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] select-text" />
+                        <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
                     </div>
                     
                     {/* ✨ UPDATED: 2-Row Layout for Better Visibility & Usability */}
@@ -924,18 +942,18 @@ export default function AddProductPage() {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
-                                <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                                <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
                             </div>
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
-                                <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D]" />
+                                <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
                             </div>
                         </div>
                         
                         <div className="flex items-end gap-3">
                             <div className="flex-1 space-y-1">
                                  <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
-                                 <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F]" />
+                                 <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
                             </div>
                             <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
                         </div>
@@ -1020,11 +1038,11 @@ export default function AddProductPage() {
                 {isAddingExtra ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3 animate-in fade-in slide-in-from-top-2">
                     <div className="grid grid-cols-2 gap-2">
-                        <input type="text" placeholder="Name (DE)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none" />
-                        <input type="text" placeholder="Name (EN)" value={newExtraNameEn} onChange={(e) => setNewExtraNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none text-[#C9A24D]" />
+                        <input type="text" placeholder="Name (DE)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none select-text" />
+                        <input type="text" placeholder="Name (EN)" value={newExtraNameEn} onChange={(e) => setNewExtraNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none text-[#C9A24D] select-text" />
                     </div>
 
-                    <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15 or -10)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none" /></div>
+                    <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15 or -10)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none select-text" /></div>
                     
                     {/* INPUT LOGIC SELECTOR */}
                     <div className="space-y-1">
@@ -1118,7 +1136,7 @@ export default function AddProductPage() {
                                         placeholder="Color (e.g. Gold)" 
                                         value={tempExtraVariant} 
                                         onChange={(e) => setTempExtraVariant(e.target.value)} 
-                                        className="flex-1 bg-white border border-black/5 rounded-lg px-2 py-1 text-xs outline-none focus:border-[#C9A24D]" 
+                                        className="flex-1 bg-white border border-black/5 rounded-lg px-2 py-1 text-xs outline-none focus:border-[#C9A24D] select-text" 
                                     />
                                     <button type="button" onClick={handleAddExtraVariantItem} className="bg-[#1F1F1F] text-white px-2 rounded text-xs font-bold">Add</button>
                                     <button type="button" onClick={() => { setIsAddingExtraVariants(false); setExtraVariantsList([]); }} className="text-xs text-red-400"><X size={14} /></button>

@@ -188,11 +188,15 @@ export default function Navbar() {
             </div>
           </div>
 
-          <Link href={user ? "/dashboard" : "/login"} className="hidden lg:block">
+          {/* ✨ BUG FIX: Changed Next.js <Link> to standard HTML <a> tag. */}
+          {/* This forces a hard browser redirect when moving from the public site */}
+          {/* to the auth/admin boundaries, completely breaking the infinite loading */}
+          {/* and layout bleeding bugs! We keep the exact styling as before. */}
+          <a href={user ? "/dashboard" : "/login"} className="hidden lg:block">
             <button className="px-3 py-2 text-sm text-[#1F1F1F]/40 hover:text-[#1F1F1F] transition-colors font-bold uppercase tracking-tighter">
               {user ? (language === "EN" ? "Dashboard" : "Dashboard") : (language === "EN" ? "Log In" : "Einloggen")}
             </button>
-          </Link>
+          </a>
 
           {/* ✨ WISHLIST BUTTON - Updated to Pink (#E76A8D) */}
           <Link href="/wishlist" className="relative hidden md:flex items-center justify-center w-10 h-10 rounded-full border border-transparent hover:border-black/5 hover:bg-white/50 transition-all group">

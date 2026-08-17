@@ -81,8 +81,10 @@ function LoginContent() {
         router.refresh();
 
         if (userEmail && administrativeStaff.includes(userEmail)) {
-          // Server-side authorized access routes them to the orders workspace
-          router.push("/admin/orders");
+          // ✨ BUG FIX: Changed from /admin/orders to /admin/dashboard.
+          // This perfectly aligns with our new proxy.ts bouncer logic so the client 
+          // and server stop fighting each other, instantly breaking the infinite loading loop!
+          router.push("/admin/dashboard");
         } else {
           // Successful login boots them straight to their secure workspace profile portal
           router.push("/dashboard");
