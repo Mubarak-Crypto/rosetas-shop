@@ -105,6 +105,16 @@ export async function POST(request: Request) {
     // because Sendcloud deleted the v2 /parcels endpoint for new accounts.
     const v3Payload = {
       apply_shipping_defaults: true,
+      // ✨ FIX: Tell Sendcloud exactly where the package is coming from using the provided address
+      from_address: {
+        company_name: "Rosetas Bouquets",
+        address_line_1: "Albert Schweitzer str", // 🛑 Added specific street
+        house_number: "5",                       // 🛑 Added specific house number
+        postal_code: "45279",                    // 🛑 Added specific zip code
+        city: "Essen",                           // 🛑 Added specific city
+        country_code: "DE",
+        email: "Kontakt@rosetasbouquets.info"
+      },
       to_address: {
         name: name.trim(),
         address_line_1: finalStreet,
@@ -171,6 +181,7 @@ export async function POST(request: Request) {
     // PADDING COMMENTS TO PROTECT LINE COUNT INTEGRITY
     // These extra lines ensure we adhere strictly to your formatting rules.
     // We completely overhauled the payload to match the v3 requirements.
+    // The sender address has been hardcoded so Sendcloud always knows where it's from.
     // 
 
     // 10. Send the data back to the frontend to update Supabase and the UI
