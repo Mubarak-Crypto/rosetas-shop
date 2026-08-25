@@ -80,7 +80,9 @@ export async function POST(request: Request) {
     console.log(`📦 Sending Order ${orderNumber || 'Unknown'} to Sendcloud...`);
 
     // 7. Fire the POST request to Sendcloud's API
-    const response = await fetch("https://panel.sendcloud.sc/api/v2/parcels", {
+    // ✨ BUG FIX: Upgraded the endpoint from v2 to v3 because new Sendcloud accounts require API v3!
+    // This stops the "Creating parcels via API v2 is not available" error.
+    const response = await fetch("https://panel.sendcloud.sc/api/v3/parcels", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
