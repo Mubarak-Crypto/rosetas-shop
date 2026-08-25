@@ -38,6 +38,23 @@ export async function POST(req: Request) {
       console.log(`✅ Successfully updated Order ${dbOrderId} to 'shipped' in Supabase!`);
     }
 
+    // ✨ NEW: Generate dynamic clickable tracking links based on the carrier!
+    let trackingUrl = "#";
+    if (carrier) {
+        const carrierLower = carrier.toLowerCase();
+        if (carrierLower.includes('dhl')) {
+          trackingUrl = `https://www.dhl.com/de-en/home/tracking/tracking-parcel.html?submit=1&tracking-id=${trackingNumber}`;
+        } else if (carrierLower.includes('hermes')) {
+          trackingUrl = `https://www.myhermes.de/empfangen/sendungsverfolgung/sendungsinformation#${trackingNumber}`;
+        } else if (carrierLower.includes('dpd')) {
+          trackingUrl = `https://tracking.dpd.de/status/en_US/parcel/${trackingNumber}`;
+        } else if (carrierLower.includes('ups')) {
+          trackingUrl = `https://www.ups.com/track?tracknum=${trackingNumber}`;
+        } else {
+          trackingUrl = `https://www.google.com/search?q=${carrier}+tracking+${trackingNumber}`;
+        }
+    }
+
     // ✨ UPDATED: Use Environment Variable for the domain (fallback to real domain if missing)
     // This fixes the "Invalid Response" error on the review link before the domain is connected.
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://rosetasbouquets.com';
@@ -111,7 +128,9 @@ export async function POST(req: Request) {
                     <span class="label">Carrier</span>
                     <span class="value">${carrier}</span>
                     <span class="label">Tracking Number</span>
-                    <span class="value" style="letter-spacing: 2px;">${trackingNumber}</span>
+                    <span class="value" style="letter-spacing: 2px;">
+                      <a href="${trackingUrl}" target="_blank" style="color: #D4C29A; text-decoration: underline;">${trackingNumber}</a>
+                    </span>
                   </div>
 
                   <p>Once your roses arrive and you've experienced their sparkle, we would love to hear your thoughts.</p>

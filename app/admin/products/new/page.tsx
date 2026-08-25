@@ -109,6 +109,62 @@ export default function AddProductPage() {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
+  // ✨ NEW: AUTO-SAVE DRAFT LOGIC ✨
+  const [isRestored, setIsRestored] = useState(false);
+
+  // 1. Restore Draft from LocalStorage on Mount
+  useEffect(() => {
+    const savedDraft = localStorage.getItem("rosetas_new_product_draft");
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.name) setName(parsed.name);
+        if (parsed.nameEn) setNameEn(parsed.nameEn);
+        if (parsed.category) setCategory(parsed.category);
+        if (parsed.status) setStatus(parsed.status);
+        if (parsed.description) setDescription(parsed.description);
+        if (parsed.descriptionEn) setDescriptionEn(parsed.descriptionEn);
+        if (parsed.isFeatured !== undefined) setIsFeatured(parsed.isFeatured);
+        if (parsed.isAddon !== undefined) setIsAddon(parsed.isAddon);
+        if (parsed.isSupply !== undefined) setIsSupply(parsed.isSupply);
+        if (parsed.safetyInstructions) setSafetyInstructions(parsed.safetyInstructions);
+        if (parsed.safetyInstructionsEn) setSafetyInstructionsEn(parsed.safetyInstructionsEn);
+        if (parsed.price) setPrice(parsed.price);
+        if (parsed.stock) setStock(parsed.stock);
+        if (parsed.isUnlimited !== undefined) setIsUnlimited(parsed.isUnlimited);
+        if (parsed.needsRibbon !== undefined) setNeedsRibbon(parsed.needsRibbon);
+        if (parsed.promoLabel) setPromoLabel(parsed.promoLabel);
+        if (parsed.persLabel1) setPersLabel1(parsed.persLabel1);
+        if (parsed.persLabel2) setPersLabel2(parsed.persLabel2);
+        if (parsed.images) setImages(parsed.images);
+        if (parsed.videoUrls) setVideoUrls(parsed.videoUrls);
+        if (parsed.variants) setVariants(parsed.variants);
+        if (parsed.extras) setExtras(parsed.extras);
+        if (parsed.stockMatrix) setStockMatrix(parsed.stockMatrix);
+      } catch (e) {
+        console.error("Failed to parse product draft", e);
+      }
+    }
+    setIsRestored(true);
+  }, []);
+
+  // 2. Silently save changes to LocalStorage every time something updates
+  useEffect(() => {
+    if (!isRestored) return; // Prevent overwriting before it loads!
+    const draft = {
+      name, nameEn, category, status, description, descriptionEn,
+      isFeatured, isAddon, isSupply, safetyInstructions, safetyInstructionsEn,
+      price, stock, isUnlimited, needsRibbon, promoLabel,
+      persLabel1, persLabel2, images, videoUrls, variants, extras, stockMatrix
+    };
+    localStorage.setItem("rosetas_new_product_draft", JSON.stringify(draft));
+  }, [
+    isRestored, name, nameEn, category, status, description, descriptionEn,
+    isFeatured, isAddon, isSupply, safetyInstructions, safetyInstructionsEn,
+    price, stock, isUnlimited, needsRibbon, promoLabel,
+    persLabel1, persLabel2, images, videoUrls, variants, extras, stockMatrix
+  ]);
+
   // AUTO-GENERATE MATRIX LOGIC
   useEffect(() => {
     if (variants.length > 0) {
@@ -446,6 +502,9 @@ export default function AddProductPage() {
         ]);
 
       if (error) throw error; // If Supabase throws a soft error, we throw it hard into the catch block.
+
+      // ✨ NEW: WIPE THE DRAFT CLEAN ONLY UPON SUCCESS
+      localStorage.removeItem("rosetas_new_product_draft");
 
       alert("Product Published Successfully!");
       router.push("/admin/products");
