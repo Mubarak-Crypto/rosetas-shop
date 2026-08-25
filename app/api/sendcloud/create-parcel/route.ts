@@ -1,5 +1,44 @@
 import { NextResponse } from "next/server";
 
+// ✨ NEW: Smart ISO-2 Country Converter for Worldwide Shipping
+// Sendcloud requires 2-letter codes (e.g. 'DE'), not full names (e.g. 'Germany')
+const getIso2CountryCode = (countryStr: string) => {
+  if (!countryStr) return "DE"; // Default fallback
+  const clean = countryStr.trim().toLowerCase();
+  
+  // If it's already a 2-letter code, just uppercase it and return
+  if (clean.length === 2) return clean.toUpperCase();
+
+  // Dictionary of full names to ISO-2 codes (English & German names for worldwide shipping)
+  const countryMap: Record<string, string> = {
+    "germany": "DE", "deutschland": "DE",
+    "austria": "AT", "österreich": "AT",
+    "switzerland": "CH", "schweiz": "CH",
+    "france": "FR", "frankreich": "FR",
+    "italy": "IT", "italien": "IT",
+    "spain": "ES", "spanien": "ES",
+    "netherlands": "NL", "niederlande": "NL", "holland": "NL",
+    "belgium": "BE", "belgien": "BE",
+    "united kingdom": "GB", "uk": "GB", "england": "GB", "great britain": "GB",
+    "united states": "US", "usa": "US", "united states of america": "US",
+    "canada": "CA", "kanada": "CA",
+    "australia": "AU", "australien": "AU",
+    "ireland": "IE", "irland": "IE",
+    "denmark": "DK", "dänemark": "DK",
+    "sweden": "SE", "schweden": "SE",
+    "norway": "NO", "norwegen": "NO",
+    "finland": "FI", "finnland": "FI",
+    "poland": "PL", "polen": "PL",
+    "portugal": "PT",
+    "south africa": "ZA", "südafrika": "ZA",
+    "luxembourg": "LU", "luxemburg": "LU",
+    "greece": "GR", "griechenland": "GR",
+    "czech republic": "CZ", "tschechien": "CZ"
+  };
+
+  return countryMap[clean] || "DE"; // Fallback to DE if unknown
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -72,7 +111,8 @@ export async function POST(request: Request) {
         house_number: finalHouseNumber,
         postal_code: postalCode.trim(),
         city: city.trim(),
-        country_code: country || "DE", // Default to Germany (ISO-2 Code required)
+        // ✨ BUG FIX: Automatically map full country names to ISO-2 codes!
+        country_code: getIso2CountryCode(country), 
         email: email || "",
         phone_number: phone || ""
       },
