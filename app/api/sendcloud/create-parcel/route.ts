@@ -105,6 +105,11 @@ export async function POST(request: Request) {
     // because Sendcloud deleted the v2 /parcels endpoint for new accounts.
     const v3Payload = {
       apply_shipping_defaults: true,
+      // ✨ FIX: Set DHL as the default fallback carrier since she uses multiple carriers.
+      // If she wants to use DPD or Hermes dynamically, she can set up "Shipping Rules" in Sendcloud!
+      ship_with: {
+        carrier: "dhl"
+      },
       // ✨ FIX: Tell Sendcloud exactly where the package is coming from using the provided address
       // We added the exact Contact Name to pass the strict Field Required validation check.
       from_address: {
@@ -201,8 +206,7 @@ export async function POST(request: Request) {
     // We completely overhauled the payload to match the v3 requirements.
     // The sender address has been hardcoded so Sendcloud always knows where it's from.
     // Added specific phone numbers and names to prevent missing field errors.
-    // Matched the contact name directly to the Sendcloud dashboard validation requirement.
-    // Formatted the phone number to strip empty spaces for API compliance.
+    // Switched to DHL default to resolve the missing rules error for multi-carrier setups.
     // Ensure email is precisely mapped.
     // 
 
