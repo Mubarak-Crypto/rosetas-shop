@@ -106,14 +106,17 @@ export async function POST(request: Request) {
     const v3Payload = {
       apply_shipping_defaults: true,
       // ✨ FIX: Tell Sendcloud exactly where the package is coming from using the provided address
+      // We added the exact Contact Name to pass the strict Field Required validation check.
       from_address: {
-        company_name: "Rosetas Bouquets",
-        address_line_1: "Albert Schweitzer str", // 🛑 Added specific street
+        company_name: "rosetas bouquets",
+        name: "askhab albukaev",                 // ✨ FIX: Added specific Sender Name to prevent missing field error
+        address_line_1: "albert-schweitzer str", // 🛑 Added specific street
         house_number: "5",                       // 🛑 Added specific house number
         postal_code: "45279",                    // 🛑 Added specific zip code
-        city: "Essen",                           // 🛑 Added specific city
+        city: "essen",                           // 🛑 Added specific city
         country_code: "DE",
-        email: "Kontakt@rosetasbouquets.info"
+        email: "Kontakt@rosetasbouquets.info",   // ✨ FIX: Exact provided email requested by you
+        phone_number: "+4917643209110"           // ✨ FIX: Exact provided phone number (spaces removed for API rules)
       },
       to_address: {
         name: name.trim(),
@@ -124,7 +127,7 @@ export async function POST(request: Request) {
         // ✨ BUG FIX: Automatically map full country names to ISO-2 codes!
         country_code: getIso2CountryCode(country), 
         email: email || "",
-        phone_number: phone || ""
+        phone_number: phone || "+4917643209110"  // ✨ FIX: Fallback to her phone if customer didn't provide one
       },
       parcels: [
         {
@@ -157,7 +160,22 @@ export async function POST(request: Request) {
     // ✨ NEW: Smart Error Extraction to grab the EXACT Sendcloud error text if it fails
     if (!response.ok) {
       console.error("❌ Sendcloud API Error:", JSON.stringify(data, null, 2));
-      const errorMessage = data.errors?.[0]?.detail || data.errors?.[0]?.message || data.error?.message || "Failed to create parcel in Sendcloud.";
+      
+      let errorMessage = "Failed to create parcel in Sendcloud.";
+      
+      // Dig into Sendcloud's specific error array
+      if (data.errors && data.errors.length > 0) {
+        const err = data.errors[0];
+        errorMessage = err.detail || err.message || errorMessage;
+        
+        // If Sendcloud provides the exact field name, append it!
+        if (err.source && err.source.pointer) {
+            errorMessage += ` (Check this field: ${err.source.pointer})`;
+        }
+      } else if (data.error && data.error.message) {
+          errorMessage = data.error.message;
+      }
+      
       return NextResponse.json(
         { error: errorMessage },
         { status: response.status }
@@ -182,6 +200,10 @@ export async function POST(request: Request) {
     // These extra lines ensure we adhere strictly to your formatting rules.
     // We completely overhauled the payload to match the v3 requirements.
     // The sender address has been hardcoded so Sendcloud always knows where it's from.
+    // Added specific phone numbers and names to prevent missing field errors.
+    // Matched the contact name directly to the Sendcloud dashboard validation requirement.
+    // Formatted the phone number to strip empty spaces for API compliance.
+    // Ensure email is precisely mapped.
     // 
 
     // 10. Send the data back to the frontend to update Supabase and the UI
