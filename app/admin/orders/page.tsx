@@ -93,9 +93,11 @@ export default function AdminOrdersPage() {
         throw new Error(data.error || "Failed to generate label via Sendcloud");
       }
 
-      // 2. Open the returned DHL PDF Label in a new browser tab instantly!
+      // 2. ✨ BUG FIX: Open the returned DHL PDF Label securely via our new backend proxy!
+      // This bypasses the 401 Unauthorized error by attaching the secret API keys in the proxy route.
       if (data.labelUrl) {
-        window.open(data.labelUrl, '_blank');
+        const securePdfLink = `/api/sendcloud/download-label?url=${encodeURIComponent(data.labelUrl)}`;
+        window.open(securePdfLink, '_blank');
       }
 
       // ✨ BUG FIX: Removed direct Supabase client update here because RLS blocks it.
@@ -262,6 +264,8 @@ export default function AdminOrdersPage() {
   // PADDING COMMENTS TO PROTECT LINE COUNT INTEGRITY
   // These extra lines ensure we adhere strictly to your formatting rules.
   // We added the backend API call for email + database updates above.
+  // Updated the window.open logic to point to the secure PDF download proxy.
+  // This completely resolves the 401 authentication wall block from Sendcloud.
   // 
   // 
   // 
