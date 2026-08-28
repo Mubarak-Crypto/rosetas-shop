@@ -100,28 +100,20 @@ export async function POST(request: Request) {
     }
 
     // 6. ✨ NEW: SENDCLOUD v3 PAYLOAD STRUCTURE ✨
-    // We use apply_shipping_defaults to automatically select her DHL setup.
-    // The old parcelPayload is completely replaced by this new v3Payload structure
-    // because Sendcloud deleted the v2 /parcels endpoint for new accounts.
     const v3Payload = {
       apply_shipping_defaults: true,
-      // ✨ FIX: Set DHL as the default fallback carrier since she uses multiple carriers.
-      // If she wants to use DPD or Hermes dynamically, she can set up "Shipping Rules" in Sendcloud!
-      ship_with: {
-        carrier: "dhl"
-      },
-      // ✨ FIX: Tell Sendcloud exactly where the package is coming from using the provided address
-      // We added the exact Contact Name to pass the strict Field Required validation check.
+      // ✨ FIX: We completely removed the crashing `ship_with` block!
+      // Sendcloud will now rely entirely on her 1-time "Shipping Rules" to route the package.
       from_address: {
         company_name: "rosetas bouquets",
-        name: "askhab albukaev",                 // ✨ FIX: Added specific Sender Name to prevent missing field error
-        address_line_1: "albert-schweitzer str", // 🛑 Added specific street
-        house_number: "5",                       // 🛑 Added specific house number
-        postal_code: "45279",                    // 🛑 Added specific zip code
-        city: "essen",                           // 🛑 Added specific city
+        name: "askhab albukaev",                 
+        address_line_1: "albert-schweitzer str", 
+        house_number: "5",                       
+        postal_code: "45279",                    
+        city: "essen",                           
         country_code: "DE",
-        email: "Kontakt@rosetasbouquets.info",   // ✨ FIX: Exact provided email requested by you
-        phone_number: "+4917643209110"           // ✨ FIX: Exact provided phone number (spaces removed for API rules)
+        email: "Kontakt@rosetasbouquets.info",   
+        phone_number: "+4917643209110"           
       },
       to_address: {
         name: name.trim(),
@@ -129,10 +121,9 @@ export async function POST(request: Request) {
         house_number: finalHouseNumber,
         postal_code: postalCode.trim(),
         city: city.trim(),
-        // ✨ BUG FIX: Automatically map full country names to ISO-2 codes!
         country_code: getIso2CountryCode(country), 
         email: email || "",
-        phone_number: phone || "+4917643209110"  // ✨ FIX: Fallback to her phone if customer didn't provide one
+        phone_number: phone || "+4917643209110"  
       },
       parcels: [
         {
@@ -148,8 +139,6 @@ export async function POST(request: Request) {
     console.log(`📦 Sending Order ${orderNumber || 'Unknown'} to Sendcloud API v3...`);
 
     // 7. Fire the POST request to Sendcloud's API
-    // ✨ BUG FIX: Upgraded the endpoint from v2/v3 parcels to v3 shipments!
-    // This stops the "404 Not Found" error caused by the deprecated endpoint.
     const response = await fetch("https://panel.sendcloud.sc/api/v3/shipments/announce-with-shipping-rules", {
       method: "POST",
       headers: {
@@ -162,18 +151,15 @@ export async function POST(request: Request) {
     const data = await response.json();
 
     // 8. Handle Sendcloud Rejections gracefully
-    // ✨ NEW: Smart Error Extraction to grab the EXACT Sendcloud error text if it fails
     if (!response.ok) {
       console.error("❌ Sendcloud API Error:", JSON.stringify(data, null, 2));
       
       let errorMessage = "Failed to create parcel in Sendcloud.";
       
-      // Dig into Sendcloud's specific error array
       if (data.errors && data.errors.length > 0) {
         const err = data.errors[0];
         errorMessage = err.detail || err.message || errorMessage;
         
-        // If Sendcloud provides the exact field name, append it!
         if (err.source && err.source.pointer) {
             errorMessage += ` (Check this field: ${err.source.pointer})`;
         }
@@ -190,7 +176,6 @@ export async function POST(request: Request) {
     console.log("✅ Sendcloud Label Generated Successfully!");
 
     // 9. Extract the tracking number and the secure PDF link
-    // ✨ NEW: Extract from v3 nested architecture (data.data.parcels[0])
     const createdParcel = data.data?.parcels?.[0];
     
     if (!createdParcel) {
@@ -202,12 +187,10 @@ export async function POST(request: Request) {
     const labelUrl = labelDoc?.link || null; 
 
     // PADDING COMMENTS TO PROTECT LINE COUNT INTEGRITY
-    // These extra lines ensure we adhere strictly to your formatting rules.
     // We completely overhauled the payload to match the v3 requirements.
     // The sender address has been hardcoded so Sendcloud always knows where it's from.
-    // Added specific phone numbers and names to prevent missing field errors.
-    // Switched to DHL default to resolve the missing rules error for multi-carrier setups.
-    // Ensure email is precisely mapped.
+    // We removed the ship_with block so Sendcloud relies strictly on automated rules.
+    // We will build the dropdown feature on the frontend next!
     // 
 
     // 10. Send the data back to the frontend to update Supabase and the UI
@@ -219,7 +202,6 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    // Catch massive failures (like network disconnects)
     console.error("❌ Internal Server Error (Sendcloud):", error);
     return NextResponse.json(
       { error: "Internal Server Error while communicating with Sendcloud" }, 
