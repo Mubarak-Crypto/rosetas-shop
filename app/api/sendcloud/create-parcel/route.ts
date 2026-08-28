@@ -126,7 +126,8 @@ export async function POST(request: Request) {
       // 🛑 apply_shipping_defaults removed because she has no automated rules
       ship_with: {
         type: "shipping_option_code",  // Sendcloud explicitly demands this type
-        shipping_option_code: validShippingOptionCode // Passed dynamically from step 6!
+        shipping_option_code: validShippingOptionCode, // Passed dynamically from step 6!
+        properties: {} // ✨ FIX: Handing Sendcloud the empty properties box it cried about!
       },
       from_address: {
         company_name: "rosetas bouquets",
@@ -217,6 +218,7 @@ export async function POST(request: Request) {
     // The sender address has been hardcoded so Sendcloud always knows where it's from.
     // We dynamically fetched the shipping_option_code to satisfy strict validation.
     // Bypassed the shipping rules endpoint entirely to avoid paywall restrictions.
+    // Fixed the final validation check by appending an empty properties object.
     // 
 
     // 11. Send the data back to the frontend to update Supabase and the UI
