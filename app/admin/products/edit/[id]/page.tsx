@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-// ✨ ADDED: ShieldCheck for Gatekeeper UI
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star, ShieldCheck } from "lucide-react"; 
+// ✨ ADDED: ShieldCheck for Gatekeeper UI, plus Package for the supply toggle
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star, ShieldCheck, Package } from "lucide-react"; 
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -1168,6 +1168,149 @@ export default function EditProductPage() {
                       className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30 select-text" 
                     />
                   </div>
+                </div>
+              </div>
+
+            </div> {/* END LEFT COLUMN */}
+
+            {/* ✨ RESTORED RIGHT COLUMN: IMAGES, VIDEO, AND GATEKEEPERS ✨ */}
+            <div className="space-y-6">
+              
+              {/* IMAGES UPLOAD */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <ImageIcon className="text-[#C9A24D]" size={20} /> Product Images
+                </h3>
+                <p className="text-xs text-gray-400">First image will be the cover. 4:5 aspect ratio.</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {images.map((url, index) => (
+                    <div key={index} className="relative aspect-[4/5] bg-gray-100 rounded-xl overflow-hidden group border border-black/5">
+                      <img src={url} alt={`Product ${index + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        {index > 0 && (
+                          <button type="button" onClick={() => moveImage(index, 'left')} className="p-1.5 bg-white/20 hover:bg-white/40 rounded-lg text-white backdrop-blur-sm transition-colors">
+                            <ArrowLeftIcon size={16} />
+                          </button>
+                        )}
+                        <button type="button" onClick={() => removeImage(index)} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white backdrop-blur-sm transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                        {index < images.length - 1 && (
+                          <button type="button" onClick={() => moveImage(index, 'right')} className="p-1.5 bg-white/20 hover:bg-white/40 rounded-lg text-white backdrop-blur-sm transition-colors">
+                            <ArrowRight size={16} />
+                          </button>
+                        )}
+                      </div>
+                      {index === 0 && (
+                        <div className="absolute top-2 left-2 bg-[#C9A24D] text-white text-[9px] font-black uppercase px-2 py-1 rounded shadow-sm">
+                          Cover
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <label className={`aspect-[4/5] border-2 border-dashed border-black/10 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#C9A24D] transition-colors group ${isUploading && uploadType === 'product' ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploading && uploadType === 'product' ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Processing</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-[#C9A24D] transition-colors">
+                        <Upload size={24} />
+                        <span className="text-xs font-bold uppercase">Add Photo</span>
+                      </div>
+                    )}
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'product')} disabled={isUploading} />
+                  </label>
+                </div>
+              </div>
+
+              {/* PRODUCT VIDEO */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <Video className="text-[#C9A24D]" size={20} /> Product Video
+                </h3>
+                <p className="text-xs text-gray-400">Upload a short showcase video (MP4/WebM).</p>
+                
+                <div className="space-y-3">
+                  {videoUrls.map((url, index) => (
+                    <div key={index} className="relative rounded-xl overflow-hidden border border-black/5 bg-black group">
+                      <video src={url} className="w-full h-48 object-cover opacity-80" controls />
+                      <button type="button" onClick={() => removeVideo(index)} className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 rounded-lg text-white backdrop-blur-sm transition-colors opacity-0 group-hover:opacity-100">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+
+                  <label className={`w-full py-4 border-2 border-dashed border-black/10 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#C9A24D] transition-colors group ${isUploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploadingVideo ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Uploading Video</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-[#C9A24D] transition-colors">
+                        <Upload size={24} />
+                        <span className="text-xs font-bold uppercase">Upload Video</span>
+                      </div>
+                    )}
+                    <input type="file" className="hidden" accept="video/mp4,video/webm,video/quicktime" onChange={handleVideoUpload} disabled={isUploadingVideo} />
+                  </label>
+                </div>
+              </div>
+
+              {/* GATEKEEPER OPTIONS */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <ShieldCheck className="text-[#C9A24D]" size={20} /> Store Settings
+                </h3>
+                <p className="text-xs text-gray-400">Control how this product behaves in the store.</p>
+                
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between p-3 border border-black/5 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Star size={18} className={isFeatured ? "text-[#C9A24D]" : "text-gray-400"} />
+                      <div>
+                        <p className="text-sm font-bold text-[#1F1F1F]">Featured Product</p>
+                        <p className="text-[10px] text-gray-400">Show on homepage hero section</p>
+                      </div>
+                    </div>
+                    <div className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${isFeatured ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}>
+                      <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                    {/* HIDDEN CHECKBOX */}
+                    <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="hidden" />
+                  </label>
+
+                  <label className="flex items-center justify-between p-3 border border-black/5 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Layers size={18} className={isAddon ? "text-[#C9A24D]" : "text-gray-400"} />
+                      <div>
+                        <p className="text-sm font-bold text-[#1F1F1F]">Makeup / Add-on Only</p>
+                        <p className="text-[10px] text-gray-400">Hide from shop, only in up-sells</p>
+                      </div>
+                    </div>
+                    <div className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${isAddon ? 'bg-[#1F1F1F] justify-end' : 'bg-gray-300 justify-start'}`}>
+                      <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                    <input type="checkbox" checked={isAddon} onChange={(e) => setIsAddon(e.target.checked)} className="hidden" />
+                  </label>
+
+                  <label className="flex items-center justify-between p-3 border border-black/5 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Package size={18} className={isSupply ? "text-[#C9A24D]" : "text-gray-400"} />
+                      <div>
+                        <p className="text-sm font-bold text-[#1F1F1F]">Florist Supply</p>
+                        <p className="text-[10px] text-gray-400">Route to supplies shipping logic</p>
+                      </div>
+                    </div>
+                    <div className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${isSupply ? 'bg-blue-600 justify-end' : 'bg-gray-300 justify-start'}`}>
+                      <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                    <input type="checkbox" checked={isSupply} onChange={(e) => setIsSupply(e.target.checked)} className="hidden" />
+                  </label>
                 </div>
               </div>
 
