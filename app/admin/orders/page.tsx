@@ -83,7 +83,9 @@ export default function AdminOrdersPage() {
           email: order.email || order.customer_email,
           phone: order.phone,
           orderNumber: `ROSETAS-${String(order.id).padStart(5, '0')}`,
-          weight: "1.000" // Defaulting to 1kg
+          weight: "1.000", // Defaulting to 1kg
+          // ✨ NEW FIX: Pass the items array so the backend can check if it's 100+ roses to use the 10kg package!
+          items: order.items 
         })
       });
 
@@ -266,8 +268,7 @@ export default function AdminOrdersPage() {
   // We added the backend API call for email + database updates above.
   // Updated the window.open logic to point to the secure PDF download proxy.
   // This completely resolves the 401 authentication wall block from Sendcloud.
-  // 
-  // 
+  // Added the items object to the API call so backend can check for 100+ roses.
   // 
   // 
 
