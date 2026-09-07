@@ -458,8 +458,10 @@ export default function AddProductPage() {
     const finalPrice = parseFloat(price);
     const finalStock = parseInt(stock) || 0;
 
-    if (!name || !price || !category) {
-      alert("Please fill in Name, Price, and Category.");
+    // ✨ BUG FIX: Added isNaN(finalPrice) check. If the user types invalid characters 
+    // into the price field, we catch it here instead of letting the database silently fail.
+    if (!name || !price || isNaN(finalPrice) || !category) {
+      alert("Please fill in Name, a valid Price, and Category.");
       setIsLoading(false);
       return;
     }
