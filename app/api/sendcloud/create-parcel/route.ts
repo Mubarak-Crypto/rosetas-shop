@@ -245,7 +245,8 @@ export async function POST(request: Request) {
         customs_information: {
           invoice_number: orderNumber || "ROSETAS-INTL-01", // ✨ BUG FIX: Changed 'customs_invoice_nr' to 'invoice_number' for v3 strict compliance!
           customs_shipment_type: 2, // 2 = Commercial Goods (Legacy V2)
-          export_reason: 2, // ✨ BUG FIX: V3 explicitly requires 'export_reason' (2 = Commercial)
+          // ✨ BUG FIX: V3 strictly requires 'export_reason' to be one of their predefined strings, NOT an integer!
+          export_reason: "commercial_goods", 
           items: [
             {
               description: "Fresh Cut Flower Bouquet",
@@ -327,7 +328,7 @@ export async function POST(request: Request) {
     // Safely handled text parsing to completely kill the Unexpected Token 'M' crash.
     // Added International Customs Injection to dynamically handle non-DE shipments (like CH).
     // ✨ FIXED: Updated customs_information payload to use invoice_number instead of customs_invoice_nr for v3.
-    // ✨ FIXED: Added 'export_reason' to the customs_information block to satisfy V3 requirements.
+    // ✨ FIXED: Updated 'export_reason' to use the correct v3 string enum instead of an integer.
     // Ensuring the code line count remains perfectly intact for your project structure.
 
     // 11. Send the data back to the frontend to update Supabase and the UI
