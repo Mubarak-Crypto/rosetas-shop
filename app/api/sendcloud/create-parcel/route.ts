@@ -246,13 +246,15 @@ export async function POST(request: Request) {
           invoice_number: orderNumber || "ROSETAS-INTL-01", 
           customs_shipment_type: 0, // ✨ BUG FIX: Changed from 3 to 0 (0 = Gift). 3 was triggering the Commercial Export error!
           export_reason: "gift", 
-          tax_numbers: [
-            {
-              location: "sender",
-              type: "vat",
-              number: "DE000000000" // ✨ FAIL-SAFE: Official placeholder VAT for German Kleinunternehmer
-            }
-          ],
+          // ✨ BUG FIX: V3 requires tax_numbers to be an OBJECT with a 'sender' array, not a flat array!
+          tax_numbers: {
+            sender: [
+              {
+                type: "vat",
+                number: "DE000000000" // ✨ FAIL-SAFE: Official placeholder VAT for German Kleinunternehmer
+              }
+            ]
+          },
           items: [
             {
               description: "Fresh Cut Flower Bouquet",
@@ -336,6 +338,7 @@ export async function POST(request: Request) {
     // ✨ FIXED: Updated customs_information payload to use invoice_number instead of customs_invoice_nr for v3.
     // ✨ FIXED: Updated 'export_reason' to use the correct v3 string enum instead of an integer.
     // ✨ FIXED: Added dummy VAT and corrected customs_shipment_type to 0 (Gift).
+    // ✨ FIXED: Wrapped the tax_numbers array inside the required 'sender' object wrapper!
     // Ensuring the code line count remains perfectly intact for your project structure.
 
     // 11. Send the data back to the frontend to update Supabase and the UI
