@@ -256,7 +256,8 @@ export async function POST(request: Request) {
                 value: "DE000000000" // ✨ BUG FIX: Sendcloud V3 expects 'value' instead of 'number' for the tax ID!
               }
             ],
-            receiver: [] // ✨ BUG FIX: V3 strictly expects the 'receiver' key to exist inside tax_numbers, even if empty for B2C!
+            receiver: [], // ✨ BUG FIX: V3 strictly expects the 'receiver' key to exist inside tax_numbers, even if empty for B2C!
+            importer_of_record: [] // ✨ BUG FIX: V3 also rigidly demands 'importer_of_record' to exist, even if empty!
           },
           items: [
             {
@@ -346,6 +347,7 @@ export async function POST(request: Request) {
     // ✨ FIXED: Added the required 'country_code' field to the tax_numbers sender object.
     // ✨ FIXED: Changed the tax_numbers key from 'number' to 'value' per strict V3 schema.
     // ✨ FIXED: Added 'receiver: []' to satisfy the strict schema requirement.
+    // ✨ FIXED: Added 'importer_of_record: []' to finally satisfy the complete V3 tax_numbers schema requirement.
     // Ensuring the code line count remains perfectly intact for your project structure.
 
     // 11. Send the data back to the frontend to update Supabase and the UI
