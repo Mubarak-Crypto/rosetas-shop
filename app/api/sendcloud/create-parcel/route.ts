@@ -251,6 +251,7 @@ export async function POST(request: Request) {
             sender: [
               {
                 name: "VAT", // ✨ BUG FIX: The 'name' field MUST be the exact tax type (e.g. 'VAT', 'EORI'), NOT the business name!
+                country_code: "DE", // ✨ BUG FIX: Added required country code for the VAT number!
                 type: "vat",
                 number: "DE000000000" // ✨ FAIL-SAFE: Official placeholder VAT for German Kleinunternehmer
               }
@@ -341,6 +342,7 @@ export async function POST(request: Request) {
     // ✨ FIXED: Added dummy VAT and corrected customs_shipment_type to 0 (Gift).
     // ✨ FIXED: Wrapped the tax_numbers array inside the required 'sender' object wrapper!
     // ✨ FIXED: Changed the tax_numbers 'name' field to 'VAT' instead of the business name.
+    // ✨ FIXED: Added the required 'country_code' field to the tax_numbers sender object.
     // Ensuring the code line count remains perfectly intact for your project structure.
 
     // 11. Send the data back to the frontend to update Supabase and the UI
