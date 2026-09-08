@@ -243,13 +243,16 @@ export async function POST(request: Request) {
       // This conditional spread automatically attaches the required form without breaking local German shipments.
       ...(destCountryCode !== "DE" && {
         customs_information: {
-          customs_invoice_nr: orderNumber || "ROSETAS-INTL-01",
+          invoice_number: orderNumber || "ROSETAS-INTL-01", // ✨ BUG FIX: Changed 'customs_invoice_nr' to 'invoice_number' for v3 strict compliance!
           customs_shipment_type: 2, // 2 = Commercial Goods
           items: [
             {
               description: "Fresh Cut Flower Bouquet",
               quantity: 1,
-              weight: targetWeightKg,
+              weight: {
+                value: targetWeightKg, // ✨ BUG FIX: Wrapped weight in value/unit object for v3 customs items
+                unit: "kg"
+              },
               value: 50.00, // Standard declared value in EUR
               hs_code: "06031100", // International HS code for fresh flowers
               origin_country: "DE"
@@ -322,6 +325,7 @@ export async function POST(request: Request) {
     // Built a bulletproof V2-to-V3 translator flow to avoid the V3 405 Method errors.
     // Safely handled text parsing to completely kill the Unexpected Token 'M' crash.
     // Added International Customs Injection to dynamically handle non-DE shipments (like CH).
+    // ✨ FIXED: Updated customs_information payload to use invoice_number instead of customs_invoice_nr for v3.
     // Ensuring the code line count remains perfectly intact for your project structure.
 
     // 11. Send the data back to the frontend to update Supabase and the UI
