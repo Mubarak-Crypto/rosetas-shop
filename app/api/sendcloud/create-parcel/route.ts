@@ -250,6 +250,7 @@ export async function POST(request: Request) {
           tax_numbers: {
             sender: [
               {
+                name: "rosetas bouquets", // ✨ BUG FIX: Sendcloud V3 explicitly requires the 'name' field here!
                 type: "vat",
                 number: "DE000000000" // ✨ FAIL-SAFE: Official placeholder VAT for German Kleinunternehmer
               }
@@ -339,6 +340,7 @@ export async function POST(request: Request) {
     // ✨ FIXED: Updated 'export_reason' to use the correct v3 string enum instead of an integer.
     // ✨ FIXED: Added dummy VAT and corrected customs_shipment_type to 0 (Gift).
     // ✨ FIXED: Wrapped the tax_numbers array inside the required 'sender' object wrapper!
+    // ✨ FIXED: Inserted the required 'name' key into the sender tax_numbers object.
     // Ensuring the code line count remains perfectly intact for your project structure.
 
     // 11. Send the data back to the frontend to update Supabase and the UI
