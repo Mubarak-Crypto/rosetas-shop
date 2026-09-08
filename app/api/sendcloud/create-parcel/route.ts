@@ -115,11 +115,14 @@ export async function POST(request: Request) {
     let validShippingOptionCode = ""; 
     let debugAvailableOptions = ""; 
     let apiErrorMsg = ""; 
+
+    // ✨ NEW: Pre-calculate the Destination Country Code once
+    const destCountryCode = getIso2CountryCode(country);
     
     try {
       // 🐛 FIX: Fetch via V2 first to completely bypass the V3 "Method Not Allowed" crash
       // This reliably pulls exactly what packages are active in her account right now.
-      const searchUrl = `https://panel.sendcloud.sc/api/v2/shipping_methods?from_postal_code=45279&to_country=${getIso2CountryCode(country)}`;
+      const searchUrl = `https://panel.sendcloud.sc/api/v2/shipping_methods?from_postal_code=45279&to_country=${destCountryCode}`;
       
       const v2Res = await fetch(searchUrl, {
         headers: { "Authorization": authHeader }
@@ -206,7 +209,7 @@ export async function POST(request: Request) {
       },
       from_address: {
         company_name: "rosetas bouquets",
-        name: "askhab albukaev",                 
+        name: "askhab albukaev",                
         address_line_1: "albert-schweitzer str", 
         house_number: "5",                       
         postal_code: "45279",                    
@@ -221,7 +224,7 @@ export async function POST(request: Request) {
         house_number: finalHouseNumber,
         postal_code: postalCode.trim(),
         city: city.trim(),
-        country_code: getIso2CountryCode(country), 
+        country_code: destCountryCode, 
         email: email || "",
         phone_number: phone || "+4917643209110"  
       },
@@ -233,7 +236,27 @@ export async function POST(request: Request) {
           }
         }
       ],
-      order_number: orderNumber || ""
+      order_number: orderNumber || "",
+      
+      // ✨ NEW: AUTOMATIC CUSTOMS INJECTION ✨
+      // If the destination is NOT Germany (e.g. Switzerland), Sendcloud requires a customs_information block.
+      // This conditional spread automatically attaches the required form without breaking local German shipments.
+      ...(destCountryCode !== "DE" && {
+        customs_information: {
+          customs_invoice_nr: orderNumber || "ROSETAS-INTL-01",
+          customs_shipment_type: 2, // 2 = Commercial Goods
+          items: [
+            {
+              description: "Fresh Cut Flower Bouquet",
+              quantity: 1,
+              weight: targetWeightKg,
+              value: 50.00, // Standard declared value in EUR
+              hs_code: "06031100", // International HS code for fresh flowers
+              origin_country: "DE"
+            }
+          ]
+        }
+      })
     };
 
     console.log(`📦 Sending Order ${orderNumber || 'Unknown'} to Sendcloud API v3...`);
@@ -298,6 +321,7 @@ export async function POST(request: Request) {
     // Implemented dynamic logic to automatically switch to the 10kg DHL Paket for 100+ roses.
     // Built a bulletproof V2-to-V3 translator flow to avoid the V3 405 Method errors.
     // Safely handled text parsing to completely kill the Unexpected Token 'M' crash.
+    // Added International Customs Injection to dynamically handle non-DE shipments (like CH).
     // Ensuring the code line count remains perfectly intact for your project structure.
 
     // 11. Send the data back to the frontend to update Supabase and the UI
