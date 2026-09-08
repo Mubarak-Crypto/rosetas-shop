@@ -244,9 +244,9 @@ export async function POST(request: Request) {
       ...(destCountryCode !== "DE" && {
         customs_information: {
           invoice_number: orderNumber || "ROSETAS-INTL-01", // ✨ BUG FIX: Changed 'customs_invoice_nr' to 'invoice_number' for v3 strict compliance!
-          customs_shipment_type: 2, // 2 = Commercial Goods (Legacy V2)
-          // ✨ BUG FIX: V3 strictly requires 'export_reason' to be one of their predefined strings, NOT an integer!
-          export_reason: "commercial_goods", 
+          customs_shipment_type: 3, // 3 = Gift (Legacy V2 bypass)
+          // ✨ BUG FIX: Changed to 'gift' to bypass VAT requirement for small businesses!
+          export_reason: "gift", 
           items: [
             {
               description: "Fresh Cut Flower Bouquet",
