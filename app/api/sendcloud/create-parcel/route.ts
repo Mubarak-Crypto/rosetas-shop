@@ -236,6 +236,22 @@ export async function POST(request: Request) {
           }
         }
       ],
+      
+      // ✨ NEW: V3 PARCEL ITEMS ARRAY ✨
+      // Sendcloud V3 completely removed items from customs_information and made it a top-level array!
+      parcel_items: [
+        {
+          description: "Fresh Cut Flower Bouquet",
+          quantity: 1,
+          weight: {
+            value: targetWeightKg, 
+            unit: "kg"
+          },
+          value: 50.00, // Standard declared value in EUR
+          hs_code: "06031100", // International HS code for fresh flowers
+          origin_country: "DE"
+        }
+      ],
       order_number: orderNumber || "",
       
       // ✨ NEW: AUTOMATIC CUSTOMS INJECTION ✨
@@ -258,20 +274,7 @@ export async function POST(request: Request) {
             ],
             receiver: [], // ✨ BUG FIX: V3 strictly expects the 'receiver' key to exist inside tax_numbers, even if empty for B2C!
             importer_of_record: [] // ✨ BUG FIX: V3 also rigidly demands 'importer_of_record' to exist, even if empty!
-          },
-          items: [
-            {
-              description: "Fresh Cut Flower Bouquet",
-              quantity: 1,
-              weight: {
-                value: targetWeightKg, 
-                unit: "kg"
-              },
-              value: 50.00, // Standard declared value in EUR
-              hs_code: "06031100", // International HS code for fresh flowers
-              origin_country: "DE"
-            }
-          ]
+          }
         }
       })
     };
@@ -348,7 +351,7 @@ export async function POST(request: Request) {
     // ✨ FIXED: Changed the tax_numbers key from 'number' to 'value' per strict V3 schema.
     // ✨ FIXED: Added 'receiver: []' to satisfy the strict schema requirement.
     // ✨ FIXED: Added 'importer_of_record: []' to finally satisfy the complete V3 tax_numbers schema requirement.
-    // Ensuring the code line count remains perfectly intact for your project structure.
+    // ✨ FIXED: Extracted 'items' out of customs_information and moved it to a root-level 'parcel_items' array.
 
     // 11. Send the data back to the frontend to update Supabase and the UI
     return NextResponse.json({
