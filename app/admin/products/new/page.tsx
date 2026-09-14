@@ -30,6 +30,57 @@ type UploadType = "product" | "extra";
 // Helper Type for the Temp List Builder
 type TempVariantItem = { de: string; en: string; stock: string };
 
+// ✨ NEW: PRESET ARRAYS FOR QUICK-CLICK UI
+// Contains all 17 Colors, 6 Sizes, and 16 Extras perfectly translated for EN/DE
+const COLOR_PRESETS = [
+  { de: "Aschgraue Eleganz", en: "Ash Grey Elegance" },
+  { de: "Mitternachtsblau", en: "Midnight Blue" },
+  { de: "Eismeerblau", en: "Ice Sea Blue" },
+  { de: "Lavendeltraum", en: "Lavender Dream" },
+  { de: "Pastellviolett", en: "Pastel Violet" },
+  { de: "Sahneweiß", en: "Cream White" },
+  { de: "Schneeflockenweiß", en: "Snowflake White" },
+  { de: "Minzschimmer", en: "Mint Shimmer" },
+  { de: "Sonnenglanz", en: "Sun Glow" },
+  { de: "Rubinfeuer", en: "Ruby Fire" },
+  { de: "Weintraum", en: "Wine Dream" },
+  { de: "Zartrosa", en: "Soft Pink" },
+  { de: "Rosenkuss", en: "Rose Kiss" },
+  { de: "Lightrose", en: "Light Rose" },
+  { de: "Nachtrose", en: "Night Rose" },
+  { de: "Waldzauber", en: "Forest Magic" },
+  { de: "Frühlingswiese", en: "Spring Meadow" }
+];
+
+const SIZE_PRESETS = [
+  { de: "20 Rosen", en: "20 Roses" },
+  { de: "33 Rosen", en: "33 Roses" },
+  { de: "50 Rosen", en: "50 Roses" },
+  { de: "75 Rosen", en: "75 Roses" },
+  { de: "100 Rosen", en: "100 Roses" },
+  { de: "150 Rosen", en: "150 Roses" }
+];
+
+// ✨ FIX: Added the exact prices to the Extras array so they auto-fill on click!
+const EXTRA_PRESETS = [
+  { de: "Schmetterlinge", en: "Butterflies", price: 1 },
+  { de: "Kristall/Perlennadeln", en: "Crystal/Pearl Pins", price: 0.25 },
+  { de: "Ausgedruckte Sticker", en: "Printed Stickers", price: 4 },
+  { de: "Persönliche Notiz", en: "Personal Note", price: 5 },
+  { de: "Brief (Langer Text)", en: "Letter (Long Text)", price: 10 },
+  { de: "Schleierkraut", en: "Baby's Breath", price: 3 },
+  { de: "Personalisiertes Band", en: "Personalized Ribbon", price: 10 },
+  { de: "Grosse Krone", en: "Large Crown", price: 15 },
+  { de: "Mini Buchstaben", en: "Mini Letters", price: 5 },
+  { de: "Schöne Schleife", en: "Beautiful Bow", price: 3 },
+  { de: "Lichterkette", en: "Fairy Lights", price: 4 },
+  { de: "Perlenrand", en: "Pearl Border", price: 5 },
+  { de: "Happy Birthday Metall", en: "Happy Birthday Metal", price: 5 },
+  { de: "Glitzer Buchstaben", en: "Glitter Letters", price: 3.5 },
+  { de: "Glitzer", en: "Glitter", price: 3 },
+  { de: "Lilien", en: "Lilies", price: 4 }
+];
+
 export default function AddProductPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -964,12 +1015,13 @@ export default function AddProductPage() {
                 <h3 className="font-bold text-lg mb-2">Options</h3>
                 <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
                 
+                {/* ✨ FIX: Completely removed the confusing "50 Roses (€100)" text to stop pricing confusion! */}
                 <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
                   <Info size={16} className="text-[#C9A24D] mt-0.5 shrink-0" />
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold">Pricing Grid Guide:</p>
+                    <p className="text-[10px] font-bold">Options Guide:</p>
                     <p className="text-[9px] font-medium leading-relaxed">
-                      Use format: <span className="bg-white px-1 font-bold italic rounded">50 Roses (€100)</span> to update shop price.
+                      Add pure options like <span className="bg-white px-1 font-bold italic rounded">50 Roses</span> without prices.
                     </p>
                   </div>
                 </div>
@@ -996,6 +1048,47 @@ export default function AddProductPage() {
                     <div className="grid grid-cols-2 gap-2">
                         <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] select-text" />
                         <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
+                    </div>
+
+                    {/* ✨ NEW: INJECTED FULL COLOR PRESET BUTTONS (17 COLORS) */}
+                    <div className="space-y-2 pt-2">
+                      <span className="text-[10px] font-bold text-[#1F1F1F] uppercase tracking-wide">Quick-Click Color Presets</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {COLOR_PRESETS.map((color) => (
+                          <button 
+                            type="button" 
+                            key={color.de} 
+                            onClick={() => { 
+                              setTempValueName(color.de); 
+                              setTempValueNameEn(color.en); 
+                            }} 
+                            className="px-2 py-1 bg-white border border-black/10 rounded text-[10px] font-medium hover:border-[#C9A24D] hover:text-[#C9A24D] transition-colors"
+                          >
+                            {color.de}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ✨ NEW: INJECTED FULL SIZE PRESET BUTTONS (6 SIZES) */}
+                    <div className="space-y-2 pb-2">
+                      <span className="text-[10px] font-bold text-[#1F1F1F] uppercase tracking-wide">Quick-Click Size Presets</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {SIZE_PRESETS.map((size) => (
+                          <button 
+                            type="button" 
+                            key={size.de} 
+                            onClick={() => { 
+                              // ✨ NOTE: Will NOT auto-fill price because base bouquet prices constantly fluctuate!
+                              setTempValueName(size.de); 
+                              setTempValueNameEn(size.en); 
+                            }} 
+                            className="px-2 py-1 bg-white border border-black/10 rounded text-[10px] font-medium hover:border-[#C9A24D] hover:text-[#C9A24D] transition-colors"
+                          >
+                            {size.de}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     
                     {/* ✨ UPDATED: 2-Row Layout for Better Visibility & Usability */}
@@ -1098,6 +1191,29 @@ export default function AddProductPage() {
                 </div>
                 {isAddingExtra ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3 animate-in fade-in slide-in-from-top-2">
+                    
+                    {/* ✨ NEW: INJECTED EXTRAS PRESET BUTTONS (16 EXTRAS) */}
+                    <div className="space-y-2 pb-2">
+                      <span className="text-[10px] font-bold text-[#1F1F1F] uppercase tracking-wide">Quick-Click Extra Presets</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {EXTRA_PRESETS.map((extra) => (
+                          <button 
+                            type="button" 
+                            key={extra.de} 
+                            onClick={() => { 
+                              setNewExtraName(extra.de); 
+                              setNewExtraNameEn(extra.en); 
+                              // ✨ FIX: This instantly auto-fills the price box based on her price list!
+                              setNewExtraPrice(extra.price.toString()); 
+                            }} 
+                            className="px-2 py-1 bg-white border border-black/10 rounded text-[10px] font-medium hover:border-[#C9A24D] hover:text-[#C9A24D] transition-colors"
+                          >
+                            {extra.de}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2">
                         <input type="text" placeholder="Name (DE)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none select-text" />
                         <input type="text" placeholder="Name (EN)" value={newExtraNameEn} onChange={(e) => setNewExtraNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none text-[#C9A24D] select-text" />

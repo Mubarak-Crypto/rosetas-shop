@@ -27,20 +27,55 @@ type UploadType = "product" | "extra";
 // Helper Type for the Temp List Builder
 type TempVariantItem = { de: string; en: string; stock: string };
 
-// ✨ NEW: Global Color Presets (Click to Auto-fill)
+// ✨ NEW: PRESET ARRAYS FOR QUICK-CLICK UI
+// Contains all 17 Colors, 6 Sizes, and 16 Extras perfectly translated for EN/DE
 const COLOR_PRESETS = [
-  { de: "Rot", en: "Red" },
-  { de: "Weiß", en: "White" },
-  { de: "Schwarz", en: "Black" },
-  { de: "Lightrose", en: "Lightrose" },
-  { de: "Rubinfeuer", en: "Ruby Fire" },
-  { de: "Rosenkuss", en: "Rosekiss" },
-  { de: "Zartrosa", en: "Softpink" },
+  { de: "Aschgraue Eleganz", en: "Ash Grey Elegance" },
+  { de: "Mitternachtsblau", en: "Midnight Blue" },
+  { de: "Eismeerblau", en: "Ice Sea Blue" },
+  { de: "Lavendeltraum", en: "Lavender Dream" },
+  { de: "Pastellviolett", en: "Pastel Violet" },
   { de: "Sahneweiß", en: "Cream White" },
   { de: "Schneeflockenweiß", en: "Snowflake White" },
+  { de: "Minzschimmer", en: "Mint Shimmer" },
+  { de: "Sonnenglanz", en: "Sun Glow" },
+  { de: "Rubinfeuer", en: "Ruby Fire" },
+  { de: "Weintraum", en: "Wine Dream" },
+  { de: "Zartrosa", en: "Soft Pink" },
+  { de: "Rosenkuss", en: "Rose Kiss" },
+  { de: "Lightrose", en: "Light Rose" },
   { de: "Nachtrose", en: "Night Rose" },
-  { de: "Eismeerblau", en: "Ice Blue" },
-  { de: "Pastellviolett", en: "Pastel Violet" }
+  { de: "Waldzauber", en: "Forest Magic" },
+  { de: "Frühlingswiese", en: "Spring Meadow" }
+];
+
+const SIZE_PRESETS = [
+  { de: "20 Rosen", en: "20 Roses" },
+  { de: "33 Rosen", en: "33 Roses" },
+  { de: "50 Rosen", en: "50 Roses" },
+  { de: "75 Rosen", en: "75 Roses" },
+  { de: "100 Rosen", en: "100 Roses" },
+  { de: "150 Rosen", en: "150 Roses" }
+];
+
+// ✨ FIX: Added the exact prices to the Extras array so they auto-fill on click!
+const EXTRA_PRESETS = [
+  { de: "Schmetterlinge", en: "Butterflies", price: 1 },
+  { de: "Kristall/Perlennadeln", en: "Crystal/Pearl Pins", price: 0.25 },
+  { de: "Ausgedruckte Sticker", en: "Printed Stickers", price: 4 },
+  { de: "Persönliche Notiz", en: "Personal Note", price: 5 },
+  { de: "Brief (Langer Text)", en: "Letter (Long Text)", price: 10 },
+  { de: "Schleierkraut", en: "Baby's Breath", price: 3 },
+  { de: "Personalisiertes Band", en: "Personalized Ribbon", price: 10 },
+  { de: "Grosse Krone", en: "Large Crown", price: 15 },
+  { de: "Mini Buchstaben", en: "Mini Letters", price: 5 },
+  { de: "Schöne Schleife", en: "Beautiful Bow", price: 3 },
+  { de: "Lichterkette", en: "Fairy Lights", price: 4 },
+  { de: "Perlenrand", en: "Pearl Border", price: 5 },
+  { de: "Happy Birthday Metall", en: "Happy Birthday Metal", price: 5 },
+  { de: "Glitzer Buchstaben", en: "Glitter Letters", price: 3.5 },
+  { de: "Glitzer", en: "Glitter", price: 3 },
+  { de: "Lilien", en: "Lilies", price: 4 }
 ];
 
 export default function EditProductPage() {
@@ -778,12 +813,13 @@ export default function EditProductPage() {
                 <h3 className="font-bold text-lg mb-2">Options</h3>
                 <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
                 
+                {/* ✨ FIX: Completely removed the confusing "50 Roses (€100)" text to stop pricing confusion! */}
                 <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
                   <Info size={16} className="text-[#C9A24D] mt-0.5 shrink-0" />
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold">Pricing Grid Guide:</p>
+                    <p className="text-[10px] font-bold">Options Guide:</p>
                     <p className="text-[9px] font-medium leading-relaxed">
-                      Use format: <span className="bg-white px-1 font-bold italic rounded">50 Roses (€100)</span> to update shop price.
+                      Add pure options like <span className="bg-white px-1 font-bold italic rounded">50 Roses</span> without prices.
                     </p>
                   </div>
                 </div>
@@ -818,26 +854,50 @@ export default function EditProductPage() {
                         <input type="text" placeholder="Option Name (DE)" value={newVariantName} onChange={(e) => setNewVariantName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] select-text" />
                         <input type="text" placeholder="Option Name (EN)" value={newVariantNameEn} onChange={(e) => setNewVariantNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
                     </div>
-                    
-                    <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
-                        
-                        {/* ✨ NEW: Quick-Click Color Presets */}
-                        <div className="mb-3 border-b border-black/5 pb-3">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase block mb-2">Quick-Click Color Presets</span>
-                            <div className="flex flex-wrap gap-1.5">
-                                {COLOR_PRESETS.map((c, i) => (
-                                    <button 
-                                        key={i} 
-                                        type="button" 
-                                        onClick={() => { setTempValueName(c.de); setTempValueNameEn(c.en); }}
-                                        className="text-[9px] font-bold bg-white text-[#1F1F1F]/60 border border-black/10 hover:border-[#C9A24D] hover:text-[#C9A24D] rounded px-2 py-1 transition-colors"
-                                    >
-                                        {c.de}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
 
+                    {/* ✨ NEW: INJECTED FULL COLOR PRESET BUTTONS (17 COLORS) */}
+                    <div className="space-y-2 pt-2">
+                      <span className="text-[10px] font-bold text-[#1F1F1F] uppercase tracking-wide">Quick-Click Color Presets</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {COLOR_PRESETS.map((color) => (
+                          <button 
+                            type="button" 
+                            key={color.de} 
+                            onClick={() => { 
+                              setTempValueName(color.de); 
+                              setTempValueNameEn(color.en); 
+                            }} 
+                            className="px-2 py-1 bg-white border border-black/10 rounded text-[10px] font-medium hover:border-[#C9A24D] hover:text-[#C9A24D] transition-colors"
+                          >
+                            {color.de}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ✨ NEW: INJECTED FULL SIZE PRESET BUTTONS (6 SIZES) */}
+                    <div className="space-y-2 pb-2">
+                      <span className="text-[10px] font-bold text-[#1F1F1F] uppercase tracking-wide">Quick-Click Size Presets</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {SIZE_PRESETS.map((size) => (
+                          <button 
+                            type="button" 
+                            key={size.de} 
+                            onClick={() => { 
+                              // ✨ NOTE: Will NOT auto-fill price because base bouquet prices constantly fluctuate!
+                              setTempValueName(size.de); 
+                              setTempValueNameEn(size.en); 
+                            }} 
+                            className="px-2 py-1 bg-white border border-black/10 rounded text-[10px] font-medium hover:border-[#C9A24D] hover:text-[#C9A24D] transition-colors"
+                          >
+                            {size.de}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* ✨ UPDATED: 2-Row Layout for Better Visibility & Usability */}
+                    <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
@@ -1018,6 +1078,29 @@ export default function EditProductPage() {
                 </div>
                 {isAddingExtra ? (
                   <div className="bg-gray-50 p-4 rounded-xl border border-black/5 space-y-3 animate-in fade-in slide-in-from-top-2">
+                    
+                    {/* ✨ NEW: INJECTED EXTRAS PRESET BUTTONS (16 EXTRAS) */}
+                    <div className="space-y-2 pb-2">
+                      <span className="text-[10px] font-bold text-[#1F1F1F] uppercase tracking-wide">Quick-Click Extra Presets</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {EXTRA_PRESETS.map((extra) => (
+                          <button 
+                            type="button" 
+                            key={extra.de} 
+                            onClick={() => { 
+                              setNewExtraName(extra.de); 
+                              setNewExtraNameEn(extra.en); 
+                              // ✨ FIX: This instantly auto-fills the price box based on her price list!
+                              setNewExtraPrice(extra.price.toString()); 
+                            }} 
+                            className="px-2 py-1 bg-white border border-black/10 rounded text-[10px] font-medium hover:border-[#C9A24D] hover:text-[#C9A24D] transition-colors"
+                          >
+                            {extra.de}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2">
                         <input type="text" placeholder="Name (DE)" value={newExtraName} onChange={(e) => setNewExtraName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none select-text" />
                         <input type="text" placeholder="Name (EN)" value={newExtraNameEn} onChange={(e) => setNewExtraNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm focus:border-[#C9A24D] outline-none text-[#C9A24D] select-text" />
@@ -1025,6 +1108,7 @@ export default function EditProductPage() {
 
                     <div className="relative"><DollarSign size={14} className="absolute left-3 top-2.5 text-gray-400" /><input type="number" placeholder="Price (e.g. 15 or -10)" value={newExtraPrice} onChange={(e) => setNewExtraPrice(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg pl-8 pr-3 py-2 text-sm focus:border-[#C9A24D] outline-none select-text" /></div>
                     
+                    {/* INPUT LOGIC SELECTOR */}
                     <div className="space-y-1">
                         <label className="text-[10px] font-bold text-gray-400 uppercase">Input Logic (Conditional)</label>
                         <div className="flex gap-2">
@@ -1053,6 +1137,7 @@ export default function EditProductPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
+                        {/* QUANTITY TOGGLE */}
                         <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
                             <div className="flex flex-col">
                                 <span className="text-xs font-bold text-[#1F1F1F]">Enable Quantity?</span>
@@ -1067,6 +1152,7 @@ export default function EditProductPage() {
                             </button>
                         </div>
 
+                        {/* MULTIPLE SELECTION TOGGLE */}
                         <div className="flex items-center justify-between bg-white border border-black/5 p-2 rounded-lg">
                             <div className="flex flex-col">
                                 <span className="text-xs font-bold text-[#1F1F1F]">Allow Multiple?</span>
@@ -1142,33 +1228,6 @@ export default function EditProductPage() {
                 ) : (
                   <button type="button" onClick={() => setIsAddingExtra(true)} className="w-full py-3 rounded-xl border border-dashed border-white/20 text-xs font-bold hover:text-[#1F1F1F] hover:border-[#1F1F1F] transition-colors flex items-center justify-center gap-2"><Plus size={14} /> Add Upsell</button>
                 )}
-              </div>
-
-              {/* PRICING & PROMOTION (Restored to its original state exactly as provided) */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-4">Pricing & Promotion</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
-                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors select-text" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
-                    <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors select-text" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
-                      <Tag size={10} /> Promotion (Optional)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={promoLabel} 
-                      onChange={(e) => setPromoLabel(e.target.value)} 
-                      placeholder="e.g. 2 for 50" 
-                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30 select-text" 
-                    />
-                  </div>
-                </div>
               </div>
 
             </div> {/* END LEFT COLUMN */}
