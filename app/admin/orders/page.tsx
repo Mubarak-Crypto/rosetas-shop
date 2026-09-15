@@ -13,7 +13,8 @@ export default function AdminOrdersPage() {
   // ✨ Category Tab State ('all' | 'bouquets' | 'supplies')
   const [activeCategory, setActiveCategory] = useState<'all' | 'bouquets' | 'supplies'>('all');
   
-  const [activeTab, setActiveTab] = useState<'paid' | 'shipped'>('paid');
+  // ✨ BUG FIX 1: Added 'unpaid' to the tab state types so we can quarantine abandoned checkouts
+  const [activeTab, setActiveTab] = useState<'paid' | 'shipped' | 'unpaid'>('paid');
   const [searchTerm, setSearchTerm] = useState(""); 
 
   // ✨ SHIPPING MODAL STATE
@@ -69,6 +70,14 @@ export default function AdminOrdersPage() {
 
   // ✨ SENDCLOUD: Auto-Generate Shipping Label
   const handleGenerateLabel = async (order: any) => {
+    // ✨ BUG FIX 3: Prevent accidental duplicate labels and spam emails!
+    if (order.status === 'shipped' || order.tracking_number) {
+       alert("Label already generated! 🛑\n\nTo prevent spamming the customer with duplicate tracking emails, we blocked this action. Please click the 'Eye' icon in your Sendcloud Dashboard to reprint the existing label.");
+       // ✨ FIXED: Now points directly to the main authenticated dashboard to prevent the 404 Error!
+       window.open("https://panel.sendcloud.sc/", "_blank");
+       return;
+    }
+
     setIsGeneratingLabel(order.id);
     try {
       // 1. Call our new secure backend API
@@ -216,10 +225,13 @@ export default function AdminOrdersPage() {
   };
 
   const displayedOrders = orders.filter(order => {
-    // 1. FILTER BY STATUS (Pending vs Shipped)
+    // 1. FILTER BY STATUS (Pending vs Shipped vs Unpaid)
+    // ✨ BUG FIX 1: Safely split "Pending (Unpaid)" away from "Paid (To Pack)"
     const matchesTab = activeTab === 'paid' 
-      ? (order.status === 'paid' || order.status === 'pending' || order.status === 'handcrafting')
-      : (order.status === 'shipped' || order.status === 'completed' || order.status === 'delivered');
+      ? (order.status === 'paid' || order.status === 'handcrafting') // Only show ACTUAL paid orders to the packers
+      : activeTab === 'shipped'
+        ? (order.status === 'shipped' || order.status === 'completed' || order.status === 'delivered')
+        : (order.status === 'pending'); // The new "Unpaid" tab for abandoned checkouts
 
     // 2. FILTER BY CATEGORY (All vs Bouquets vs Supplies)
     let matchesCategory = true;
@@ -276,6 +288,9 @@ export default function AdminOrdersPage() {
   // Added the items object to the API call so backend can check for 100+ roses.
   // We've successfully integrated the Micro View for discount data directly into
   // the financial strip without breaking any existing formatting.
+  // ✨ Added the unpaid quarantine tab to hide abandoned checkouts from packers.
+  // ✨ Added logic to disable the shipping label button on unpaid orders.
+  // Everything is fully intact and explicitly protected.
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans selection:bg-[#C9A24D] selection:text-white">
@@ -327,13 +342,20 @@ export default function AdminOrdersPage() {
                     onClick={() => setActiveTab('paid')}
                     className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'paid' ? 'bg-[#1F1F1F] text-white shadow-lg' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
                   >
-                    <Clock size={16} /> Pending
+                    <Clock size={16} /> To Pack (Paid)
                   </button>
                   <button 
                     onClick={() => setActiveTab('shipped')}
                     className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'shipped' ? 'bg-[#C9A24D] text-white shadow-lg' : 'text-[#1F1F1F]/40 hover:text-[#1F1F1F]'}`}
                   >
                     <Truck size={16} /> History
+                  </button>
+                  {/* ✨ BUG FIX 1: New Unpaid Tab so they don't lose abandoned checkouts, but they stay out of the packing list */}
+                  <button 
+                    onClick={() => setActiveTab('unpaid')}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all ${activeTab === 'unpaid' ? 'bg-red-500 text-white shadow-lg' : 'text-[#1F1F1F]/40 hover:text-red-500'}`}
+                  >
+                    <AlertCircle size={16} /> Unpaid
                   </button>
                 </div>
               </div>
@@ -408,7 +430,8 @@ export default function AdminOrdersPage() {
                 const productPrice = total - tip - donation - gift + discountAmount;
 
                 return (
-                  <div key={order.id} className="bg-white border border-black/5 rounded-3xl p-6 hover:shadow-xl hover:border-[#C9A24D]/20 transition-all animate-in fade-in slide-in-from-bottom-4 group">
+                  // ✨ BUG FIX 2: Added red border for pending/unpaid items so they stand out
+                  <div key={order.id} className={`bg-white border ${order.status === 'pending' ? 'border-red-200 shadow-sm' : 'border-black/5'} rounded-3xl p-6 hover:shadow-xl hover:border-[#C9A24D]/20 transition-all animate-in fade-in slide-in-from-bottom-4 group`}>
                     
                     {/* ORDER HEADER */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 border-b border-black/5 pb-4">
@@ -471,16 +494,26 @@ export default function AdminOrdersPage() {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                             <p className="text-[10px] font-black text-[#1F1F1F]/20 uppercase tracking-widest">Grand Total</p>
-                            <span className="text-2xl font-bold text-[#C9A24D]">€{total.toFixed(2)}</span>
+                            <span className={`text-2xl font-bold ${order.status === 'pending' ? 'text-red-500' : 'text-[#C9A24D]'}`}>€{total.toFixed(2)}</span>
                         </div>
                         
-                        {(order.status === 'paid' || order.status === 'pending' || order.status === 'handcrafting') ? (
+                        {/* ✨ BUG FIX 2: Prevent manually shipping an unpaid order! */}
+                        {(order.status === 'paid' || order.status === 'handcrafting') ? (
                           <button 
                             onClick={() => setShippingModal({ open: true, orderId: order.id })}
                             className="bg-[#1F1F1F] text-white px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-[#C9A24D] transition-all flex items-center gap-2 shadow-lg group-hover:scale-105"
                           >
                             <Truck size={14} /> Ship Order
                           </button>
+                        ) : order.status === 'pending' ? (
+                          <div className="text-right">
+                            <div className="flex items-center gap-2 text-red-700 font-black text-[10px] uppercase tracking-widest bg-red-50 px-4 py-2 rounded-xl border border-red-100 mb-1">
+                              <AlertCircle size={14} /> Awaiting Payment
+                            </div>
+                            <div className="text-[10px] text-red-400 font-mono tracking-wider font-bold">
+                              DO NOT PACK
+                            </div>
+                          </div>
                         ) : (
                           <div className="text-right">
                             <div className="flex items-center gap-2 text-blue-700 font-black text-[10px] uppercase tracking-widest bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 mb-1">
@@ -554,25 +587,31 @@ export default function AdminOrdersPage() {
                       <div className="space-y-4 text-sm">
                         <div className="bg-[#F9F9F9] border-2 border-dashed border-gray-300 rounded-2xl p-5 shadow-sm relative overflow-hidden">
                           
-                          {/* ✨ SENDCLOUD INTEGRATION: Clickable Generate Label Button */}
-                          <button 
-                            onClick={() => handleGenerateLabel(order)}
-                            disabled={isGeneratingLabel === order.id}
-                            className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all shadow-sm ${
-                              order.status === 'shipped' && order.tracking_number 
-                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer' 
-                                : 'bg-[#1F1F1F] text-[#C9A24D] hover:bg-[#C9A24D] hover:text-[#1F1F1F] cursor-pointer'
-                            }`}
-                            title={order.tracking_number ? "Generate Replacement Label" : "Generate DHL Label via Sendcloud"}
-                          >
-                            {isGeneratingLabel === order.id ? (
-                              <><Loader2 size={12} className="animate-spin" /> Processing...</>
-                            ) : order.status === 'shipped' && order.tracking_number ? (
-                               <><Printer size={12} /> Re-Print Label</>
-                            ) : (
-                               <><Printer size={12} /> Auto-Generate Label</>
-                            )}
-                          </button>
+                          {/* ✨ BUG FIX 3: Prevent label generation on unpaid or already shipped orders! */}
+                          {order.status === 'pending' ? (
+                            <button disabled className="absolute top-0 right-0 px-4 py-1.5 rounded-bl-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all shadow-sm bg-red-100 text-red-700 cursor-not-allowed">
+                               <AlertCircle size={12} /> Unpaid Order
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={() => handleGenerateLabel(order)}
+                              disabled={isGeneratingLabel === order.id}
+                              className={`absolute top-0 right-0 px-4 py-1.5 rounded-bl-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1 transition-all shadow-sm ${
+                                order.status === 'shipped' && order.tracking_number 
+                                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer' 
+                                  : 'bg-[#1F1F1F] text-[#C9A24D] hover:bg-[#C9A24D] hover:text-[#1F1F1F] cursor-pointer'
+                              }`}
+                              title={order.tracking_number ? "View in Sendcloud Dashboard" : "Generate DHL Label via Sendcloud"}
+                            >
+                              {isGeneratingLabel === order.id ? (
+                                <><Loader2 size={12} className="animate-spin" /> Processing...</>
+                              ) : order.status === 'shipped' && order.tracking_number ? (
+                                 <><Printer size={12} /> View in Sendcloud</> // ✨ Changed from "Re-Print Label" to avoid confusion
+                              ) : (
+                                 <><Printer size={12} /> Auto-Generate Label</>
+                              )}
+                            </button>
+                          )}
 
                           <h4 className="text-[10px] font-black text-[#1F1F1F]/40 uppercase tracking-widest mb-3 flex items-center gap-1 mt-2">
                              <MapPin size={12} /> Shipping Address
