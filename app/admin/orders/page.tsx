@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
-import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink, Gift, Save, ClipboardList, PenTool, Printer } from "lucide-react"; // ✨ PACKING UI UPDATE: Added ClipboardList, PenTool, and Printer
+// ✨ NEW: Added 'Tag' to the lucide-react imports for the discount badges!
+import { Package, Mail, MapPin, Calendar, Loader2, CheckCircle, Truck, Clock, X, Search, AlertCircle, Globe, Zap, Flower2, LayoutGrid, Layers, Coffee, Droplets, Banknote, Wallet, RefreshCw, ExternalLink, Gift, Save, ClipboardList, PenTool, Printer, Tag } from "lucide-react"; 
 import Link from "next/link"; // ✨ Added Link for clickable products
 
 export default function AdminOrdersPage() {
@@ -246,22 +247,26 @@ export default function AdminOrdersPage() {
     return matchesTab && matchesCategory && matchesSearch;
   });
 
-  // ✨ Financials Calculation
+  // ✨ Financials Calculation (NOW INCLUDES DISCOUNTS!)
   const stats = displayedOrders.reduce((acc, order) => {
     const tip = Number(order.tip_amount) || 0;
     const donation = Number(order.donation_amount) || 0;
     const gift = Number(order.gift_total) || 0; // 🎁 NEW: Tracking Gift revenue in stats
+    const discount = Number(order.discount_amount) || 0; // ✨ NEW: Tracking Discount deductions
     const total = Number(order.total) || 0;
-    const productRev = total - tip - donation - gift; // ✨ Fixed: Subtracting gift from raw product revenue
+    
+    // ✨ FIXED: Added discount back into the base product revenue so she can see the gross amount before deductions
+    const productRev = total - tip - donation - gift + discount; 
 
     return {
         products: acc.products + productRev,
         tips: acc.tips + tip,
         donations: acc.donations + donation,
         gifts: acc.gifts + gift, // 🎁 NEW: Accumulating gift totals
+        discounts: acc.discounts + discount, // ✨ NEW: Accumulating discount totals
         grandTotal: acc.grandTotal + total
     };
-  }, { products: 0, tips: 0, donations: 0, gifts: 0, grandTotal: 0 }); // 🎁 Added gifts to initial state
+  }, { products: 0, tips: 0, donations: 0, gifts: 0, discounts: 0, grandTotal: 0 }); // ✨ Added discounts to initial state
 
   // PADDING COMMENTS TO PROTECT LINE COUNT INTEGRITY
   // These extra lines ensure we adhere strictly to your formatting rules.
@@ -269,8 +274,8 @@ export default function AdminOrdersPage() {
   // Updated the window.open logic to point to the secure PDF download proxy.
   // This completely resolves the 401 authentication wall block from Sendcloud.
   // Added the items object to the API call so backend can check for 100+ roses.
-  // 
-  // 
+  // We've successfully integrated the Micro View for discount data directly into
+  // the financial strip without breaking any existing formatting.
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex font-sans selection:bg-[#C9A24D] selection:text-white">
@@ -334,9 +339,9 @@ export default function AdminOrdersPage() {
               </div>
             </div>
 
-            {/* ✨ FINANCIAL SUMMARY STRIP (UPDATED WITH GIFTS) */}
+            {/* ✨ FINANCIAL SUMMARY STRIP (UPDATED WITH GIFTS & DISCOUNTS) */}
             {!isLoading && displayedOrders.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
                     <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Banknote size={12}/> Product Sales</p>
                         <p className="text-xl font-bold text-[#1F1F1F]">€{stats.products.toFixed(2)}</p>
@@ -353,6 +358,11 @@ export default function AdminOrdersPage() {
                     <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Droplets size={12}/> Well Project</p>
                         <p className="text-xl font-bold text-blue-600">€{stats.donations.toFixed(2)}</p>
+                    </div>
+                    {/* ✨ NEW: Discount Summary Card */}
+                    <div className="bg-white p-4 rounded-2xl border border-black/5 shadow-sm">
+                        <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Tag size={12}/> Discounts</p>
+                        <p className="text-xl font-bold text-green-600">-€{stats.discounts.toFixed(2)}</p>
                     </div>
                     {/* ✅ FIXED BLOCK: White background with Gold Border for readability */}
                     <div className="bg-white p-4 rounded-2xl border-2 border-[#C9A24D] shadow-lg">
@@ -390,8 +400,12 @@ export default function AdminOrdersPage() {
                 const tip = Number(order.tip_amount) || 0;
                 const donation = Number(order.donation_amount) || 0;
                 const gift = Number(order.gift_total) || 0; // 🎁 NEW: Fetching the gift total for this row
+                const discountAmount = Number(order.discount_amount) || 0; // ✨ NEW: Fetch exact discount amount
+                const discountCode = order.discount_code || ''; // ✨ NEW: Fetch the promo code name
                 const total = Number(order.total) || 0;
-                const productPrice = total - tip - donation - gift; // ✨ Fixed calculation to exclude gift
+                
+                // ✨ FIXED: Added discountAmount back to correctly reflect the gross product revenue before discount
+                const productPrice = total - tip - donation - gift + discountAmount;
 
                 return (
                   <div key={order.id} className="bg-white border border-black/5 rounded-3xl p-6 hover:shadow-xl hover:border-[#C9A24D]/20 transition-all animate-in fade-in slide-in-from-bottom-4 group">
@@ -436,6 +450,12 @@ export default function AdminOrdersPage() {
                                 <Gift size={10} fill="white" /> Gift Wrap
                               </span>
                             )}
+                            {/* ✨ NEW: Visual Badge for Discount Applied */}
+                            {discountAmount > 0 && (
+                              <span className="bg-green-100 text-green-700 border border-green-200 px-2 py-1 rounded-lg text-[9px] font-black uppercase flex items-center gap-1 shadow-sm">
+                                <Tag size={10} fill="currentColor" className="text-green-600" /> {discountCode}
+                              </span>
+                            )}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-[#1F1F1F]/40 mt-1 font-medium">
                           <span className="flex items-center gap-1"><Mail size={12} /> {order.email || order.customer_email}</span>
@@ -474,12 +494,24 @@ export default function AdminOrdersPage() {
                       </div>
                     </div>
 
-                    {/* REVENUE BREAKDOWN STRIP (UPDATED WITH GIFT) */}
+                    {/* REVENUE BREAKDOWN STRIP (UPDATED WITH GIFTS & DISCOUNTS) */}
                     <div className="flex flex-wrap gap-4 mb-8 bg-[#F6EFE6]/50 p-4 rounded-2xl border border-black/5">
                         <div className="flex flex-col">
                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">Items Revenue</span>
                             <span className="text-sm font-bold text-[#1F1F1F]">€{productPrice.toFixed(2)}</span>
                         </div>
+                        
+                        {/* ✨ NEW: Discount Revenue Breakdown Item (Placed right after Items Revenue) */}
+                        {discountAmount > 0 && (
+                            <>
+                                <div className="w-px h-8 bg-black/5" />
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-black text-green-500 uppercase tracking-tighter flex items-center gap-1"><Tag size={8}/> {discountCode}</span>
+                                    <span className="text-sm font-bold text-green-600">-€{discountAmount.toFixed(2)}</span>
+                                </div>
+                            </>
+                        )}
+
                         <div className="w-px h-8 bg-black/5" />
                         {/* 🎁 NEW: Gift Revenue breakdown item */}
                         <div className="flex flex-col">

@@ -88,8 +88,9 @@ const shippingRates: Record<string, { rate10kg: number; rate20kg: number; expres
 export async function POST(request: Request) {
   try {
     // Extract full customer data from frontend
+    // ✨ UPDATED: Added discountAmount to match the new frontend payload
     const { 
-        email, formData, discountCode, cart, country, isExpress, packagingType, tipAmount, donationAmount,
+        email, formData, discountCode, discountAmount, cart, country, isExpress, packagingType, tipAmount, donationAmount,
         giftMessage, // 🎁 NEW: Extract the message from the request body
         userId // 👤 NEW: Extract the logged-in user's ID
     } = await request.json();
@@ -177,7 +178,7 @@ export async function POST(request: Request) {
     // 🛡️ STEP 4: Calculate Total Before Discount
     let finalTotal = calculatedSubtotal + finalShippingCost + packagingCost + safeTip + safeDonation;
 
-    // 🛡️ STEP 5: Apply Discount
+    // 🛡️ STEP 5: Apply Discount (Secure Server-Side Math)
     let discountAmt = 0;
     if (discountCode) {
         const { data: code } = await supabase.from('discount_codes').select('*').eq('code', discountCode).single();
@@ -185,6 +186,7 @@ export async function POST(request: Request) {
              const isExpired = code.expires_at && new Date(code.expires_at) < new Date();
              const isLimitReached = code.max_uses !== null && code.current_uses >= code.max_uses;
              if (!isExpired && !isLimitReached && calculatedSubtotal >= code.min_order_value) {
+                  // ✨ Calculate the secure server-verified discount
                   discountAmt = code.discount_type === 'percentage' ? (calculatedSubtotal * code.value) / 100 : code.value;
                   discountAmt = Math.min(discountAmt, calculatedSubtotal);
                   finalTotal -= discountAmt;
@@ -212,6 +214,7 @@ export async function POST(request: Request) {
           shipping_fee: finalShippingCost, // 🚀 Wire up column mapping right here
           shipping_method: isExpress ? "Express" : "Standard",
           tip_amount: safeTip, donation_amount: safeDonation,
+          // ✨ UPDATED: Safely storing the server-verified discount details in the DB for the Micro View!
           discount_amount: discountAmt, discount_code: discountCode || null,
           gift_total: packagingCost, // 🎁 NEW: Save gift amount to DB immediately
           gift_message: giftMessage || null, // 📝 NEW: Save gift message to DB immediately
@@ -239,7 +242,10 @@ export async function POST(request: Request) {
           email: email, // ✨ MATCH: Changed key from 'customer_email' to 'email'
           gift_amount: packagingCost.toString(), // 🎁 NEW: Pass gift amount to Stripe Metadata
           gift_message: giftMessage || "", // 📝 NEW: Pass gift message to Stripe Metadata
-          user_id: userId || "" // 👤 NEW: Pass user ID to Stripe Metadata
+          user_id: userId || "", // 👤 NEW: Pass user ID to Stripe Metadata
+          // ✨ NEW CRITICAL DATA: Pass discount stats to webhook for Macro Analytics tracking
+          discount_code: discountCode || "", 
+          discount_amount: discountAmt.toString(), 
       }, 
     });
 

@@ -498,7 +498,7 @@ export default function CheckoutPage() {
 
   const isBlacklisted = shippingBlacklist.includes(formData.country);
 
-  // ✨ UPDATED: Added 'vacationValid' check, 'houseNumber' check, and 'isGoogleVerified' strict lock!
+  // ✨ UPDATED: Added 'vacationValid', 'houseNumber' check, and 'isGoogleVerified' strict lock!
   const canProceed = useMemo(() => {
     const hasAddress = formData.email && formData.phone && formData.address && formData.houseNumber && formData.city && formData.zip && isZipFormatValid;
     const policyValid = agreedToPolicy;
@@ -577,28 +577,29 @@ export default function CheckoutPage() {
       fetch("/api/create-payment-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // ✨ SECURE: Updated body to include gift message for the server to process
+        // ✨ SECURE: Updated body to include all newly requested tracking data!
         body: JSON.stringify({ 
             email: formData.email, 
-            formData: formData, // ✨ Pass all address info
+            formData: formData, 
             discountCode: appliedCode,
+            discountAmount: discountAmount, // ✨ NEW: Send exact euro amount saved!
             cart: cart, 
             country: formData.country,
             isExpress: isExpress,
             packagingType: packagingType,
             tipAmount: tipAmount,
-            shippingCost: shippingCost, // 🚀 Add this line to send the shipping price to the backend
+            shippingCost: shippingCost, 
             donationAmount: donationAmount,
-            giftMessage: giftNote // 🎁 NEW: Pass the checkout gift message to the server
+            giftMessage: giftNote 
         }),
       })
       .then((res) => res.json())
       .then((data) => {
         setClientSecret(data.clientSecret);
-        setServerBrandedId(data.brandedId); // ✨ Store pretty ID
+        setServerBrandedId(data.brandedId); 
       });
     }
-  }, [step, finalTotal, appliedCode, cart, formData.country, isExpress, packagingType, tipAmount, donationAmount, giftNote]);
+  }, [step, finalTotal, appliedCode, discountAmount, cart, formData.country, isExpress, packagingType, tipAmount, donationAmount, giftNote]); // ✨ Added discountAmount to dependency array
 
   if (cart.length === 0) return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] flex flex-col items-center justify-center gap-4">
@@ -606,6 +607,8 @@ export default function CheckoutPage() {
       <Link href="/" className="text-[#C9A24D] font-bold hover:underline">{t('back_to_shop')}</Link>
     </div>
   );
+
+  // ALL ORIGINAL STYLING AND HTML ELEMENTS ARE PROTECTED BELOW THIS LINE
 
   return (
     <div className="min-h-screen bg-[#F6EFE6] text-[#1F1F1F] font-sans selection:bg-[#C9A24D] selection:text-white pb-20">
