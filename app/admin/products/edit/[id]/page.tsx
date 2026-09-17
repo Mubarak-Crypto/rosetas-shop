@@ -25,7 +25,8 @@ type Area = { x: number; y: number; width: number; height: number; };
 type UploadType = "product" | "extra"; 
 
 // Helper Type for the Temp List Builder
-type TempVariantItem = { de: string; en: string; stock: string };
+// ✨ RESTORED: Added 'price' back to the Variant builder so she can set prices for sizes!
+type TempVariantItem = { de: string; en: string; stock: string; price?: string };
 
 // ✨ NEW: PRESET ARRAYS FOR QUICK-CLICK UI
 // Contains all 17 Colors, 6 Sizes, and 16 Extras perfectly translated for EN/DE
@@ -128,6 +129,7 @@ export default function EditProductPage() {
   const [tempValueName, setTempValueName] = useState("");
   const [tempValueNameEn, setTempValueNameEn] = useState(""); 
   const [tempValueStock, setTempValueStock] = useState("");
+  const [tempValuePrice, setTempValuePrice] = useState(""); // ✨ RESTORED: Price tracking for variants
   const [tempList, setTempList] = useState<TempVariantItem[]>([]);
 
   // STOCK MATRIX STATE
@@ -186,9 +188,10 @@ export default function EditProductPage() {
         setSafetyInstructions(data.safety_instructions_de || "");
         setSafetyInstructionsEn(data.safety_instructions_en || "");
 
-        setPrice(data.price.toString());
+        // ✨ FIX: Guarantee price is loaded properly
+        setPrice(data.price?.toString() || "");
         setCategory(data.category || "");
-        setStock(data.stock?.toString() || "0"); // Original stock logic restored
+        setStock(data.stock?.toString() || "0"); 
         setStatus(data.status || "active");
         setImages(data.images || []);
         
@@ -384,10 +387,12 @@ export default function EditProductPage() {
   const handleAddVariantItem = () => {
     if (!tempValueName) return;
     
+    // ✨ RESTORED: Catching the price variable in the item builder!
     const newItem: TempVariantItem = {
         de: tempValueName,
         en: tempValueNameEn || tempValueName, 
-        stock: tempValueStock
+        stock: tempValueStock,
+        price: tempValuePrice
     };
     
     setTempList([...tempList, newItem]);
@@ -395,6 +400,7 @@ export default function EditProductPage() {
     setTempValueName("");
     setTempValueNameEn("");
     setTempValueStock("");
+    setTempValuePrice(""); // ✨ Clear price input
   };
 
   // ✨ NEW: Easy Reordering Function for Variants
@@ -414,20 +420,26 @@ export default function EditProductPage() {
     const valuesDe = variant.values.split(',').map(s => s.trim());
     const valuesEn = variant.values_en ? variant.values_en.split(',').map(s => s.trim()) : [];
 
+    // ✨ RESTORED: Safely extracting both Stock AND Price strings back out of the DB text
     const parsedTempList: TempVariantItem[] = valuesDe.map((valStr, i) => {
         let deName = valStr;
         let stock = "";
+        let price = "";
 
-        if (valStr.includes('| Stock:')) {
-            const parts = valStr.split('| Stock:');
-            deName = parts[0].trim();
-            stock = parts[1].trim();
+        if (valStr.includes('|')) {
+            const parts = valStr.split('|').map(p => p.trim());
+            deName = parts[0];
+            parts.forEach(p => {
+                if (p.startsWith('Stock:')) stock = p.replace('Stock:', '').trim();
+                if (p.startsWith('Price:')) price = p.replace('Price:', '').trim();
+            });
         }
 
         return {
             de: deName,
             en: valuesEn[i] || deName,
-            stock: stock
+            stock: stock,
+            price: price
         };
     });
 
@@ -439,7 +451,13 @@ export default function EditProductPage() {
   const handleAddVariant = () => {
     if (!newVariantName || tempList.length === 0) return;
     
-    const valuesDE = tempList.map(item => item.stock ? `${item.de} | Stock: ${item.stock}` : item.de).join(', ');
+    // ✨ RESTORED: We compile the DE string to properly include the attached price modifiers!
+    const valuesDE = tempList.map(item => {
+        let str = item.de;
+        if (item.stock) str += ` | Stock: ${item.stock}`;
+        if (item.price) str += ` | Price: ${item.price}`;
+        return str;
+    }).join(', ');
     const valuesEN = tempList.map(item => item.en).join(', ');
 
     const newVariantObj = { 
@@ -546,7 +564,8 @@ export default function EditProductPage() {
           description_en: descriptionEn, 
           safety_instructions_de: safetyInstructions,
           safety_instructions_en: safetyInstructionsEn,
-          price: parseFloat(price),
+          // ✨ FIXED: Price and Stock fields are now passing numbers properly!
+          price: parseFloat(price) || 0,
           category: category.trim(),
           stock: parseInt(stock) || 0,
           status,
@@ -652,7 +671,7 @@ export default function EditProductPage() {
                       <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
                       Name (German)
                     </label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" />
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" required />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
@@ -717,6 +736,36 @@ export default function EditProductPage() {
                       <option value="active">Active</option>
                       <option value="draft">Draft</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* ✨ RESTORED: Global Price & Global Stock inputs exactly back where they belong! */}
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#1F1F1F] uppercase flex items-center gap-1.5">
+                      <DollarSign size={14} className="text-[#C9A24D]" /> Base Price (€) *
+                    </label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={price} 
+                      onChange={(e) => setPrice(e.target.value)} 
+                      placeholder="e.g. 149.99" 
+                      className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" 
+                      required 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#1F1F1F] uppercase flex items-center gap-1.5">
+                      <Package size={14} className="text-[#C9A24D]" /> Global Stock
+                    </label>
+                    <input 
+                      type="number" 
+                      value={stock} 
+                      onChange={(e) => setStock(e.target.value)} 
+                      placeholder="0 (Or use matrix below)" 
+                      className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" 
+                    />
                   </div>
                 </div>
 
@@ -811,7 +860,7 @@ export default function EditProductPage() {
               {/* OPTIONS (VARIANTS) WITH NEW PRESETS AND ARROWS */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-2">Options</h3>
-                <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
+                <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock & prices)</p>
                 
                 {/* ✨ FIX: Completely removed the confusing "50 Roses (€100)" text to stop pricing confusion! */}
                 <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
@@ -819,7 +868,7 @@ export default function EditProductPage() {
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold">Options Guide:</p>
                     <p className="text-[9px] font-medium leading-relaxed">
-                      Add pure options like <span className="bg-white px-1 font-bold italic rounded">50 Roses</span> without prices.
+                      Add options like <span className="bg-white px-1 font-bold italic rounded">50 Roses</span> and assign them specific price boosts.
                     </p>
                   </div>
                 </div>
@@ -884,7 +933,6 @@ export default function EditProductPage() {
                             type="button" 
                             key={size.de} 
                             onClick={() => { 
-                              // ✨ NOTE: Will NOT auto-fill price because base bouquet prices constantly fluctuate!
                               setTempValueName(size.de); 
                               setTempValueNameEn(size.en); 
                             }} 
@@ -896,23 +944,27 @@ export default function EditProductPage() {
                       </div>
                     </div>
                     
-                    {/* ✨ UPDATED: 2-Row Layout for Better Visibility & Usability */}
+                    {/* ✨ UPDATED: Beautifully Restored 2-Row Layout with Price Back in Place! */}
                     <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
-                                <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
+                                <input type="text" placeholder="e.g. 50 Roses" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
                             </div>
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
-                                <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
+                                <input type="text" placeholder="e.g. 50 Roses" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
                             </div>
                         </div>
                         
                         <div className="flex items-end gap-3">
                             <div className="flex-1 space-y-1">
+                                 <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Price (€) (Optional)</span>
+                                 <input type="number" placeholder="Price Override" value={tempValuePrice} onChange={(e) => setTempValuePrice(e.target.value)} className="w-full bg-white border border-[#C9A24D]/30 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
+                            </div>
+                            <div className="flex-1 space-y-1">
                                  <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
-                                 <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
+                                 <input type="number" placeholder="Qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
                             </div>
                             <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
                         </div>
@@ -925,7 +977,11 @@ export default function EditProductPage() {
                                                 <span className="text-[10px] font-bold">{t.de}</span>
                                                 <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
                                             </div>
-                                            <span className="text-[9px] text-[#C9A24D]">{t.en} {t.stock ? `(${t.stock})` : ''}</span>
+                                            <span className="text-[9px] text-[#C9A24D]">
+                                                {t.en} 
+                                                {t.stock ? ` (Qty: ${t.stock})` : ''} 
+                                                {t.price ? ` (€${t.price})` : ''}
+                                            </span>
                                             
                                             {/* ✨ NEW: Easy Reordering Arrows */}
                                             <div className="flex items-center justify-between mt-1 pt-1 border-t border-black/5">

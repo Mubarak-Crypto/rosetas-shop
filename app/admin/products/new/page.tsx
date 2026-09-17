@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react"; 
-import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star, ShieldCheck } from "lucide-react"; // ✨ Added Star for Featured Toggle, ShieldCheck for Gatekeeper
+import { ArrowLeft, Upload, Save, X, Plus, Trash2, DollarSign, Loader2, Crop, Image as ImageIcon, ChevronDown, ArrowRight, ArrowLeft as ArrowLeftIcon, Video, Globe, Bookmark, Info, LayoutGrid, Tag, PenTool, Palette, MessageSquare, FileText, Hash, ToggleLeft, ToggleRight, Layers, Edit2, ShieldAlert, Star, ShieldCheck, Package } from "lucide-react"; // ✨ Added Star for Featured Toggle, ShieldCheck for Gatekeeper, Package
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Cropper from "react-easy-crop";
@@ -28,7 +28,8 @@ type Area = { x: number; y: number; width: number; height: number; };
 type UploadType = "product" | "extra"; 
 
 // Helper Type for the Temp List Builder
-type TempVariantItem = { de: string; en: string; stock: string };
+// ✨ RESTORED: Added 'price' back to the Variant builder so she can set prices for sizes!
+type TempVariantItem = { de: string; en: string; stock: string; price?: string };
 
 // ✨ NEW: PRESET ARRAYS FOR QUICK-CLICK UI
 // Contains all 17 Colors, 6 Sizes, and 16 Extras perfectly translated for EN/DE
@@ -129,6 +130,7 @@ export default function AddProductPage() {
   const [tempValueName, setTempValueName] = useState("");
   const [tempValueNameEn, setTempValueNameEn] = useState(""); 
   const [tempValueStock, setTempValueStock] = useState("");
+  const [tempValuePrice, setTempValuePrice] = useState(""); // ✨ RESTORED: Price tracking for variants
   const [tempList, setTempList] = useState<TempVariantItem[]>([]);
 
   // STOCK MATRIX STATE
@@ -398,10 +400,12 @@ export default function AddProductPage() {
   const handleAddVariantItem = () => {
     if (!tempValueName) return;
     
+    // ✨ RESTORED: Catching the price variable in the item builder!
     const newItem: TempVariantItem = {
         de: tempValueName,
         en: tempValueNameEn || tempValueName, 
-        stock: tempValueStock
+        stock: tempValueStock,
+        price: tempValuePrice
     };
     
     setTempList([...tempList, newItem]);
@@ -410,12 +414,28 @@ export default function AddProductPage() {
     setTempValueName("");
     setTempValueNameEn("");
     setTempValueStock("");
+    setTempValuePrice(""); // ✨ Clear price input
+  };
+
+  // ✨ NEW: Easy Reordering Function for Variants
+  const moveTempItem = (index: number, direction: 'left' | 'right') => {
+    const newList = [...tempList];
+    const newIndex = direction === 'left' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= newList.length) return;
+    [newList[index], newList[newIndex]] = [newList[newIndex], newList[index]];
+    setTempList(newList);
   };
 
   const handleAddVariant = () => {
     if (!newVariantName || tempList.length === 0) return;
     
-    const valuesDE = tempList.map(item => item.stock ? `${item.de} | Stock: ${item.stock}` : item.de).join(', ');
+    // ✨ RESTORED: We compile the DE string to properly include the attached price modifiers!
+    const valuesDE = tempList.map(item => {
+        let str = item.de;
+        if (item.stock) str += ` | Stock: ${item.stock}`;
+        if (item.price) str += ` | Price: ${item.price}`;
+        return str;
+    }).join(', ');
     const valuesEN = tempList.map(item => item.en).join(', ');
 
     setVariants([...variants, { 
@@ -610,7 +630,7 @@ export default function AddProductPage() {
                       <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
                       Product Name (German)
                     </label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" />
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" required />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
@@ -678,7 +698,58 @@ export default function AddProductPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                {/* ✨ RESTORED: Global Price & Global Stock inputs exactly back where they belong! */}
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-[#1F1F1F] uppercase flex items-center gap-1.5">
+                      <DollarSign size={14} className="text-[#C9A24D]" /> Base Price (€) *
+                    </label>
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={price} 
+                      onChange={(e) => setPrice(e.target.value)} 
+                      placeholder="e.g. 149.99" 
+                      className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" 
+                      required 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-[#1F1F1F] uppercase flex items-center gap-1.5">
+                        <Package size={14} className="text-[#C9A24D]" /> Global Stock
+                      </label>
+                      <button type="button" onClick={() => setIsUnlimited(!isUnlimited)} className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${isUnlimited ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                        {isUnlimited ? <ToggleRight size={12}/> : <ToggleLeft size={12}/>} Unlimited
+                      </button>
+                    </div>
+                    {isUnlimited ? (
+                      <div className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm text-gray-400 font-bold flex items-center justify-center">∞ Unlimited</div>
+                    ) : (
+                      <input 
+                        type="number" 
+                        value={stock} 
+                        onChange={(e) => setStock(e.target.value)} 
+                        placeholder="0 (Or use matrix below)" 
+                        className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors font-bold select-text" 
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2 pt-2">
+                  <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
+                    <Tag size={10} /> Promotion Label (Optional)
+                  </label>
+                  <input 
+                    type="text" 
+                    value={promoLabel} 
+                    onChange={(e) => setPromoLabel(e.target.value)} 
+                    placeholder="e.g. 2 for 50" 
+                    className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30 select-text" 
+                  />
+                </div>
+
+                <div className="space-y-4 pt-2 border-t border-black/5">
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-1.5">
                       <span className="w-4 h-3 bg-gray-200 rounded-sm text-[8px] flex items-center justify-center text-gray-500">DE</span>
@@ -768,252 +839,10 @@ export default function AddProductPage() {
                 </div>
               </div>
 
-              {variants.length > 1 && (
-                <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-6">
-                  <div className="flex items-center gap-2">
-                    <LayoutGrid className="text-[#C9A24D]" size={20} />
-                    <h3 className="font-bold text-lg">Individual Stock Tracking</h3>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                      <thead className="text-[10px] font-black uppercase text-gray-400 bg-gray-50">
-                        <tr>
-                          {variants.map(v => <th key={v.name} className="px-4 py-3">{v.name}</th>)}
-                          <th className="px-4 py-3">Stock Limit?</th>
-                          <th className="px-4 py-3">Quantity</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-black/5">
-                        {stockMatrix.map((item, idx) => {
-                            const isUnlimitedMatrix = item.stock === -1;
-                            
-                            return (
-                              <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                {variants.map(v => <td key={v.name} className="px-4 py-3 text-xs font-bold">{item[v.name]}</td>)}
-                                
-                                {/* Toggle for Unlimited */}
-                                <td className="px-4 py-2">
-                                    <button 
-                                        type="button"
-                                        onClick={() => {
-                                            const updated = [...stockMatrix];
-                                            // Toggle between -1 (Unlimited) and 0 (Tracked)
-                                            updated[idx].stock = isUnlimitedMatrix ? 0 : -1;
-                                            setStockMatrix(updated);
-                                        }}
-                                        className={`flex items-center gap-2 text-xs font-bold px-2 py-1 rounded-lg transition-colors ${
-                                            isUnlimitedMatrix ? "text-green-600 bg-green-50" : "text-[#C9A24D] bg-[#F6EFE6]"
-                                        }`}
-                                    >
-                                        {isUnlimitedMatrix ? <ToggleLeft size={16}/> : <ToggleRight size={16}/>}
-                                        {isUnlimitedMatrix ? "Unlimited" : "Tracked"}
-                                    </button>
-                                </td>
-
-                                {/* Stock Quantity Input - ✨ FIXED TEXT COLOR AND LOGIC */}
-                                <td className="px-4 py-2">
-                                  {isUnlimitedMatrix ? (
-                                    <span className="text-xl text-gray-300 font-bold">∞</span>
-                                  ) : (
-                                    <input 
-                                      type="number" 
-                                      value={item.stock} 
-                                      onChange={(e) => {
-                                        const val = parseInt(e.target.value);
-                                        const safeVal = isNaN(val) ? 0 : val;
-                                        
-                                        // ✨ Correct way to update state in a map
-                                        const updated = stockMatrix.map((row, i) => 
-                                            i === idx ? { ...row, stock: safeVal } : row
-                                        );
-                                        setStockMatrix(updated);
-                                      }}
-                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold text-[#1F1F1F] outline-none focus:border-[#C9A24D] select-text"
-                                      placeholder="0"
-                                    />
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-4">Pricing & Promotion</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase">Price (€)</label>
-                    <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors select-text" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-gray-400 uppercase">Total Capacity</label>
-                      <button type="button" onClick={() => setIsUnlimited(!isUnlimited)} className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded transition-colors ${isUnlimited ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                        {isUnlimited ? <ToggleRight size={12}/> : <ToggleLeft size={12}/>} Unlimited
-                      </button>
-                    </div>
-                    {isUnlimited ? (
-                      <div className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm text-gray-400 font-bold flex items-center justify-center">∞ Unlimited</div>
-                    ) : (
-                      <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} className="w-full bg-gray-50 border border-black/5 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors select-text" placeholder="e.g. 100" />
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-[#C9A24D] uppercase flex items-center gap-1.5">
-                      <Tag size={10} /> Promotion (Optional)
-                    </label>
-                    <input 
-                      type="text" 
-                      value={promoLabel} 
-                      onChange={(e) => setPromoLabel(e.target.value)} 
-                      placeholder="e.g. 2 for 50" 
-                      className="w-full bg-[#F6EFE6] border border-[#C9A24D]/30 rounded-xl px-4 py-3 text-sm focus:border-[#C9A24D] outline-none transition-colors text-[#C9A24D] font-bold placeholder:text-[#C9A24D]/30 select-text" 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN */}
-            <div className="space-y-6">
-              {/* ✨ PHASE 2: HOMEPAGE VISIBILITY TOGGLE */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
-                  <Star className="text-amber-500 fill-amber-500" size={20} /> Homepage Visibility
-                </h3>
-                <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-[#1F1F1F]">Feature on Homepage?</p>
-                    <p className="text-[10px] text-amber-700/60 mt-1 font-medium italic">If active, this product will appear in the 2x2 grid on the front page.</p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setIsFeatured(!isFeatured)}
-                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isFeatured ? 'bg-amber-500 justify-end' : 'bg-gray-200 justify-start'}`}
-                  >
-                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
-                  </button>
-                </div>
-              </div>
-
-              {/* ✨ NEW: CATEGORY RULES (GATEKEEPER TOGGLES) */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 className="font-bold text-lg mb-2 flex items-center gap-2">
-                  <ShieldCheck className="text-green-500" size={20} /> Category Rules
-                </h3>
-                
-                <div className="p-4 bg-gray-50 rounded-xl border border-black/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-[#1F1F1F]">Is Makeup Add-on?</p>
-                    <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Cannot be bought without a Bouquet/Basket.</p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setIsAddon(!isAddon)}
-                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isAddon ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
-                  >
-                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
-                  </button>
-                </div>
-
-                <div className="p-4 bg-gray-50 rounded-xl border border-black/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-[#1F1F1F]">Is Florist Supply?</p>
-                    <p className="text-[10px] text-gray-500 mt-1 font-medium italic">Requires cart total &ge; €80 to checkout.</p>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => setIsSupply(!isSupply)}
-                    className={`w-12 h-7 rounded-full transition-all flex items-center p-1 ${isSupply ? 'bg-green-500 justify-end' : 'bg-gray-200 justify-start'}`}
-                  >
-                    <div className="w-5 h-5 bg-white rounded-full shadow-sm" />
-                  </button>
-                </div>
-              </div>
-
-              {/* IMAGES */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <h3 className="font-bold text-lg mb-4">Images</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  {images.map((img, idx) => (
-                    <div key={idx} className="relative space-y-2 group">
-                      <div className="relative aspect-[4/5] rounded-lg overflow-hidden border border-black/5">
-                        <img src={img} alt={`Product ${idx}`} className="w-full h-full object-cover" />
-                        
-                        <div className="absolute inset-x-0 bottom-0 bg-black/60 backdrop-blur-sm p-2 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button type="button" onClick={() => moveImage(idx, 'left')} disabled={idx === 0} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowLeftIcon size={14}/></button>
-                          <button type="button" onClick={() => removeImage(idx)} className="p-1 text-white hover:text-red-500"><Trash2 size={14} /></button>
-                          <button type="button" onClick={() => moveImage(idx, 'right')} disabled={idx === images.length - 1} className="p-1 text-white hover:text-[#C9A24D] disabled:opacity-30"><ArrowRight size={14}/></button>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-50 rounded px-2 py-1 border border-black/5 text-center">
-                        <span className="text-[9px] font-bold text-gray-400 uppercase block leading-tight">Pos {idx + 1}</span>
-                        <span className="text-[10px] font-bold text-[#C9A24D] uppercase truncate block">
-                          {colorLabels[idx] || "Extra"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  <label className={`aspect-[4/5] rounded-lg border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isUploading ? (
-                      <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <Upload size={24} />
-                        <span className="text-[10px] font-bold uppercase">Add Photo</span>
-                      </div>
-                    )}
-                    <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'product')} disabled={isUploading} />
-                  </label>
-                </div>
-                <p className="text-xs text-gray-400 italic">
-                  {isUploading ? "Uploading..." : "Tip: Images are automatically cropped to 4:5 Portrait mode."}
-                </p>
-              </div>
-
-              {/* PRODUCT VIDEOS */}
-              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
-                <h3 className="font-bold text-lg mb-4">Product Videos</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {videoUrls.map((url, idx) => (
-                    <div key={idx} className="relative rounded-xl overflow-hidden border border-black/5 aspect-video bg-black group">
-                      <video src={url} className="w-full h-full object-cover" muted loop autoPlay />
-                      <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[9px] font-bold text-white uppercase tracking-widest">Video {idx + 1}</div>
-                      <button 
-                        type="button" 
-                        onClick={() => removeVideo(idx)} 
-                        className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  <label className={`w-full aspect-video rounded-xl border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}>
-                    {isUploadingVideo ? (
-                      <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
-                    ) : (
-                      <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <Video size={24} />
-                        <span className="text-[10px] font-bold uppercase">Add Video (MP4)</span>
-                      </div>
-                    )}
-                    <input type="file" className="hidden" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
-                  </label>
-                </div>
-              </div>
-
-              {/* OPTIONS (VARIANTS) */}
+              {/* OPTIONS (VARIANTS) WITH NEW PRESETS AND ARROWS */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
                 <h3 className="font-bold text-lg mb-2">Options</h3>
-                <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock)</p>
+                <p className="text-xs text-gray-400 mb-4">Colors, Sizes (Track individual stock & prices)</p>
                 
                 {/* ✨ FIX: Completely removed the confusing "50 Roses (€100)" text to stop pricing confusion! */}
                 <div className="bg-[#F6EFE6] border border-[#C9A24D]/20 p-3 rounded-xl mb-4 flex items-start gap-3">
@@ -1021,7 +850,7 @@ export default function AddProductPage() {
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold">Options Guide:</p>
                     <p className="text-[9px] font-medium leading-relaxed">
-                      Add pure options like <span className="bg-white px-1 font-bold italic rounded">50 Roses</span> without prices.
+                      Add options like <span className="bg-white px-1 font-bold italic rounded">50 Roses</span> and assign them specific price boosts.
                     </p>
                   </div>
                 </div>
@@ -1091,23 +920,27 @@ export default function AddProductPage() {
                       </div>
                     </div>
                     
-                    {/* ✨ UPDATED: 2-Row Layout for Better Visibility & Usability */}
+                    {/* ✨ UPDATED: Beautifully Restored 2-Row Layout with Price Back in Place! */}
                     <div className="space-y-3 bg-white/50 p-3 rounded-lg border border-black/5">
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-gray-400 uppercase">Value (DE)</span>
-                                <input type="text" placeholder="e.g. Rot" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
+                                <input type="text" placeholder="e.g. 50 Roses" value={tempValueName} onChange={(e) => setTempValueName(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
                             </div>
                             <div className="space-y-1">
                                 <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Value (EN)</span>
-                                <input type="text" placeholder="e.g. Red" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
+                                <input type="text" placeholder="e.g. 50 Roses" value={tempValueNameEn} onChange={(e) => setTempValueNameEn(e.target.value)} className="w-full bg-white border border-[#C9A24D]/20 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#C9A24D] select-text" />
                             </div>
                         </div>
                         
                         <div className="flex items-end gap-3">
                             <div className="flex-1 space-y-1">
+                                 <span className="text-[10px] font-bold text-[#C9A24D] uppercase">Price (€) (Optional)</span>
+                                 <input type="number" placeholder="Price Override" value={tempValuePrice} onChange={(e) => setTempValuePrice(e.target.value)} className="w-full bg-white border border-[#C9A24D]/30 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
+                            </div>
+                            <div className="flex-1 space-y-1">
                                  <span className="text-[10px] font-bold text-gray-400 uppercase">Stock (Optional)</span>
-                                 <input type="number" placeholder="Enter qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
+                                 <input type="number" placeholder="Qty..." value={tempValueStock} onChange={(e) => setTempValueStock(e.target.value)} className="w-full bg-white border border-black/5 rounded-lg px-3 py-2 text-sm outline-none focus:border-[#C9A24D] text-[#1F1F1F] select-text" />
                             </div>
                             <button type="button" onClick={handleAddVariantItem} className="h-[38px] px-6 bg-[#C9A24D] text-white rounded-lg flex items-center gap-2 font-bold shadow-sm hover:bg-[#b08d43] transition-colors"><Plus size={18}/> Add Value</button>
                         </div>
@@ -1115,12 +948,23 @@ export default function AddProductPage() {
                         {tempList.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-2 border-t border-black/5 mt-2">
                                 {tempList.map((t, i) => (
-                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5">
+                                    <div key={i} className="bg-white border border-black/5 rounded px-2 py-1 flex flex-col gap-0.5 min-w-[100px]">
                                             <div className="flex items-center gap-2 justify-between">
                                                 <span className="text-[10px] font-bold">{t.de}</span>
                                                 <button type="button" onClick={() => setTempList(tempList.filter((_, idx) => idx !== i))}><X size={10} className="text-red-400"/></button>
                                             </div>
-                                            <span className="text-[9px] text-[#C9A24D]">{t.en} {t.stock ? `(${t.stock})` : ''}</span>
+                                            <span className="text-[9px] text-[#C9A24D]">
+                                                {t.en} 
+                                                {t.stock ? ` (Qty: ${t.stock})` : ''} 
+                                                {t.price ? ` (€${t.price})` : ''}
+                                            </span>
+                                            
+                                            {/* ✨ NEW: Easy Reordering Arrows */}
+                                            <div className="flex items-center justify-between mt-1 pt-1 border-t border-black/5">
+                                                <button type="button" onClick={() => moveTempItem(i, 'left')} disabled={i === 0} className="p-0.5 text-gray-400 hover:text-[#1F1F1F] disabled:opacity-30"><ArrowLeftIcon size={12}/></button>
+                                                <span className="text-[8px] text-gray-300">Pos {i + 1}</span>
+                                                <button type="button" onClick={() => moveTempItem(i, 'right')} disabled={i === tempList.length - 1} className="p-0.5 text-gray-400 hover:text-[#1F1F1F] disabled:opacity-30"><ArrowRight size={12}/></button>
+                                            </div>
                                     </div>
                                 ))}
                             </div>
@@ -1138,6 +982,81 @@ export default function AddProductPage() {
                   </button>
                 )}
               </div>
+
+              {/* INDIVIDUAL STOCK TRACKING */}
+              {variants.length > 1 && (
+                <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid className="text-[#C9A24D]" size={20} />
+                    <h3 className="font-bold text-lg">Individual Stock Tracking</h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                      <thead className="text-[10px] font-black uppercase text-gray-400 bg-gray-50">
+                        <tr>
+                          {variants.map(v => <th key={v.name} className="px-4 py-3">{v.name}</th>)}
+                          <th className="px-4 py-3">Stock Limit?</th>
+                          <th className="px-4 py-3">Quantity</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-black/5">
+                        {stockMatrix.map((item, idx) => {
+                            const isUnlimitedMatrix = item.stock === -1;
+                            
+                            return (
+                              <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                {variants.map(v => <td key={v.name} className="px-4 py-3 text-xs font-bold">{item[v.name]}</td>)}
+                                
+                                {/* Toggle for Unlimited */}
+                                <td className="px-4 py-2">
+                                    <button 
+                                        type="button"
+                                        onClick={() => {
+                                            const updated = [...stockMatrix];
+                                            // Toggle between -1 (Unlimited) and 0 (Tracked)
+                                            updated[idx].stock = isUnlimitedMatrix ? 0 : -1;
+                                            setStockMatrix(updated);
+                                        }}
+                                        className={`flex items-center gap-2 text-xs font-bold px-2 py-1 rounded-lg transition-colors ${
+                                            isUnlimitedMatrix ? "text-green-600 bg-green-50" : "text-[#C9A24D] bg-[#F6EFE6]"
+                                        }`}
+                                    >
+                                        {isUnlimitedMatrix ? <ToggleLeft size={16}/> : <ToggleRight size={16}/>}
+                                        {isUnlimitedMatrix ? "Unlimited" : "Tracked"}
+                                    </button>
+                                </td>
+
+                                {/* Stock Quantity Input */}
+                                <td className="px-4 py-2">
+                                  {isUnlimitedMatrix ? (
+                                    <span className="text-xl text-gray-300 font-bold">∞</span>
+                                  ) : (
+                                    <input 
+                                      type="number" 
+                                      value={item.stock} 
+                                      onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        const safeVal = isNaN(val) ? 0 : val;
+                                        
+                                        const updated = stockMatrix.map((row, i) => 
+                                            i === idx ? { ...row, stock: safeVal } : row
+                                        );
+                                        setStockMatrix(updated);
+                                      }}
+                                      className="w-24 bg-white border border-black/10 rounded-lg px-3 py-2 text-xs font-bold text-[#1F1F1F] outline-none focus:border-[#C9A24D] select-text"
+                                      placeholder="0"
+                                    />
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* EXTRAS (With Image & Variant Support) */}
               <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm">
@@ -1343,7 +1262,155 @@ export default function AddProductPage() {
                 )}
               </div>
 
-            </div>
+            </div> {/* END LEFT COLUMN */}
+
+            {/* ✨ RESTORED RIGHT COLUMN: IMAGES, VIDEO, AND GATEKEEPERS ✨ */}
+            <div className="space-y-6">
+              
+              {/* IMAGES UPLOAD */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <ImageIcon className="text-[#C9A24D]" size={20} /> Product Images
+                </h3>
+                <p className="text-xs text-gray-400">First image will be the cover. 4:5 aspect ratio.</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {images.map((url, index) => (
+                    <div key={index} className="relative aspect-[4/5] bg-gray-100 rounded-xl overflow-hidden group border border-black/5">
+                      <img src={url} alt={`Product ${index + 1}`} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        {index > 0 && (
+                          <button type="button" onClick={() => moveImage(index, 'left')} className="p-1.5 bg-white/20 hover:bg-white/40 rounded-lg text-white backdrop-blur-sm transition-colors">
+                            <ArrowLeftIcon size={16} />
+                          </button>
+                        )}
+                        <button type="button" onClick={() => removeImage(index)} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white backdrop-blur-sm transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                        {index < images.length - 1 && (
+                          <button type="button" onClick={() => moveImage(index, 'right')} className="p-1.5 bg-white/20 hover:bg-white/40 rounded-lg text-white backdrop-blur-sm transition-colors">
+                            <ArrowRight size={16} />
+                          </button>
+                        )}
+                      </div>
+                      {index === 0 && (
+                        <div className="absolute top-2 left-2 bg-[#C9A24D] text-white text-[9px] font-black uppercase px-2 py-1 rounded shadow-sm">
+                          Cover
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <label className={`aspect-[4/5] border-2 border-dashed border-black/10 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-[#C9A24D] transition-colors group ${isUploading && uploadType === 'product' ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploading && uploadType === 'product' ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Processing</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-[#C9A24D] transition-colors">
+                        <Upload size={24} />
+                        <span className="text-xs font-bold uppercase">Add Photo</span>
+                      </div>
+                    )}
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => onFileChange(e, 'product')} disabled={isUploading} />
+                  </label>
+                </div>
+              </div>
+
+              {/* PRODUCT VIDEO */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <Video className="text-[#C9A24D]" size={20} /> Product Video
+                </h3>
+                <p className="text-xs text-gray-400">Upload a short showcase video (MP4/WebM).</p>
+                
+                <div className="space-y-3">
+                  {videoUrls.map((url, idx) => (
+                    <div key={idx} className="relative rounded-xl overflow-hidden border border-black/5 aspect-video bg-black group">
+                      <video src={url} className="w-full h-full object-cover" muted loop autoPlay />
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[9px] font-bold text-white uppercase tracking-widest">Video {idx + 1}</div>
+                      <button 
+                        type="button" 
+                        onClick={() => removeVideo(idx)} 
+                        className="absolute top-2 right-2 p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <label className={`w-full aspect-video rounded-xl border-2 border-dashed border-black/10 hover:border-[#C9A24D]/50 cursor-pointer flex items-center justify-center relative ${isUploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploadingVideo ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="animate-spin text-[#C9A24D]" size={24} />
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">Uploading Video</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-[#C9A24D] transition-colors">
+                        <Upload size={24} />
+                        <span className="text-[10px] font-bold uppercase">Add Video (MP4)</span>
+                      </div>
+                    )}
+                    <input type="file" className="hidden" accept="video/*" onChange={handleVideoUpload} disabled={isUploadingVideo} />
+                  </label>
+                </div>
+              </div>
+
+              {/* GATEKEEPER OPTIONS */}
+              <div className="bg-white border border-black/5 rounded-2xl p-6 shadow-sm space-y-4">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <ShieldCheck className="text-[#C9A24D]" size={20} /> Store Settings
+                </h3>
+                <p className="text-xs text-gray-400">Control how this product behaves in the store.</p>
+                
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between p-3 border border-black/5 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Star size={18} className={isFeatured ? "text-[#C9A24D]" : "text-gray-400"} />
+                      <div>
+                        <p className="text-sm font-bold text-[#1F1F1F]">Featured Product</p>
+                        <p className="text-[10px] text-gray-400">Show on homepage hero section</p>
+                      </div>
+                    </div>
+                    <div className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${isFeatured ? 'bg-[#C9A24D] justify-end' : 'bg-gray-300 justify-start'}`}>
+                      <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                    {/* HIDDEN CHECKBOX */}
+                    <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} className="hidden" />
+                  </label>
+
+                  <label className="flex items-center justify-between p-3 border border-black/5 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Layers size={18} className={isAddon ? "text-[#C9A24D]" : "text-gray-400"} />
+                      <div>
+                        <p className="text-sm font-bold text-[#1F1F1F]">Makeup / Add-on Only</p>
+                        <p className="text-[10px] text-gray-400">Hide from shop, only in up-sells</p>
+                      </div>
+                    </div>
+                    <div className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${isAddon ? 'bg-[#1F1F1F] justify-end' : 'bg-gray-300 justify-start'}`}>
+                      <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                    <input type="checkbox" checked={isAddon} onChange={(e) => setIsAddon(e.target.checked)} className="hidden" />
+                  </label>
+
+                  <label className="flex items-center justify-between p-3 border border-black/5 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Package size={18} className={isSupply ? "text-[#C9A24D]" : "text-gray-400"} />
+                      <div>
+                        <p className="text-sm font-bold text-[#1F1F1F]">Florist Supply</p>
+                        <p className="text-[10px] text-gray-400">Route to supplies shipping logic</p>
+                      </div>
+                    </div>
+                    <div className={`w-10 h-6 rounded-full transition-all flex items-center p-1 ${isSupply ? 'bg-blue-600 justify-end' : 'bg-gray-300 justify-start'}`}>
+                      <div className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                    </div>
+                    <input type="checkbox" checked={isSupply} onChange={(e) => setIsSupply(e.target.checked)} className="hidden" />
+                  </label>
+                </div>
+              </div>
+
+            </div> {/* END RIGHT COLUMN */}
           </div>
         </form>
 
