@@ -169,7 +169,7 @@ export default function Navbar() {
           )}
 
           {/* ✨ UPDATED: High-visibility Language Toggle Pill */}
-          <div className="flex items-center gap-1.5 md:gap-2 bg-white border-[1.5px] border-[#C9A24D]/40 hover:border-[#C9A24D] px-3 md:px-4 py-1.5 md:py-2 rounded-full shadow-sm transition-all cursor-pointer">
+          <div className="flex items-center gap-1.5 md:gap-2 bg-white border-[1.5px] border-[#C9A24D]/40 hover:border-[#C9A24D] px-3 md:px-4 py-1.5 md:py-2 rounded-full shadow-sm transition-all cursor-pointer hidden sm:flex">
             <Globe size={16} className="text-[#C9A24D] hidden md:block" />
             <div className="flex items-center gap-1.5 md:gap-2">
               <button 
@@ -192,8 +192,9 @@ export default function Navbar() {
           {/* This forces a hard browser redirect when moving from the public site */}
           {/* to the auth/admin boundaries, completely breaking the infinite loading */}
           {/* and layout bleeding bugs! We keep the exact styling as before. */}
-          <a href={user ? "/dashboard" : "/login"} className="hidden lg:block">
-            <button className="px-3 py-2 text-sm text-[#1F1F1F]/40 hover:text-[#1F1F1F] transition-colors font-bold uppercase tracking-tighter">
+          {/* ✨ FIXED: Removed hidden lg:block so the button is always visible on all devices */}
+          <a href={user ? "/dashboard" : "/login"}>
+            <button className="px-2 md:px-3 py-2 text-[10px] md:text-sm text-[#1F1F1F]/40 hover:text-[#1F1F1F] transition-colors font-bold uppercase tracking-tighter">
               {user ? (language === "EN" ? "Dashboard" : "Dashboard") : (language === "EN" ? "Log In" : "Einloggen")}
             </button>
           </a>
