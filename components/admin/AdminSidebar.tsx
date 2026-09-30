@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users, Percent, FileText, PlaySquare } from "lucide-react"; // ✨ Added Percent, FileText, and PlaySquare icon for stories
+import { LayoutDashboard, ShoppingBag, Package, LogOut, ExternalLink, Menu, X, Star, Layout, Tag, Heart, Users, Percent, FileText, PlaySquare, Activity } from "lucide-react"; // ✨ Added Percent, FileText, and PlaySquare icon for stories, AND Activity for Live Monitor
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 
@@ -94,6 +94,20 @@ export default function AdminSidebar() {
           >
             <LayoutDashboard size={20} />
             Dashboard
+          </Link>
+
+          {/* ✨ NEW: Live Traffic Monitor Link added here per your request */}
+          <Link 
+            href="/admin/live" 
+            onClick={() => setIsOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              isActive("/admin/live") 
+                ? "bg-[#D4C29A] text-white shadow-lg shadow-[#D4C29A]/20" 
+                : "text-white/40 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Activity size={20} />
+            Live Traffic
           </Link>
 
           {/* Orders Link */}
