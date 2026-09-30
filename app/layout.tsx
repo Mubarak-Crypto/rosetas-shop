@@ -13,6 +13,7 @@ import CookieConsent from "../components/CookieConsent"; // ✨ NEW: Import Cook
 import ExitIntentPopup from "../components/ExitIntentPopup"; // ✨ NEW: Import Exit Intent Popup
 import RamadanBanner from "../components/RamadanBanner"; // ✨ NEW: Import Ramadan Banner
 import { GoogleAnalytics } from '@next/third-parties/google';
+import LiveTracker from "../components/LiveTracker"; // adjust path if needed
 // 🗑️ Removed unused SocialProof import
 
 const inter = Inter({ subsets: ["latin"] });
@@ -21,8 +22,8 @@ const inter = Inter({ subsets: ["latin"] });
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // ✨ FIX: Removed maximumScale and userScalable to allow mobile pinch-to-zoom.
+  // This is a major win for mobile accessibility and Google SEO rankings!
 };
 
 // 🚀 GOOGLE SEO UPGRADE: Full Metadata for Search Engines
@@ -198,6 +199,10 @@ export default function RootLayout({
     <html lang="en">
       {/* ✨ Added overflow-x-hidden to body to prevent messy horizontal scrolling on phones */}
       <body className={`${inter.className} antialiased overflow-x-hidden w-full min-h-screen relative`}>
+        
+        {/* Live visitor tracking */}
+        <LiveTracker />
+
         {/* ✨ NEW: Wrapped with AuthProvider to manage user accounts, sessions, and guest conversion sync */}
         <AuthProvider>
           {/* ✨ Wrapped with LanguageProvider to enable DE/EN switching */}
@@ -241,6 +246,9 @@ export default function RootLayout({
 
         {/* 📊 Google Analytics Tracking */}
         <GoogleAnalytics gaId="G-J8YRZJB2JK" />
+
+
+        
       </body>
     </html>
   );
