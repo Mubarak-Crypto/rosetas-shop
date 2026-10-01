@@ -98,12 +98,20 @@ export async function POST(request: Request) {
     // 🕵️ DEBUG LOG: See what the frontend is actually sending
     console.log("DEBUG: Cart Data received:", JSON.stringify(cart, null, 2));
 
-    // 🛡️ STEP 1: Re-calculate Subtotal (Using exact cart prices for matching)
+    // 🛡️ STEP 1a: Fetch Live Store Settings (The absolute truth for Global Sales)
+    // ✨ NEW GATEKEEPER LOGIC: We fetch this directly from the DB so we know if a sale is active RIGHT NOW.
+    const { data: settings } = await supabase
+        .from('storefront_settings')
+        .select('is_global_sale_active, global_sale_percentage')
+        .eq('id', '00000000-0000-0000-0000-000000000000')
+        .single();
+
+    // 🛡️ STEP 1b: Re-calculate Subtotal (Using exact cart prices for matching)
     const productIds = cart.map((item: any) => item.productId);
     const { data: dbProducts, error: prodError } = await supabase
         .from('products')
-        // ✨ NEW: Added stock, is_unlimited, and stock_matrix to the fetch list for the Bouncer check
-        .select('id, price, sale_price, is_on_sale, category, stock, is_unlimited, stock_matrix')
+        // ✨ NEW: Added variants and extras to the select query so the server can do the exact math!
+        .select('id, price, sale_price, is_on_sale, category, stock, is_unlimited, stock_matrix, variants, extras')
         .in('id', productIds);
 
     if (prodError || !dbProducts) throw new Error("Security Alert: Verification failed.");
@@ -135,19 +143,65 @@ export async function POST(request: Request) {
             }
         }
 
-        // --- 🌹 FINAL HANDSHAKE FIX: USE FRONTEND PRICE DIRECTLY ---
-        // Since your frontend already calculates Roses + Extras correctly (e.g., €402),
-        // we use that price to ensure the Database and Stripe charge match perfectly.
-        let realItemPrice = Number(item.price);
+        // --- 🔒 BULLETPROOF DYNAMIC PRICE CALCULATION (THE GATEKEEPER) ---
+        // We completely removed the blind trust. The server now calculates the exact price from the DB.
+        
+        // 1. Get the base price from the database
+        let serverItemTotal = dbProduct.is_on_sale ? Number(dbProduct.sale_price) : Number(dbProduct.price);
 
-        // Security check: Ensure the price isn't impossible (must be at least 50% of base DB price)
-        const dbBasePrice = dbProduct.is_on_sale ? dbProduct.sale_price : dbProduct.price;
-        if (realItemPrice < (dbBasePrice * 0.5)) {
-            console.warn(`🚨 Price discrepancy detected for ${item.name}. DB Base: ${dbBasePrice}, Sent: ${realItemPrice}`);
+        // 2. Add prices from the dynamic 'extras' JSONB column (e.g. Glitzer, Lichterkette)
+        // We loop through the string array sent by the cart and match it to the DB extras
+        if (item.extras && Array.isArray(item.extras)) {
+            item.extras.forEach((clientExtraName: string) => {
+                const dbExtra = (dbProduct.extras || []).find((e: any) => 
+                    e.name && e.name.toLowerCase() === clientExtraName.toLowerCase()
+                );
+                if (dbExtra && dbExtra.price) {
+                    serverItemTotal += Number(dbExtra.price);
+                }
+            });
         }
 
-        console.log(`DEBUG: Item ${item.name} | Confirmed Unit Price: ${realItemPrice} | Qty: ${item.quantity}`);
-        calculatedSubtotal += (realItemPrice * item.quantity);
+        // 3. Extract prices embedded in 'options' (e.g., "50 Rosen (€105)" or "+€10")
+        // This regex dynamically finds any euro price inside parenthesis and applies it!
+        if (item.options) {
+            Object.values(item.options).forEach((optVal: any) => {
+                const valStr = String(optVal);
+                // Regex to perfectly match things like (€105), (+€10), ( € 5 )
+                const priceMatch = valStr.match(/\(\s*\+?\s*€?\s*(\d+(\.\d{1,2})?)\s*€?\s*\)/);
+                if (priceMatch) {
+                    const extractedPrice = Number(priceMatch[1]);
+                    if (valStr.includes("+")) {
+                        // It's an additive variant (e.g., "+€10")
+                        serverItemTotal += extractedPrice;
+                    } else {
+                        // It's a replacement variant (e.g., "50 Rosen (€105)") - overwrites base price
+                        serverItemTotal = extractedPrice;
+                    }
+                }
+            });
+        }
+
+        // 4. Apply Global Sale if active TODAY, RIGHT NOW in the database
+        if (settings?.is_global_sale_active && settings?.global_sale_percentage) {
+            const saleMultiplier = (100 - settings.global_sale_percentage) / 100;
+            serverItemTotal = serverItemTotal * saleMultiplier;
+        }
+
+        // 5. THE GATEKEEPER CHECK: Compare Server Math to Frontend Math
+        // We allow a tiny 10-cent margin just in case of weird JavaScript float rounding
+        const frontendPrice = Number(item.price);
+        const difference = Math.abs(serverItemTotal - frontendPrice);
+
+        if (difference > 0.10) {
+            console.error(`🚨 PRICE MISMATCH DETECTED ON ${item.name}! Server says: €${serverItemTotal}, Frontend says: €${frontendPrice}`);
+            // THIS STOPS THE GHOST CART DEAD IN ITS TRACKS! 
+            // It aborts the payment intent and throws this error back to the checkout page.
+            throw new Error(`The price for ${item.name} has changed due to an expired sale. Please refresh your cart to see the updated total.`);
+        }
+
+        console.log(`DEBUG: Item ${item.name} | Verified Server Price: ${serverItemTotal} | Qty: ${item.quantity}`);
+        calculatedSubtotal += (serverItemTotal * item.quantity);
 
         const optionValues = Object.values(item.options || {}).join(" ");
         if (optionValues.includes("100") || optionValues.includes("200") || optionValues.includes("150")) {
@@ -253,6 +307,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("CRITICAL API ERROR:", error);
+    // ✨ THIS CATCHES THE GATEKEEPER ERROR AND SENDS IT TO THE FRONTEND
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

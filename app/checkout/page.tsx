@@ -190,6 +190,7 @@ export default function CheckoutPage() {
   });
 
   const [step, setStep] = useState(1);
+  const [gatekeeperError, setGatekeeperError] = useState<string | null>(null); // ✨ NEW: Catches price mismatch errors from backend
   const [clientSecret, setClientSecret] = useState("");
   const [serverBrandedId, setServerBrandedId] = useState(""); // ✨ NEW
   const [isExpress, setIsExpress] = useState(false); 
@@ -593,10 +594,19 @@ export default function CheckoutPage() {
             giftMessage: giftNote 
         }),
       })
-      .then((res) => res.json())
-      .then((data) => {
+      .then(async (res) => {
+        const data = await res.json();
+        // ✨ NEW GATEKEEPER CHECK: Catch backend price mismatch errors dynamically
+        if (data.error) {
+            setGatekeeperError(data.error);
+            return;
+        }
         setClientSecret(data.clientSecret);
         setServerBrandedId(data.brandedId); 
+      })
+      .catch(() => {
+        // ✨ NEW: Fallback network error catcher
+        setGatekeeperError("Unable to connect to payment server. Please refresh your cart.");
       });
     }
   }, [step, finalTotal, appliedCode, discountAmount, cart, formData.country, isExpress, packagingType, tipAmount, donationAmount, giftNote]); // ✨ Added discountAmount to dependency array
@@ -1041,7 +1051,19 @@ export default function CheckoutPage() {
               )}
 
               <h2 className="text-2xl font-bold pt-4">{t('checkout_method')}</h2>
-              {clientSecret ? (
+              {/* ✨ NEW GATEKEEPER UI: Show error if prices mismatched */}
+              {gatekeeperError ? (
+                <div className="bg-red-50 border border-red-200 p-6 rounded-2xl shadow-sm text-red-700 animate-in fade-in">
+                  <div className="flex items-center gap-3 mb-2">
+                    <AlertCircle size={24} />
+                    <h3 className="font-bold text-lg">Price Update Required</h3>
+                  </div>
+                  <p className="text-sm font-medium mb-4">{gatekeeperError}</p>
+                  <button onClick={() => window.location.reload()} className="bg-red-600 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-red-700 transition-colors w-full text-center">
+                    Refresh Cart
+                  </button>
+                </div>
+              ) : clientSecret ? (
                 <div className="bg-white p-6 rounded-2xl shadow-lg">
                   <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe', variables: { colorPrimary: '#1F1F1F' } } }}>
                     <PaymentForm 
