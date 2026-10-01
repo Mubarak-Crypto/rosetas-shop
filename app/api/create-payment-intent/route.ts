@@ -1,3 +1,6 @@
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs'; // 🔥 FIX: Forces Node.js environment to prevent intermittent Webhook Signature failures
+
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js"; 
@@ -100,9 +103,10 @@ export async function POST(request: Request) {
 
     // 🛡️ STEP 1a: Fetch Live Store Settings (The absolute truth for Global Sales)
     // ✨ NEW GATEKEEPER LOGIC: We fetch this directly from the DB so we know if a sale is active RIGHT NOW.
+    // 🔧 FIXED: Changed global_sale_percentage to global_discount_percentage to match Supabase schema
     const { data: settings } = await supabase
         .from('storefront_settings')
-        .select('is_global_sale_active, global_sale_percentage')
+        .select('is_global_sale_active, global_discount_percentage')
         .eq('id', '00000000-0000-0000-0000-000000000000')
         .single();
 
@@ -183,8 +187,9 @@ export async function POST(request: Request) {
         }
 
         // 4. Apply Global Sale if active TODAY, RIGHT NOW in the database
-        if (settings?.is_global_sale_active && settings?.global_sale_percentage) {
-            const saleMultiplier = (100 - settings.global_sale_percentage) / 100;
+        // 🔧 FIXED: Using the correct column name 'global_discount_percentage'
+        if (settings?.is_global_sale_active && settings?.global_discount_percentage) {
+            const saleMultiplier = (100 - settings.global_discount_percentage) / 100;
             serverItemTotal = serverItemTotal * saleMultiplier;
         }
 
@@ -193,8 +198,10 @@ export async function POST(request: Request) {
         const frontendPrice = Number(item.price);
         const difference = Math.abs(serverItemTotal - frontendPrice);
 
-        if (difference > 0.10) {
-            console.error(`🚨 PRICE MISMATCH DETECTED ON ${item.name}! Server says: €${serverItemTotal}, Frontend says: €${frontendPrice}`);
+        // 🔧 FIXED: Tightened the security lock down to 2 cents! (0.02)
+        // Now, even on a €1 test item, a 7-cent ghost cart difference will trigger the alarm.
+        if (difference > 0.02) {
+            console.error(`🚨 PRICE MISMATCH DETECTED ON ${item.name}! Server says: €${serverItemTotal.toFixed(2)}, Frontend says: €${frontendPrice.toFixed(2)}`);
             // THIS STOPS THE GHOST CART DEAD IN ITS TRACKS! 
             // It aborts the payment intent and throws this error back to the checkout page.
             throw new Error(`The price for ${item.name} has changed due to an expired sale. Please refresh your cart to see the updated total.`);
