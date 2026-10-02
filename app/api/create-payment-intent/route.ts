@@ -103,7 +103,7 @@ export async function POST(request: Request) {
 
     // 🛡️ STEP 1a: Fetch Live Store Settings (The absolute truth for Global Sales)
     // ✨ NEW GATEKEEPER LOGIC: We fetch this directly from the DB so we know if a sale is active RIGHT NOW.
-    // 🔧 FIXED: Changed global_sale_percentage to global_discount_percentage to match Supabase schema
+    // 🔧 FIXED: The Supabase column is named 'global_discount_percentage', not 'global_sale_percentage'.
     const { data: settings } = await supabase
         .from('storefront_settings')
         .select('is_global_sale_active, global_discount_percentage')
@@ -157,8 +157,10 @@ export async function POST(request: Request) {
         // We loop through the string array sent by the cart and match it to the DB extras
         if (item.extras && Array.isArray(item.extras)) {
             item.extras.forEach((clientExtraName: string) => {
+                // 🔧 FIXED: Now checks BOTH 'name' (DE) and 'name_en' (EN) to catch bilingual frontend carts!
                 const dbExtra = (dbProduct.extras || []).find((e: any) => 
-                    e.name && e.name.toLowerCase() === clientExtraName.toLowerCase()
+                    (e.name && e.name.toLowerCase() === clientExtraName.toLowerCase()) ||
+                    (e.name_en && e.name_en.toLowerCase() === clientExtraName.toLowerCase())
                 );
                 if (dbExtra && dbExtra.price) {
                     serverItemTotal += Number(dbExtra.price);
@@ -187,19 +189,18 @@ export async function POST(request: Request) {
         }
 
         // 4. Apply Global Sale if active TODAY, RIGHT NOW in the database
-        // 🔧 FIXED: Using the correct column name 'global_discount_percentage'
+        // 🔧 FIXED: Using the correct Supabase column name 'global_discount_percentage'
         if (settings?.is_global_sale_active && settings?.global_discount_percentage) {
             const saleMultiplier = (100 - settings.global_discount_percentage) / 100;
             serverItemTotal = serverItemTotal * saleMultiplier;
         }
 
         // 5. THE GATEKEEPER CHECK: Compare Server Math to Frontend Math
-        // We allow a tiny 10-cent margin just in case of weird JavaScript float rounding
+        // We allow a tiny 2-cent margin just in case of normal JavaScript float rounding.
+        // 🔧 FIXED: Tightened the security tolerance from 10 cents to 2 cents.
         const frontendPrice = Number(item.price);
         const difference = Math.abs(serverItemTotal - frontendPrice);
 
-        // 🔧 FIXED: Tightened the security lock down to 2 cents! (0.02)
-        // Now, even on a €1 test item, a 7-cent ghost cart difference will trigger the alarm.
         if (difference > 0.02) {
             console.error(`🚨 PRICE MISMATCH DETECTED ON ${item.name}! Server says: €${serverItemTotal.toFixed(2)}, Frontend says: €${frontendPrice.toFixed(2)}`);
             // THIS STOPS THE GHOST CART DEAD IN ITS TRACKS! 
@@ -302,7 +303,7 @@ export async function POST(request: Request) {
           orderId: brandedId, // ✨ MATCH: Changed key from 'branded_id' to 'orderId' for webhook logic
           email: email, // ✨ MATCH: Changed key from 'customer_email' to 'email'
           gift_amount: packagingCost.toString(), // 🎁 NEW: Pass gift amount to Stripe Metadata
-          gift_message: giftMessage || "", // 📝 NEW: Pass gift message to Stripe Metadata
+          gift_message: giftMessage || "", // 📝 Pass gift message to Stripe Metadata
           user_id: userId || "", // 👤 NEW: Pass user ID to Stripe Metadata
           // ✨ NEW CRITICAL DATA: Pass discount stats to webhook for Macro Analytics tracking
           discount_code: discountCode || "", 

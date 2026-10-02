@@ -272,32 +272,165 @@ export default function ProductClient({ initialProduct, initialSettings, initial
       }
   };
 
+  // 🔧 FIXED: Bulletproof Matrix Matcher (Handles -1 global stock routing, ignores case/spaces)
+  // ✨ PHASE 3 STOCK FIX: Matrix stock is now treated as the source of truth for
+  // exact combinations. A stock value of -1 means Unlimited and NEVER falls
+  // back to the global product.stock value.
   const getSelectedVariantStock = () => {
     if (!product || !product.variants || product.variants.length === 0) {
-        return product.is_unlimited ? 999 : Math.max(0, product.stock || 0);
+        return product.is_unlimited ? 999 : Math.max(0, Number(product.stock) || 0);
     }
 
     const matrix = Array.isArray(product.stock_matrix) ? product.stock_matrix : [];
 
-    if (matrix.length > 0) {
-        const match = matrix.find((item: any) => {
-            return Object.keys(selectedOptions).every(key => {
-                const selectedClean = selectedOptions[key].split('|')[0].trim();
-                return item[key] === selectedClean;
-            });
-        });
+    // ✨ PHASE 3 STOCK FIX: If a product has variants but no matrix,
+    // preserve the existing global-stock behavior as a safe fallback.
+    if (matrix.length === 0) {
+        return product.is_unlimited ? 999 : Math.max(0, Number(product.stock) || 0);
+    }
 
-        if (match) {
-            return product.is_unlimited ? 999 : Math.max(0, match.stock || 0);
+    // ✨ PHASE 3 STOCK FIX: Do not use a matrix row until every product
+    // option has been selected. This prevents the first matrix row from
+    // incorrectly determining the customer's available stock.
+    const allOptionsSelected = product.variants.every(
+        (variant: any) => selectedOptions[variant.name]
+    );
+
+    if (!allOptionsSelected) {
+        return 0;
+    }
+
+    const match = matrix.find((item: any) => {
+        return Object.keys(selectedOptions).every(key => {
+            const selectedClean = String(selectedOptions[key]).split('|')[0];
+            
+            // 1. Normalize what the frontend is looking for
+            const normalizedSearchKey = String(key).replace(/\s+/g, '').toLowerCase();
+            const normalizedSearchVal = String(selectedClean).replace(/\s+/g, '').toLowerCase();
+            
+            // 2. Search the matrix keys, ignoring case and spaces
+            const matrixKey = Object.keys(item).find(k => String(k).replace(/\s+/g, '').toLowerCase() === normalizedSearchKey);
+            if (!matrixKey) return false;
+            
+            // 3. Compare the values, ignoring case and spaces
+            return String(item[matrixKey]).replace(/\s+/g, '').toLowerCase() === normalizedSearchVal;
+        });
+    });
+
+    if (match) {
+        // ✨ PHASE 3 STOCK FIX: -1 from the admin stock matrix means
+        // Unlimited. It does NOT route to product.stock anymore.
+        const matrixStock = Number(match.stock);
+
+        if (matrixStock === -1) {
+            return 999;
         }
-        
-        if (product.is_unlimited) return 999;
-        const hasAnyStock = matrix.some((item: any) => item.stock > 0);
-        if (hasAnyStock) return 999;
+
+        return Number.isFinite(matrixStock) ? Math.max(0, matrixStock) : 0;
     }
     
+    // ✨ PHASE 3 STOCK FIX: If the exact selected combination does not
+    // exist in the matrix, it is unavailable. We no longer use the old
+    // "hasAnyStock -> 999" fallback because another combination having
+    // stock does not mean this selected combination has stock.
     return 0;
   };
+
+  // ✨ PHASE 3 STOCK FIX: Check whether a candidate option has at least
+  // one available matrix combination while respecting all other options
+  // the customer has already selected.
+  const hasAvailableMatrixCombination = (
+    variantName: string,
+    candidateValue: string
+  ) => {
+    if (!product) return false;
+
+    if (!product.variants || product.variants.length === 0) {
+        return product.is_unlimited || Number(product.stock) > 0;
+    }
+
+    const matrix = Array.isArray(product.stock_matrix) ? product.stock_matrix : [];
+
+    // If there is no matrix, preserve the existing global stock behavior.
+    if (matrix.length === 0) {
+        return product.is_unlimited || Number(product.stock) > 0;
+    }
+
+    const normalizedVariantName = String(variantName).replace(/\s+/g, '').toLowerCase();
+    const normalizedCandidateValue = String(candidateValue)
+        .split('|')[0]
+        .replace(/\s+/g, '')
+        .toLowerCase();
+
+    // ✨ PHASE 3 STOCK FIX: Check every matrix row instead of just the
+    // first row matching this individual option. This is important for
+    // 3-dimensional combinations such as Size + Test + Color.
+    return matrix.some((item: any) => {
+        const candidateKey = Object.keys(item).find(
+            key => String(key).replace(/\s+/g, '').toLowerCase() === normalizedVariantName
+        );
+
+        if (!candidateKey) return false;
+
+        const matrixCandidateValue = String(item[candidateKey])
+            .split('|')[0]
+            .replace(/\s+/g, '')
+            .toLowerCase();
+
+        if (matrixCandidateValue !== normalizedCandidateValue) {
+            return false;
+        }
+
+        // Every OTHER option already selected must match this same matrix row.
+        const otherSelectedOptionsMatch = Object.keys(selectedOptions).every(key => {
+            if (String(key).replace(/\s+/g, '').toLowerCase() === normalizedVariantName) {
+                return true;
+            }
+
+            const normalizedSelectedKey = String(key).replace(/\s+/g, '').toLowerCase();
+            const normalizedSelectedValue = String(selectedOptions[key])
+                .split('|')[0]
+                .replace(/\s+/g, '')
+                .toLowerCase();
+
+            const matrixKey = Object.keys(item).find(
+                matrixKeyName =>
+                    String(matrixKeyName).replace(/\s+/g, '').toLowerCase() === normalizedSelectedKey
+            );
+
+            if (!matrixKey) return false;
+
+            return String(item[matrixKey])
+                .split('|')[0]
+                .replace(/\s+/g, '')
+                .toLowerCase() === normalizedSelectedValue;
+        });
+
+        if (!otherSelectedOptionsMatch) {
+            return false;
+        }
+
+        // ✨ PHASE 3 STOCK FIX: -1 means Unlimited.
+        const rowStock = Number(item.stock);
+        return rowStock === -1 || (Number.isFinite(rowStock) && rowStock > 0);
+    });
+  };
+
+  // ✨ PHASE 3 STOCK FIX: Keep the visible/cart quantity inside the
+  // actual stock limit whenever the selected combination changes.
+  useEffect(() => {
+    if (!product) return;
+
+    const currentStock = getSelectedVariantStock();
+
+    if (currentStock > 0 && quantity > currentStock) {
+        setQuantity(currentStock);
+    }
+
+    if (currentStock === 0 && quantity !== 1) {
+        setQuantity(1);
+    }
+  }, [selectedOptions, product]);
 
   const getBasePrice = () => {
     if (!product) return 0;
@@ -449,20 +582,30 @@ export default function ProductClient({ initialProduct, initialSettings, initial
 
     const uniqueId = `${product.id}-${optionsKey}-${extrasKey}-${finalCustomText}`;
 
+    // ✨ PHASE 3 STOCK FIX: Re-check the exact selected combination at
+    // the moment the item is added, so the cart can never receive a
+    // quantity higher than the current matrix stock.
+    const selectedStock = getSelectedVariantStock();
+    const safeQuantity = selectedStock > 0
+      ? Math.min(quantity, selectedStock)
+      : quantity;
+
     addToCart({
       productId: product.id,
       uniqueId,
       name: language === 'EN' && product.name_en ? product.name_en : product.name, 
       price: unitPrice,
       image: activeImage || "/placeholder.jpg",
-      quantity: quantity,
+      quantity: safeQuantity,
       options: translatedOptions, 
       rawOptions: dbOptions,
       extras: finalExtras, 
       category: product.category,
       customText: finalCustomText, 
       promoLabel: product.promo_label,
-      maxStock: getSelectedVariantStock(),
+      // ✨ PHASE 3 STOCK FIX: Cart now receives the exact selected
+      // combination stock, including 999 for an Unlimited (-1) row.
+      maxStock: selectedStock,
       is_addon: product.is_addon,     // ✨ Pass flags to cart
       is_supply: product.is_supply
     });
@@ -501,6 +644,17 @@ export default function ProductClient({ initialProduct, initialSettings, initial
   const currentVariantStock = getSelectedVariantStock(); 
   const allOptionsSelected = product.variants ? product.variants.every((v: any) => selectedOptions[v.name]) : true;
 
+  // ✨ PHASE 3 STOCK DISPLAY FIX:
+  // The stock shown beside the price is intentionally based on the GLOBAL
+  // product stock, not the selected variant combination.
+  // This means the product can immediately show "In Stock" before any
+  // options are selected. Variant availability is handled separately below.
+  const globalStock = product.is_unlimited
+    ? 999
+    : Math.max(0, Number(product.stock) || 0);
+
+  const isGlobalInStock = product.is_unlimited || globalStock > 0;
+
   const hasRibbonExtraSelected = selectedExtras.some(extraName => {
     const e = extraName.toLowerCase();
     if (e.includes("mini")) return false; 
@@ -531,6 +685,9 @@ export default function ProductClient({ initialProduct, initialSettings, initial
       shortNoteText.trim().length > 0 ||
       selectedExtras.length > 0;
 
+  // ✨ PHASE 3 STOCK DISPLAY FIX:
+  // This remains the EXACT selected-combination stock used by the Add to Cart
+  // gatekeeper. It is deliberately separate from isGlobalInStock above.
   const isCurrentlyInStock = currentVariantStock > 0; 
   
   // ✨ ADDED: Gatekeeper Logic for Add-ons (Makeup) and Supplies
@@ -732,10 +889,21 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                         €{totalPrice.toFixed(2)}
                     </span>
                 </div>
-                {isCurrentlyInStock ? (
-                    <span className="text-green-600 text-sm mb-1.5 flex items-center gap-1 font-bold"><Check size={14} /> {t('in_stock')} {currentVariantStock < 900 && `(${currentVariantStock})`}</span>
+
+                {/* ✨ PHASE 3 STOCK DISPLAY FIX:
+                    This status is GLOBAL product stock and is intentionally
+                    independent from selectedOptions / stock_matrix.
+                    It therefore displays correctly as soon as the page loads. */}
+                {isGlobalInStock ? (
+                    <span className="text-green-600 text-sm mb-1.5 flex items-center gap-1 font-bold">
+                        <Check size={14} /> 
+                        {t('in_stock')} 
+                        {product.is_unlimited ? "" : `(${globalStock})`}
+                    </span>
                 ) : (
-                    <span className="text-red-600 text-sm mb-1.5 flex items-center gap-1 font-bold">{t('out_of_stock')}</span>
+                    <span className="text-red-600 text-sm mb-1.5 flex items-center gap-1 font-bold">
+                        {t('out_of_stock')}
+                    </span>
                 )}
                 </div>
                 
@@ -804,11 +972,92 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                             const cleanLabel = val.split('(')[0].split('|')[0].trim();
                             const subLabel = val.includes('(') ? val.split('(')[1].split(')')[0] : "";
                             
-                            let itemStock = product.is_unlimited ? 999 : (product.stock !== undefined ? Math.max(0, product.stock) : 999); 
+                            // 🔧 FIXED: Handle -1 from Admin Portal
+                            // ✨ PHASE 3 STOCK FIX: Option availability is now based on
+                            // compatible stock-matrix combinations, not just the first
+                            // matrix row matching this individual option.
+                            let itemStock = product.is_unlimited ? 999 : (product.stock !== undefined ? Math.max(0, Number(product.stock) || 0) : 999); 
                             const matrix = Array.isArray(product.stock_matrix) ? product.stock_matrix : [];
-                            if(matrix.length > 0) {
-                                const match = matrix.find((m: any) => m[variant.name] === deVal.split('|')[0].trim());
-                                if(match) itemStock = product.is_unlimited ? 999 : Math.max(0, match.stock || 0);
+
+                            if (matrix.length > 0) {
+                                // ✨ PHASE 3 STOCK FIX: Check whether this option can
+                                // participate in ANY available combination while respecting
+                                // the other options the customer has already selected.
+                                const hasAvailableCombination = hasAvailableMatrixCombination(
+                                    variant.name,
+                                    deVal
+                                );
+
+                                if (hasAvailableCombination) {
+                                    // ✨ PHASE 3 STOCK FIX: We use 999 as the frontend
+                                    // representation of Unlimited (-1), while finite
+                                    // combinations retain their real stock quantity.
+                                    const compatibleRows = matrix.filter((m: any) => {
+                                        const targetVal = String(deVal.split('|')[0])
+                                            .replace(/\s+/g, '')
+                                            .toLowerCase();
+                                        const targetKey = String(variant.name)
+                                            .replace(/\s+/g, '')
+                                            .toLowerCase();
+
+                                        const mKey = Object.keys(m).find(
+                                            k => String(k).replace(/\s+/g, '').toLowerCase() === targetKey
+                                        );
+
+                                        if (!mKey) return false;
+
+                                        if (
+                                            String(m[mKey]).split('|')[0].replace(/\s+/g, '').toLowerCase() !== targetVal
+                                        ) {
+                                            return false;
+                                        }
+
+                                        return Object.keys(selectedOptions).every(key => {
+                                            if (
+                                                String(key).replace(/\s+/g, '').toLowerCase() === targetKey
+                                            ) {
+                                                return true;
+                                            }
+
+                                            const selectedKey = String(key)
+                                                .replace(/\s+/g, '')
+                                                .toLowerCase();
+                                            const selectedValue = String(selectedOptions[key])
+                                                .split('|')[0]
+                                                .replace(/\s+/g, '')
+                                                .toLowerCase();
+
+                                            const rowKey = Object.keys(m).find(
+                                                k => String(k).replace(/\s+/g, '').toLowerCase() === selectedKey
+                                            );
+
+                                            if (!rowKey) return false;
+
+                                            return String(m[rowKey])
+                                                .split('|')[0]
+                                                .replace(/\s+/g, '')
+                                                .toLowerCase() === selectedValue;
+                                        });
+                                    });
+
+                                    const hasUnlimitedRow = compatibleRows.some(
+                                        (row: any) => Number(row.stock) === -1
+                                    );
+
+                                    if (hasUnlimitedRow) {
+                                        itemStock = 999;
+                                    } else {
+                                        const availableStocks = compatibleRows
+                                            .map((row: any) => Number(row.stock))
+                                            .filter((stock: number) => Number.isFinite(stock) && stock > 0);
+
+                                        itemStock = availableStocks.length > 0
+                                            ? Math.max(...availableStocks)
+                                            : 0;
+                                    }
+                                } else {
+                                    itemStock = 0;
+                                }
                             }
 
                             return (
@@ -1155,7 +1404,16 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                         ? (language === 'EN' ? "Select a Bouquet/Basket First" : "Zuerst einen Strauß/Korb wählen")
                         : isSupplyBlocked
                             ? (language === 'EN' ? `Min. €80 for Supplies` : `Min. 80 € für Bedarf`)
-                            : !isCurrentlyInStock ? t('out_of_stock') : !allOptionsSelected ? t('select_options') : (isPersonalizedOrder && !withdrawalAccepted ? (language === 'EN' ? "Accept Policy" : "Richtlinie akzeptieren") : t('ribbon_placeholder'))}
+                            : !allOptionsSelected
+                                // ✨ PHASE 3 STOCK DISPLAY FIX:
+                                // Check option selection BEFORE variant stock here.
+                                // getSelectedVariantStock() intentionally returns 0
+                                // until all options are selected, so checking stock
+                                // first caused the button to incorrectly say Out of Stock.
+                                ? t('select_options')
+                                : !isCurrentlyInStock
+                                    ? t('out_of_stock')
+                                    : (isPersonalizedOrder && !withdrawalAccepted ? (language === 'EN' ? "Accept Policy" : "Richtlinie akzeptieren") : t('ribbon_placeholder'))}
                 </span>
                 </button>
 

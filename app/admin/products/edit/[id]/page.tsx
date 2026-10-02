@@ -28,6 +28,133 @@ type UploadType = "product" | "extra";
 // ✨ RESTORED: Added 'price' back to the Variant builder so she can set prices for sizes!
 type TempVariantItem = { de: string; en: string; stock: string; price?: string };
 
+// ✨ PHASE 2: STOCK MATRIX ROW TYPE
+// Keeps the stock matrix flexible because variant names are dynamic,
+// while guaranteeing every matrix row has a numeric stock value.
+type StockMatrixRow = {
+    [key: string]: string | number;
+    stock: number;
+};
+
+// ✨ PHASE 2: STOCK MATRIX HELPERS
+// These helpers make the Edit page tolerant of differences such as
+// "Size" vs "size" or "Color " vs "Color" when matching existing rows.
+const cleanVariantMatrixValue = (value: string) => {
+    return String(value).split('|')[0].split('(')[0].trim();
+};
+
+// ✨ PHASE 2: Read stock metadata from a variant value.
+// Example:
+// "50 Rosen | Stock: 3 | Price: 100" -> 3
+// No Stock metadata means -1 (Unlimited), matching the existing system.
+const getVariantValueStock = (value: string): number => {
+    const stockMatch = String(value).match(/\|\s*Stock:\s*(-?\d+(?:\.\d+)?)/i);
+
+    if (!stockMatch) return -1;
+
+    const parsedStock = parseInt(stockMatch[1], 10);
+
+    if (Number.isNaN(parsedStock)) return -1;
+
+    return Math.max(0, parsedStock);
+};
+
+// ✨ PHASE 2: Normalize matrix keys/values for safe matching.
+// This does NOT change what gets stored. It is only used when comparing rows.
+const normalizeMatrixValue = (value: unknown) => {
+    return String(value ?? "").replace(/\s+/g, "").toLowerCase();
+};
+
+// ✨ PHASE 2: Check whether an existing matrix row represents
+// the exact same combination as the newly generated combination.
+const matrixRowsMatch = (
+    existingRow: StockMatrixRow,
+    targetCombo: Record<string, string>
+) => {
+    return Object.keys(targetCombo).every((key) => {
+        const existingKey = Object.keys(existingRow).find(
+            (rowKey) =>
+                normalizeMatrixValue(rowKey) === normalizeMatrixValue(key)
+        );
+
+        if (!existingKey) return false;
+
+        return (
+            normalizeMatrixValue(existingRow[existingKey]) ===
+            normalizeMatrixValue(targetCombo[key])
+        );
+    });
+};
+
+// ✨ PHASE 2: Find an existing row that partially matches a combination.
+// This is useful when a new variant/option is added and old stock
+// needs to be carried into the newly-created combinations.
+const findPartialMatrixMatch = (
+    existingMatrix: StockMatrixRow[],
+    combo: Record<string, string>
+) => {
+    return existingMatrix.find((row) => {
+        const matrixOptionKeys = Object.keys(row).filter(
+            (key) => normalizeMatrixValue(key) !== "stock"
+        );
+
+        if (matrixOptionKeys.length === 0) return false;
+
+        return matrixOptionKeys.every((key) => {
+            const comboKey = Object.keys(combo).find(
+                (comboName) =>
+                    normalizeMatrixValue(comboName) ===
+                    normalizeMatrixValue(key)
+            );
+
+            if (!comboKey) return false;
+
+            return (
+                normalizeMatrixValue(row[key]) ===
+                normalizeMatrixValue(combo[comboKey])
+            );
+        });
+    });
+};
+
+// ✨ PHASE 2: Find stock entered directly beside a variant value.
+// This is used only when no existing matrix row can be preserved.
+const getSeedStockForCombo = (
+    combo: Record<string, string>,
+    variantsList: Variant[]
+): number => {
+    const matchingVariant = variantsList.find((variant) =>
+        Object.keys(combo).some(
+            (comboKey) =>
+                normalizeMatrixValue(comboKey) ===
+                normalizeMatrixValue(variant.name)
+        )
+    );
+
+    if (!matchingVariant) return -1;
+
+    const comboKey = Object.keys(combo).find(
+        (comboName) =>
+            normalizeMatrixValue(comboName) ===
+            normalizeMatrixValue(matchingVariant.name)
+    );
+
+    if (!comboKey) return -1;
+
+    const rawVariantValue = matchingVariant.values
+        .split(',')
+        .map((value) => value.trim())
+        .find(
+            (value) =>
+                normalizeMatrixValue(cleanVariantMatrixValue(value)) ===
+                normalizeMatrixValue(combo[comboKey])
+        );
+
+    if (!rawVariantValue) return -1;
+
+    return getVariantValueStock(rawVariantValue);
+};
+
 // ✨ NEW: PRESET ARRAYS FOR QUICK-CLICK UI
 // Contains all 17 Colors, 6 Sizes, and 16 Extras perfectly translated for EN/DE
 const COLOR_PRESETS = [
@@ -200,7 +327,16 @@ export default function EditProductPage() {
         setVariants(data.variants || []);
         setExtras(data.extras || []);
         setNeedsRibbon(data.needs_ribbon || false); 
-        setStockMatrix(data.stock_matrix || []); 
+
+        // ✨ PHASE 2: LOAD THE EXISTING MATRIX EXACTLY AS STORED.
+        // The matrix is now treated as the source of truth for combinations
+        // that already exist. We do not replace it with -1 on initial load.
+        setStockMatrix(
+          Array.isArray(data.stock_matrix)
+            ? data.stock_matrix
+            : []
+        );
+
         setPromoLabel(data.promo_label || ""); 
         
         setPersLabel1(data.pers_label_1 || "");
@@ -213,7 +349,11 @@ export default function EditProductPage() {
     fetchProduct();
   }, [productId, router]);
 
-  // AUTO-GENERATE MATRIX LOGIC
+  // ✨ PHASE 2: AUTO-GENERATE / PRESERVE MATRIX LOGIC
+  // Existing combinations keep their current stock.
+  // New combinations are seeded from an existing partial match where possible.
+  // If no existing combination can be found, the stock entered beside the
+  // variant value is used. If no stock was entered, -1 remains Unlimited.
   useEffect(() => {
     if (variants.length > 0) {
       const generateMatrix = () => {
@@ -224,22 +364,81 @@ export default function EditProductPage() {
 
         const optionGroups = variants.map(v => ({
           name: v.name,
-          values: v.values.split(',').map(val => val.split('(')[0].split('|')[0].trim())
+          values: v.values
+            .split(',')
+            .map(val => cleanVariantMatrixValue(val))
+            .filter(Boolean)
         }));
 
         const combos = optionGroups.reduce((a, b) => 
           a.flatMap((d: any) => b.values.map(v => ({ ...d, [b.name]: v })))
         , [{}]);
 
-        const newMatrix = combos.map(combo => {
-          const existing = stockMatrix.find(m => 
-            Object.keys(combo).every(key => m[key] === combo[key])
-          );
-          return existing || { ...combo, stock: -1 };
+        const existingMatrix: StockMatrixRow[] = stockMatrix.map((row: any) => {
+          const normalizedRow: StockMatrixRow = {
+            ...row,
+            stock:
+              typeof row.stock === "number"
+                ? row.stock
+                : getVariantValueStock(String(row.stock ?? ""))
+          };
+
+          return normalizedRow;
         });
+
+        const newMatrix: StockMatrixRow[] = combos.map(
+          (combo: Record<string, string>) => {
+            // ✨ PHASE 2: EXACT MATCH
+            // If this exact combination already exists, preserve its stock
+            // even if other variant values were edited.
+            const existingExact = existingMatrix.find((m) =>
+              matrixRowsMatch(m, combo)
+            );
+
+            if (existingExact) {
+              return {
+                ...combo,
+                stock:
+                  typeof existingExact.stock === "number"
+                    ? existingExact.stock
+                    : getVariantValueStock(
+                        String(existingExact.stock ?? "")
+                      )
+              };
+            }
+
+            // ✨ PHASE 2: PARTIAL MATCH
+            // When a new option is added, an old row such as:
+            // Size = 20 Rosen, Stock = 5
+            // can seed:
+            // Size = 20 Rosen, Color = Red, Stock = 5
+            const partialMatch = findPartialMatrixMatch(
+              existingMatrix,
+              combo
+            );
+
+            if (partialMatch && typeof partialMatch.stock === "number") {
+              return {
+                ...combo,
+                stock: partialMatch.stock
+              };
+            }
+
+            // ✨ PHASE 2: VARIANT VALUE SEED
+            // If there is no previous matrix row, use the stock entered
+            // beside the option value itself.
+            const seededStock = getSeedStockForCombo(combo, variants);
+
+            return {
+              ...combo,
+              stock: seededStock
+            };
+          }
+        );
 
         setStockMatrix(newMatrix);
       };
+
       generateMatrix();
     } else {
         setStockMatrix([]);
@@ -402,8 +601,10 @@ export default function EditProductPage() {
     setTempValueStock("");
     setTempValuePrice(""); // ✨ Clear price input
   };
-
-  // ✨ NEW: Easy Reordering Function for Variants
+  
+  // ✨ PHASE 2: When an option is edited, the stock matrix remains the
+  // source of truth for combinations that still exist. The variant's
+  // stock metadata is only used to seed genuinely new combinations.
   const moveTempItem = (index: number, direction: 'left' | 'right') => {
     const newList = [...tempList];
     const newIndex = direction === 'left' ? index - 1 : index + 1;
@@ -468,11 +669,18 @@ export default function EditProductPage() {
     };
 
     if (editingVariantIndex !== null) {
+        // ✨ PHASE 2: Updating an existing option.
+        // We intentionally do NOT reset stockMatrix here.
+        // The matrix effect will preserve every exact combination that
+        // still exists and will only seed rows that are genuinely new.
         const updatedVariants = [...variants];
         updatedVariants[editingVariantIndex] = newVariantObj;
         setVariants(updatedVariants);
         setEditingVariantIndex(null);
     } else {
+        // ✨ PHASE 2: Adding a new option.
+        // The matrix effect will expand the combinations while preserving
+        // the stock of existing rows wherever possible.
         setVariants([...variants, newVariantObj]);
     }
 
@@ -483,6 +691,10 @@ export default function EditProductPage() {
   };
 
   const removeVariant = (index: number) => {
+    // ✨ PHASE 2: Removing an option.
+    // We only update the variants here. The matrix effect rebuilds the
+    // remaining combinations and preserves stock for combinations that
+    // still exist after the option is removed.
     setVariants(variants.filter((_, i) => i !== index));
   };
 
