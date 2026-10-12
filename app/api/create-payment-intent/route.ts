@@ -153,7 +153,49 @@ export async function POST(request: Request) {
         // 1. Get the base price from the database
         let serverItemTotal = dbProduct.is_on_sale ? Number(dbProduct.sale_price) : Number(dbProduct.price);
 
-        // 2. Add prices from the dynamic 'extras' JSONB column (e.g. Glitzer, Lichterkette)
+        // ✨ MATH ORDER FIX: Calculate Option Overrides FIRST, then add Extras!
+        // 2. Extract prices embedded in 'options' (e.g., "50 Rosen (€105)" or "+€10")
+        // ✨ PRICE OVERRIDE FIX: The cart strips the price to keep the UI clean, 
+        // so we must cross-reference the clean cart string with the raw database string!
+        if (item.rawOptions && dbProduct.variants) {
+            Object.keys(item.rawOptions).forEach(variantName => {
+                const selectedCleanValue = item.rawOptions[variantName]; 
+                
+                const dbVariant = dbProduct.variants.find((v: any) => v.name === variantName);
+                if (dbVariant && dbVariant.values) {
+                    const valuesArray = dbVariant.values.split(',').map((s: string) => s.trim());
+                    // Find the original uncut string from the DB that matches our cart's clean value
+                    const fullValueStr = valuesArray.find((val: string) => val.split('|')[0].trim() === selectedCleanValue);
+                    
+                    if (fullValueStr) {
+                        // Look for new format: "100 Rosen | Stock: 2 | Price: 303"
+                        if (fullValueStr.includes('|')) {
+                            const parts = fullValueStr.split('|').map((p: string) => p.trim());
+                            const pricePart = parts.find((p: string) => p.startsWith('Price:'));
+                            if (pricePart) {
+                                const overridePrice = parseFloat(pricePart.replace('Price:', '').trim());
+                                if (!isNaN(overridePrice)) {
+                                    serverItemTotal = overridePrice;
+                                }
+                            }
+                        }
+                        
+                        // Look for old format: "(€105)"
+                        const priceMatch = fullValueStr.match(/\(\s*\+?\s*€?\s*(\d+(\.\d{1,2})?)\s*€?\s*\)/);
+                        if (priceMatch) {
+                            const extractedPrice = Number(priceMatch[1]);
+                            if (fullValueStr.includes("+")) {
+                                serverItemTotal += extractedPrice;
+                            } else {
+                                serverItemTotal = extractedPrice;
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Add prices from the dynamic 'extras' JSONB column (e.g. Glitzer, Lichterkette)
         // We loop through the string array sent by the cart and match it to the DB extras
         if (item.extras && Array.isArray(item.extras)) {
             item.extras.forEach((clientExtraName: string) => {
@@ -164,39 +206,6 @@ export async function POST(request: Request) {
                 );
                 if (dbExtra && dbExtra.price) {
                     serverItemTotal += Number(dbExtra.price);
-                }
-            });
-        }
-
-        // 3. Extract prices embedded in 'options' (e.g., "50 Rosen (€105)" or "+€10")
-        // ✨ PRICE OVERRIDE FIX: Accurately read override prices dynamically from option fields.
-        if (item.options) {
-            Object.values(item.options).forEach((optVal: any) => {
-                const valStr = String(optVal);
-
-                // 1. Check for the new Admin Panel format: "100 Rosen | Stock: 2 | Price: 303"
-                if (valStr.includes('|')) {
-                    const parts = valStr.split('|').map(p => p.trim());
-                    const pricePart = parts.find(p => p.startsWith('Price:'));
-                    if (pricePart) {
-                        const overridePrice = parseFloat(pricePart.replace('Price:', '').trim());
-                        if (!isNaN(overridePrice)) {
-                            serverItemTotal = overridePrice;
-                        }
-                    }
-                }
-                
-                // 2. Fallback Regex to perfectly match things like (€105), (+€10), ( € 5 )
-                const priceMatch = valStr.match(/\(\s*\+?\s*€?\s*(\d+(\.\d{1,2})?)\s*€?\s*\)/);
-                if (priceMatch) {
-                    const extractedPrice = Number(priceMatch[1]);
-                    if (valStr.includes("+")) {
-                        // It's an additive variant (e.g., "+€10")
-                        serverItemTotal += extractedPrice;
-                    } else {
-                        // It's a replacement variant (e.g., "50 Rosen (€105)") - overwrites base price
-                        serverItemTotal = extractedPrice;
-                    }
                 }
             });
         }
