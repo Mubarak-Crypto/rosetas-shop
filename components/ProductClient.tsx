@@ -436,6 +436,18 @@ export default function ProductClient({ initialProduct, initialSettings, initial
     if (!product) return 0;
     let currentBase = product.price;
     Object.values(selectedOptions).forEach(val => {
+      // ✨ PRICE OVERRIDE FIX: Accurately read override prices dynamically from option fields.
+      if (val.includes('|')) {
+          const parts = val.split('|').map(p => p.trim());
+          const pricePart = parts.find(p => p.startsWith('Price:'));
+          if (pricePart) {
+              const overridePrice = parseFloat(pricePart.replace('Price:', '').trim());
+              if (!isNaN(overridePrice)) {
+                  currentBase = overridePrice;
+              }
+          }
+      }
+      
       const priceMatch = val.match(/\(€(\d+)\)/);
       if (priceMatch && priceMatch[1]) {
         currentBase = parseFloat(priceMatch[1]);

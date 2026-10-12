@@ -169,11 +169,24 @@ export async function POST(request: Request) {
         }
 
         // 3. Extract prices embedded in 'options' (e.g., "50 Rosen (€105)" or "+€10")
-        // This regex dynamically finds any euro price inside parenthesis and applies it!
+        // ✨ PRICE OVERRIDE FIX: Accurately read override prices dynamically from option fields.
         if (item.options) {
             Object.values(item.options).forEach((optVal: any) => {
                 const valStr = String(optVal);
-                // Regex to perfectly match things like (€105), (+€10), ( € 5 )
+
+                // 1. Check for the new Admin Panel format: "100 Rosen | Stock: 2 | Price: 303"
+                if (valStr.includes('|')) {
+                    const parts = valStr.split('|').map(p => p.trim());
+                    const pricePart = parts.find(p => p.startsWith('Price:'));
+                    if (pricePart) {
+                        const overridePrice = parseFloat(pricePart.replace('Price:', '').trim());
+                        if (!isNaN(overridePrice)) {
+                            serverItemTotal = overridePrice;
+                        }
+                    }
+                }
+                
+                // 2. Fallback Regex to perfectly match things like (€105), (+€10), ( € 5 )
                 const priceMatch = valStr.match(/\(\s*\+?\s*€?\s*(\d+(\.\d{1,2})?)\s*€?\s*\)/);
                 if (priceMatch) {
                     const extractedPrice = Number(priceMatch[1]);
