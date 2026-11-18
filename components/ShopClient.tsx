@@ -272,6 +272,8 @@ function ShopContent({ initialProducts, initialSettings, initialColors }: ShopCl
                 delay={index * 0.1} 
                 promoLabel={product.promo_label} 
                 stock={product.stock}
+                // ✨ TASK 3 UPDATE: Passed the reviews array down to ProductCard
+                reviews={product.reviews}
               />
             ))}
           </div>

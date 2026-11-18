@@ -10,7 +10,8 @@ export default async function ShopPage() {
   // ✅ PHASE 2: Fetching all active products including the new 'is_featured' column
   const { data: products } = await supabase
     .from("products")
-    .select("*")
+    // ✨ TASK 3 UPDATE: Added reviews(rating, status) to pull review data for star ratings
+    .select("*, reviews(rating, status)")
     .eq('status', 'active')
     // ✨ ADDED: Completely hides makeup (add-ons) from the main shop catalog
     .not('is_addon', 'eq', true)

@@ -202,6 +202,7 @@ export default function CheckoutPage() {
   const [agreedToCustoms, setAgreedToCustoms] = useState(false); 
   const [agreedToWithdrawal, setAgreedToWithdrawal] = useState(false); 
   const [agreedToCancellation, setAgreedToCancellation] = useState(false); 
+  const [agreedToRefundStrict, setAgreedToRefundStrict] = useState(false); // ✨ NEW: Refund Policy Checkbox state
 
   // ✨ NEW: Vacation Mode State
   const [vacationSettings, setVacationSettings] = useState({ isActive: false, endDate: '', message: '' });
@@ -499,13 +500,14 @@ export default function CheckoutPage() {
 
   const isBlacklisted = shippingBlacklist.includes(formData.country);
 
-  // ✨ UPDATED: Added 'vacationValid', 'houseNumber' check, and 'isGoogleVerified' strict lock!
+  // ✨ UPDATED: Added 'vacationValid', 'houseNumber' check, 'isGoogleVerified' strict lock, AND strict refund policy!
   const canProceed = useMemo(() => {
     const hasAddress = formData.email && formData.phone && formData.address && formData.houseNumber && formData.city && formData.zip && isZipFormatValid;
     const policyValid = agreedToPolicy;
     const customsValid = isNonEU ? agreedToCustoms : true;
     const withdrawalValid = (!isNonEU && hasPersonalization) ? agreedToWithdrawal : true; 
     const cancellationValid = agreedToCancellation; 
+    const refundStrictValid = agreedToRefundStrict; // ✨ Refund check
     
     // ✨ Vacation Check: If active, must be agreed. If not active, it's always valid.
     const vacationValid = !vacationSettings.isActive || agreedToVacation;
@@ -514,9 +516,9 @@ export default function CheckoutPage() {
 
     if (isBlacklisted) return false;
 
-    // ✨ MUST BE GOOGLE VERIFIED NOW
-    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid && vacationValid && isGoogleVerified;
-  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation, vacationSettings.isActive, agreedToVacation, isZipFormatValid, isGoogleVerified]);
+    // ✨ MUST BE GOOGLE VERIFIED NOW + STRICT REFUND AGREED
+    return hasAddress && policyValid && customsValid && withdrawalValid && giftNoteValid && cancellationValid && refundStrictValid && vacationValid && isGoogleVerified;
+  }, [formData, agreedToPolicy, agreedToCustoms, agreedToWithdrawal, isNonEU, hasPersonalization, isBlacklisted, packagingType, giftNote, agreedToCancellation, agreedToRefundStrict, vacationSettings.isActive, agreedToVacation, isZipFormatValid, isGoogleVerified]);
 
   // ✨ NEW: Variable to check if the user is typing an address without selecting the Google dropdown
   const isMissingDropdownClick = formData.address.trim().length > 4 && !isGoogleVerified;
@@ -685,6 +687,7 @@ export default function CheckoutPage() {
                             </div>
                         </div>
 
+                        {/* ✨ UPDATED Express Text here */}
                         <div 
                             onClick={() => setIsExpress(true)} 
                             className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between h-28 ${isExpress ? 'bg-[#1F1F1F] border-[#1F1F1F] shadow-lg' : 'bg-white/50 border-black/10 hover:border-[#C9A24D]'}`} 
@@ -695,7 +698,7 @@ export default function CheckoutPage() {
                                 {isExpress && <div className="w-3 h-3 rounded-full bg-[#C9A24D] shadow-[0_0_10px_#C9A24D]" />}
                             </div>
                             <div>
-                                <p className="font-bold text-sm uppercase tracking-wide" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>Express (Next Day)</p>
+                                <p className="font-bold text-sm uppercase tracking-wide" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>Express</p>
                                 <p className="font-bold text-sm text-right mt-auto" style={{ color: isExpress ? 'white' : '#1F1F1F' }}>€{expressCost.toFixed(2)}</p>
                             </div>
                         </div>
@@ -849,6 +852,50 @@ export default function CheckoutPage() {
                             {language === 'EN' 
                             ? "I have read and agree to the cancellation policy." 
                             : "Ich habe den Hinweis zur Stornierung gelesen und bin damit einverstanden."} *
+                        </label>
+                    </div>
+                </div>
+
+                {/* ✨ NEW STRICT REFUND POLICY CHECKBOX */}
+                <div className="space-y-4 mt-6 animate-in slide-in-from-top-2">
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex gap-3 text-amber-900">
+                        <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+                        <div className="text-xs leading-relaxed font-medium">
+                            <p className="font-bold mb-2">
+                                {language === 'EN' ? "Strict Refund Policy" : "Strenge Rückerstattungsrichtlinie"}
+                            </p>
+                            <ul className="list-disc pl-4 space-y-1.5">
+                                <li>
+                                    {language === 'EN' 
+                                        ? "If a customer refuses to accept a package or it is returned because they no longer want or need the order, no refund will be issued, subject to applicable consumer protection laws."
+                                        : "Nimmt ein Kunde ein Paket nicht an oder wird es zurückgesendet, weil er die Bestellung nicht mehr wünscht oder benötigt, erfolgt vorbehaltlich geltender Verbraucherschutzgesetze keine Rückerstattung."}
+                                </li>
+                                <li>
+                                    {language === 'EN'
+                                        ? "Our roses are handmade and individually personalized. If a customer’s event has passed or their plans have changed, this does not automatically entitle them to a refund."
+                                        : "Unsere Rosen sind handgefertigt und individuell personalisiert. Ist die Veranstaltung eines Kunden vergangen oder haben sich seine Pläne geändert, berechtigt dies nicht automatisch zu einer Rückerstattung."}
+                                </li>
+                                <li>
+                                    {language === 'EN'
+                                        ? "If a returned package needs to be shipped to the customer again, the customer must pay the additional shipping costs before it is resent."
+                                        : "Muss ein zurückgesendetes Paket erneut an den Kunden versandt werden, hat der Kunde die zusätzlichen Versandkosten vor dem erneuten Versand zu tragen."}
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-3 p-4 bg-white/30 border border-black/5 rounded-xl">
+                        <input 
+                            required 
+                            type="checkbox" 
+                            id="refundStrictAgreement" 
+                            checked={agreedToRefundStrict} 
+                            onChange={(e) => setAgreedToRefundStrict(e.target.checked)} 
+                            className="mt-1 w-4 h-4 accent-[#C9A24D] cursor-pointer" 
+                        />
+                        <label htmlFor="refundStrictAgreement" className="text-[11px] font-bold text-[#1F1F1F] leading-relaxed cursor-pointer">
+                            {language === 'EN' 
+                            ? "Yes I agree to the refund policy" 
+                            : "Ja, ich stimme den Rückerstattungsrichtlinien zu"} *
                         </label>
                     </div>
                 </div>

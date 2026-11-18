@@ -929,6 +929,16 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                 </div>
             </div>
 
+            {/* ✨ UPDATED: MOVED SHIPPING TIMES ESTIMATES HERE */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-white/60 border border-[#D4C29A]/20 rounded-xl p-4 shadow-sm animate-in fade-in">
+                <Truck size={20} className="text-[#D4C29A] shrink-0" />
+                <div className="flex flex-col gap-1 w-full text-xs font-bold text-[#1F1F1F]/80">
+                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#D4C29A]"></span> Germany: <span className="text-[#1F1F1F]">2-5 days</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#D4C29A]"></span> Austria: <span className="text-[#1F1F1F]">4-6 days</span></span>
+                    <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#D4C29A]"></span> Switzerland: <span className="text-[#1F1F1F]">5-7 days</span></span>
+                </div>
+            </div>
+
             <div className="space-y-4">
                 <p className="text-[#1F1F1F]/60 font-medium leading-relaxed whitespace-pre-line">
                     {language === 'EN' && product.description_en ? product.description_en : product.description}
@@ -1105,17 +1115,15 @@ export default function ProductClient({ initialProduct, initialSettings, initial
                     );
                 })}
                 
-                {/* ✨ NEW: Rose Count Disclaimer dynamically conditionally rendered */}
-                {(product?.name?.toLowerCase().includes('rose') || product?.category?.toLowerCase().includes('bouquet') || product?.category?.toLowerCase().includes('strauß') || product?.category?.toLowerCase().includes('rosen')) && (
-                    <div className="flex items-start gap-3 bg-[#F6EFE6]/50 border border-[#D4C29A]/30 p-4 rounded-xl animate-in fade-in">
-                        <AlertCircle size={16} className="text-[#D4C29A] shrink-0 mt-0.5" />
-                        <p className="text-xs text-[#1F1F1F]/70 font-medium leading-relaxed">
-                            {language === 'EN' 
-                                ? "Please note: To ensure your arrangement looks perfectly full and balanced, the exact number of roses may vary slightly depending on the natural bloom size of each flower."
-                                : "Bitte beachten Sie: Um sicherzustellen, dass Ihr Arrangement perfekt voll und harmonisch wirkt, kann die genaue Anzahl der Rosen je nach natürlicher Blütengröße leicht variieren."}
-                        </p>
-                    </div>
-                )}
+                {/* ✨ NEW: Rose Count Disclaimer unconditionally rendered */}
+                <div className="flex items-start gap-3 bg-[#F6EFE6]/50 border border-[#D4C29A]/30 p-4 rounded-xl animate-in fade-in">
+                    <AlertCircle size={16} className="text-[#D4C29A] shrink-0 mt-0.5" />
+                    <p className="text-xs text-[#1F1F1F]/70 font-medium leading-relaxed">
+                        {language === 'EN' 
+                            ? "Please note: To ensure your arrangement looks perfectly full and balanced, the exact number of roses may vary slightly (approx. 1-4 roses) depending on the bouquet size and the natural bloom size of each flower."
+                            : "Bitte beachten Sie: Um sicherzustellen, dass Ihr Arrangement perfekt voll und harmonisch wirkt, kann die genaue Anzahl der Rosen je nach Straußgröße und natürlicher Blütengröße leicht variieren (ca. 1-4 Rosen)."}
+                    </p>
+                </div>
                 </div>
             )}
             

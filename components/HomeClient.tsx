@@ -281,6 +281,7 @@ export default function HomeClient({ products = [], makeupProducts = [], setting
               delay={index * 0.1} 
               promoLabel={product.promo_label}
               stock={product.stock}
+              reviews={product.reviews} // ✨ TASK 3 UPDATE: Passed reviews to ProductCard
             />
           )) : (
             <div className="col-span-2 text-center py-10 text-[#1F1F1F]/30 bg-white border border-dashed border-black/10 rounded-3xl">
@@ -340,6 +341,7 @@ export default function HomeClient({ products = [], makeupProducts = [], setting
                 delay={index * 0.1} 
                 promoLabel={product.promo_label}
                 stock={product.stock}
+                reviews={product.reviews} // ✨ TASK 3 UPDATE: Passed reviews to ProductCard
               />
             ))}
           </div>

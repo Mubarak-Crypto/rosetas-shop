@@ -9,7 +9,9 @@ export default async function HomePage() {
   // 1. Fetch Products (Limit to 3 best sellers, just like your old code)
   const { data: products } = await supabase
     .from('products')
-    .select('*')
+    // ✨ TASK 3 UPDATE: Added reviews(rating, status) to the select query
+    // This pulls all review data simultaneously so the ProductCard can calculate the average stars!
+    .select('*, reviews(rating, status)')
     .eq('status', 'active') 
     .eq('is_featured', true) // ✅ PHASE 2 CHANGE: Only fetch Rosetta's chosen featured products
     .neq('category', 'supplies') 
@@ -23,7 +25,8 @@ export default async function HomePage() {
   // We limit to 3 items so they fit perfectly in a stylish row on desktop
   const { data: makeupProducts } = await supabase
     .from('products')
-    .select('*')
+    // ✨ TASK 3 UPDATE: Also fetching reviews for the makeup products so they have stars too!
+    .select('*, reviews(rating, status)')
     .eq('status', 'active')
     .eq('is_addon', true)
     .order('created_at', { ascending: false })

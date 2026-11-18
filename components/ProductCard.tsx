@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Plus, ShoppingBag, Video, Tag, Sparkles, Heart } from "lucide-react"; 
+import { Plus, ShoppingBag, Video, Tag, Sparkles, Heart, Star } from "lucide-react"; // ✨ TASK 3 UPDATE: Added Star icon
 import Link from "next/link";
 import Image from "next/image"; // ✨ PERFORMANCE FIX: Import Next.js Image
 import { useLanguage } from "../context/LanguageContext";
@@ -24,12 +24,14 @@ interface ProductProps {
   // ✨ ADDED: Flags for the Gatekeeper logic so the Quick Add button is protected
   isAddon?: boolean;
   isSupply?: boolean;
+  // ✨ TASK 3 UPDATE: Added reviews to props to calculate ratings on the grid
+  reviews?: { rating: number; status: string }[];
 }
 
 export default function ProductCard({ 
   id, title, price, salePrice, isOnSale, globalDiscount, 
   category, image, delay, videoUrl, promoLabel, stock,
-  isAddon, isSupply // Destructure the new props
+  isAddon, isSupply, reviews // ✨ TASK 3 UPDATE: Destructure reviews
 }: ProductProps) {
   
   const { language } = useLanguage(); 
@@ -59,6 +61,13 @@ export default function ProductCard({
   // Just in case the parent component forgets to pass the isAddon flag, we check the category string too!
   const isSupplyItem = isSupply || category === 'supplies' || category === 'Floristenbedarf';
   const isAddonItem = isAddon || category.toLowerCase().includes('makeup') || category.toLowerCase().includes('add-on') || category.toLowerCase().includes('ergänzung');
+
+  // ✨ TASK 3 UPDATE: Calculate average rating for this specific card
+  const approvedReviews = reviews?.filter(r => r.status === 'approved') || [];
+  const avgRating = approvedReviews.length > 0 
+    ? approvedReviews.reduce((acc, r) => acc + r.rating, 0) / approvedReviews.length 
+    : 5.0; // Default to 5.0 if no reviews exist yet
+  const reviewCount = approvedReviews.length;
 
   // ✨ Handle Quick Add to Cart with Stock & Gatekeeper Checks
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -245,6 +254,19 @@ export default function ProductCard({
           <p className="text-[10px] text-[#1F1F1F]/60 uppercase tracking-widest mb-1 font-bold">{translatedCategory}</p>
           <h3 className="text-sm font-bold text-[#1F1F1F] mb-1 group-hover:text-[#C9A24D] transition-colors leading-tight">{title}</h3>
           
+          {/* ✨ TASK 3 UPDATE: Star Ratings added to Product Card */}
+          {reviewCount > 0 && (
+            <div className="flex items-center gap-1.5 mb-2">
+              <Star size={12} className="text-[#C9A24D] fill-[#C9A24D]" />
+              <span className="text-[10px] font-bold text-[#1F1F1F]/80">
+                  {avgRating.toFixed(1)} 
+                  <span className="text-[#1F1F1F]/40 font-medium ml-1">
+                      ({reviewCount})
+                  </span>
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 justify-between">
             <div className="flex items-center gap-2">
                 {isDiscounted ? (
