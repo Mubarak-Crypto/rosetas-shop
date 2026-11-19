@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation"; 
+import Link from "next/link"; // ✨ NEW: Import Link to navigate to the linked product page
 import { motion } from "framer-motion"; 
 import { supabase } from "../../../lib/supabase";
-import { Star, Save, Plus, Instagram, MessageCircle, Trash2, CheckCircle, Loader2, Check, ShoppingBag, Upload, X, Image as ImageIcon } from "lucide-react"; // ✨ Added new icons
+import { Star, Save, Plus, Instagram, MessageCircle, Trash2, CheckCircle, Loader2, Check, ShoppingBag, Upload, X, Image as ImageIcon, ChevronDown, ExternalLink } from "lucide-react"; // ✨ Added new icons + ChevronDown for custom product dropdown + ExternalLink for clickable product link
 
 
 export default function AdminReviewsPage() {
@@ -16,6 +17,9 @@ export default function AdminReviewsPage() {
   
   // ✨ NEW: Uploading State
   const [isUploading, setIsUploading] = useState(false);
+
+  // ✨ NEW: State to toggle the custom product dropdown with images
+  const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
 
   // New Review Form State
   const [formData, setFormData] = useState({
@@ -35,8 +39,9 @@ export default function AdminReviewsPage() {
 
   const fetchInitialData = async () => {
     setIsLoading(true);
-    const { data: pData } = await supabase.from('products').select('id, name').eq('status', 'active');
-    const { data: rData } = await supabase.from('reviews').select('*, products(name)').order('created_at', { ascending: false });
+    // ✨ UPDATED: Added 'images' to both queries so product thumbnails can be displayed
+    const { data: pData } = await supabase.from('products').select('id, name, images').eq('status', 'active');
+    const { data: rData } = await supabase.from('reviews').select('*, products(name, images)').order('created_at', { ascending: false });
     
     if (pData) setProducts(pData);
     if (rData) setReviews(rData);
@@ -75,12 +80,18 @@ export default function AdminReviewsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // ✨ NEW: Validation for custom product dropdown
+    if (!formData.product_id) {
+      alert("Please select a bouquet/product first.");
+      return;
+    }
     const { error } = await supabase.from('reviews').insert([formData]);
     
     if (error) {
       alert("Error saving review: " + error.message);
     } else {
       setIsAdding(false);
+      setIsProductDropdownOpen(false);
       setFormData({ product_id: "", customer_name: "", rating: 5, comment: "", is_verified: true, source: "whatsapp", status: "approved", image_url: "" });
       await fetchInitialData();
       router.refresh(); 
@@ -124,6 +135,9 @@ export default function AdminReviewsPage() {
     }
   };
 
+  // ✨ NEW: Find currently selected product to display its thumbnail in the dropdown trigger
+  const selectedProduct = products.find(p => String(p.id) === String(formData.product_id));
+
   if (isLoading) {
     return (
       <div className="flex h-screen bg-[#F6EFE6]">
@@ -162,17 +176,63 @@ export default function AdminReviewsPage() {
               className="bg-white p-10 rounded-[2.5rem] shadow-2xl mb-16 space-y-8 border border-black/5 max-w-3xl mx-auto"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-2">Assign to Product</label>
-                  <select 
-                    required
-                    className="w-full bg-[#F6EFE6] p-4 rounded-2xl outline-none font-bold border-none"
-                    value={formData.product_id}
-                    onChange={e => setFormData({...formData, product_id: e.target.value})}
+                  {/* ✨ UPDATED: Custom Dropdown showing product thumbnails next to names */}
+                  <button
+                    type="button"
+                    onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
+                    className="w-full bg-[#F6EFE6] p-3 rounded-2xl outline-none font-bold border-none flex items-center justify-between gap-3 text-left min-h-[56px]"
                   >
-                    <option value="">Select Bouquet...</option>
-                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
+                    {selectedProduct ? (
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        {selectedProduct.images?.[0] ? (
+                          <img 
+                            src={selectedProduct.images[0]} 
+                            alt={selectedProduct.name} 
+                            className="w-9 h-9 rounded-lg object-cover border border-black/10 flex-shrink-0" 
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-lg bg-white/60 flex items-center justify-center border border-black/5 flex-shrink-0">
+                            <ImageIcon size={14} className="text-[#1F1F1F]/30" />
+                          </div>
+                        )}
+                        <span className="truncate">{selectedProduct.name}</span>
+                      </div>
+                    ) : (
+                      <span className="opacity-50 pl-1">Select Bouquet...</span>
+                    )}
+                    <ChevronDown size={18} className={`flex-shrink-0 transition-transform ${isProductDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isProductDropdownOpen && (
+                    <div className="absolute z-50 left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-black/10 max-h-64 overflow-y-auto p-2 space-y-1">
+                      {products.map(p => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData({...formData, product_id: String(p.id)});
+                            setIsProductDropdownOpen(false);
+                          }}
+                          className={`w-full flex items-center gap-3 p-2 rounded-xl text-left transition-colors ${String(formData.product_id) === String(p.id) ? 'bg-[#F6EFE6] font-black' : 'hover:bg-[#F6EFE6]/60 font-bold'}`}
+                        >
+                          {p.images?.[0] ? (
+                            <img 
+                              src={p.images[0]} 
+                              alt={p.name} 
+                              className="w-10 h-10 rounded-lg object-cover border border-black/10 flex-shrink-0" 
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-[#F6EFE6] flex items-center justify-center border border-black/5 flex-shrink-0">
+                              <ImageIcon size={16} className="text-[#1F1F1F]/30" />
+                            </div>
+                          )}
+                          <span className="text-sm truncate">{p.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest opacity-40 ml-2">Customer Name</label>
@@ -304,7 +364,23 @@ export default function AdminReviewsPage() {
                             {review.status === 'pending' && <span className="text-[10px] bg-yellow-500 text-white px-2 py-0.5 rounded font-black uppercase tracking-tighter">Pending Approval</span>}
                         </div>
                         <p className="text-[#1F1F1F] font-medium opacity-80 leading-relaxed italic">"{review.comment}"</p>
-                        <p className="text-[10px] font-black text-[#C9A24D] uppercase tracking-widest">Linked to: {review.products?.name}</p>
+                        {/* ✨ UPDATED: Clickable linked product thumbnail + name that opens the product page at the reviews section */}
+                        <Link
+                            href={`/product/${review.product_id}?action=write_review`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 group hover:opacity-80 transition-opacity"
+                        >
+                            {review.products?.images?.[0] && (
+                                <img 
+                                    src={review.products.images[0]} 
+                                    alt={review.products?.name || "Product"} 
+                                    className="w-6 h-6 rounded-md object-cover border border-black/10 flex-shrink-0" 
+                                />
+                            )}
+                            <p className="text-[10px] font-black text-[#C9A24D] uppercase tracking-widest group-hover:underline">Linked to: {review.products?.name}</p>
+                            <ExternalLink size={12} className="text-[#C9A24D]" />
+                        </Link>
                     </div>
                 </div>
                 
